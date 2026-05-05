@@ -10,5 +10,10 @@
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "format": "pnpm -r format"
+  },
+  "pnpm": {
+    "overrides": {
+      "undici": "6.21.2"
+    }
   }
 }
