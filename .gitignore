@@ -1,0 +1,15 @@
+node_modules
+dist
+build
+coverage
+.next
+.qwik
+.vscode
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+pnpm-lock.yaml
+package-lock.json
+yarn.lock

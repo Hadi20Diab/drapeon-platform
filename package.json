@@ -1,0 +1,14 @@
+{
+  "name": "drapeon-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Multi-vendor suit and dress rental platform",
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm -r --parallel dev",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "format": "pnpm -r format"
+  }
+}
