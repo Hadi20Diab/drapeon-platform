@@ -1,8 +1,17 @@
 import { IsOptional, IsString, IsUUID, MaxLength, MinLength } from "class-validator";
 
 export class CreateDeliveryRequestDto {
+  @IsOptional()
   @IsUUID()
-  bookingId!: string;
+  bookingId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  orderId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  productId?: string;
 
   @IsString()
   @MinLength(8)

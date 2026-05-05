@@ -13,6 +13,10 @@ export class CreateBookingDto {
   @IsUUID()
   designerId!: string;
 
+  @IsOptional()
+  @IsUUID()
+  variantId?: string;
+
   @Type(() => Date)
   @IsDate()
   startsAt!: Date;
