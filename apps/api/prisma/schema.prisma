@@ -1,0 +1,394 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  DESIGNER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum DesignerApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ProductCategory {
+  SUIT
+  DRESS
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum AvailabilityStatus {
+  AVAILABLE
+  RESERVED
+  UNAVAILABLE
+}
+
+enum BookingType {
+  FITTING
+  RENTAL
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  CANCELLED
+  COMPLETED
+}
+
+enum RentalOrderStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum DeliveryStatus {
+  PENDING
+  APPROVED
+  PACKING
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+enum AiSessionChannel {
+  REST
+  WS
+}
+
+enum AiMessageRole {
+  USER
+  AGENT
+  TOOL
+  SYSTEM
+}
+
+model User {
+  id                String            @id @default(uuid())
+  email             String            @unique
+  passwordHash      String
+  role              UserRole          @default(USER)
+  status            UserStatus        @default(ACTIVE)
+  isEmailVerified   Boolean           @default(false)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  profile           UserProfile?
+  refreshTokens     RefreshToken[]
+  bookings          Booking[]
+  rentalOrders      RentalOrder[]
+  deliveryRequests  DeliveryRequest[]
+  aiSessions        AiSession[]
+  adminAuditLogs    AdminAuditLog[]   @relation("AuditActor")
+  designerProfile   Designer?         @relation("DesignerAccount")
+  approvedDesigners Designer[]        @relation("DesignerApprovedBy")
+
+  @@index([role, status])
+}
+
+model UserProfile {
+  id           String           @id @default(uuid())
+  userId       String           @unique
+  firstName    String
+  lastName     String
+  phoneNumber  String?
+  preferences  Json?
+  dateOfBirth  DateTime?
+  avatarUrl    String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  measurements BodyMeasurement?
+}
+
+model BodyMeasurement {
+  id         String      @id @default(uuid())
+  profileId  String      @unique
+  heightCm   Decimal?    @db.Decimal(5, 2)
+  weightKg   Decimal?    @db.Decimal(5, 2)
+  chestCm    Decimal?    @db.Decimal(5, 2)
+  waistCm    Decimal?    @db.Decimal(5, 2)
+  hipCm      Decimal?    @db.Decimal(5, 2)
+  shoulderCm Decimal?    @db.Decimal(5, 2)
+  inseamCm   Decimal?    @db.Decimal(5, 2)
+  notes      String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  profile    UserProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model Designer {
+  id             String                 @id @default(uuid())
+  userId         String                 @unique
+  storeName      String
+  slug           String                 @unique
+  bio            String
+  location       String?
+  approvalStatus DesignerApprovalStatus @default(PENDING)
+  approvedById   String?
+  approvedAt     DateTime?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  user           User                   @relation("DesignerAccount", fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy     User?                  @relation("DesignerApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  products       Product[]
+  bookings       Booking[]
+  rentalOrders   RentalOrder[]
+  deliveries     DeliveryRequest[]
+
+  @@index([approvalStatus])
+}
+
+model Product {
+  id                  String            @id @default(uuid())
+  designerId          String
+  category            ProductCategory
+  title               String
+  slug                String            @unique
+  description         String
+  rentalPrice         Decimal           @db.Decimal(10, 2)
+  securityDeposit     Decimal?          @db.Decimal(10, 2)
+  currency            String            @default("USD")
+  status              ProductStatus     @default(DRAFT)
+  isDeliveryAvailable Boolean           @default(true)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  designer            Designer          @relation(fields: [designerId], references: [id], onDelete: Cascade)
+  images              ProductImage[]
+  variants            ProductVariant[]
+  bookings            Booking[]
+  orderItems          RentalOrderItem[]
+  deliveryRequests    DeliveryRequest[]
+
+  @@index([designerId, status])
+  @@index([category, status])
+  @@index([rentalPrice])
+}
+
+model ProductImage {
+  id        String   @id @default(uuid())
+  productId String
+  url       String
+  altText   String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, sortOrder])
+}
+
+model ProductVariant {
+  id               String                @id @default(uuid())
+  productId        String
+  sku              String                @unique
+  sizeLabel        String
+  color            String
+  stockTotal       Int
+  stockReserved    Int                   @default(0)
+  isActive         Boolean               @default(true)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  product          Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
+  availability     ProductAvailability[]
+  bookings         Booking[]
+  rentalOrderItems RentalOrderItem[]
+
+  @@unique([productId, sizeLabel, color])
+  @@index([productId, isActive])
+  @@index([color])
+}
+
+model ProductAvailability {
+  id             String             @id @default(uuid())
+  variantId      String
+  date           DateTime           @db.Date
+  status         AvailabilityStatus @default(AVAILABLE)
+  availableUnits Int
+  reservedUnits  Int                @default(0)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  variant        ProductVariant     @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([variantId, date])
+  @@index([date, status])
+}
+
+model Booking {
+  id                       String           @id @default(uuid())
+  userId                   String
+  designerId               String
+  productId                String
+  variantId                String?
+  type                     BookingType      @default(FITTING)
+  status                   BookingStatus    @default(PENDING)
+  startsAt                 DateTime
+  endsAt                   DateTime
+  notes                    String?
+  requiresDesignerApproval Boolean          @default(true)
+  approvedAt               DateTime?
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+  user                     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  designer                 Designer         @relation(fields: [designerId], references: [id], onDelete: Cascade)
+  product                  Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant                  ProductVariant?  @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  deliveryRequest          DeliveryRequest?
+
+  @@index([userId, startsAt])
+  @@index([designerId, startsAt])
+  @@index([productId, startsAt])
+}
+
+model RentalOrder {
+  id              String            @id @default(uuid())
+  userId          String
+  designerId      String
+  status          RentalOrderStatus @default(PENDING)
+  rentalStartDate DateTime
+  rentalEndDate   DateTime
+  subtotalAmount  Decimal           @db.Decimal(10, 2)
+  serviceFee      Decimal           @db.Decimal(10, 2)
+  totalAmount     Decimal           @db.Decimal(10, 2)
+  deliveryAddress String
+  notes           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  designer        Designer          @relation(fields: [designerId], references: [id], onDelete: Cascade)
+  items           RentalOrderItem[]
+  deliveryRequest DeliveryRequest?
+
+  @@index([userId, status])
+  @@index([designerId, status])
+}
+
+model RentalOrderItem {
+  id          String          @id @default(uuid())
+  orderId     String
+  productId   String
+  variantId   String?
+  quantity    Int             @default(1)
+  rentalDays  Int
+  unitPrice   Decimal         @db.Decimal(10, 2)
+  lineTotal   Decimal         @db.Decimal(10, 2)
+  createdAt   DateTime        @default(now())
+  rentalOrder RentalOrder     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variant     ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model DeliveryRequest {
+  id              String                  @id @default(uuid())
+  userId          String
+  designerId      String
+  orderId         String?                 @unique
+  bookingId       String?                 @unique
+  productId       String?
+  deliveryAddress String
+  contactPhone    String?
+  instructions    String?
+  status          DeliveryStatus          @default(PENDING)
+  requestedAt     DateTime                @default(now())
+  scheduledFor    DateTime?
+  dispatchedAt    DateTime?
+  deliveredAt     DateTime?
+  cancelledAt     DateTime?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  designer        Designer                @relation(fields: [designerId], references: [id], onDelete: Cascade)
+  order           RentalOrder?            @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  booking         Booking?                @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  product         Product?                @relation(fields: [productId], references: [id], onDelete: SetNull)
+  trackingEvents  DeliveryTrackingEvent[]
+
+  @@index([userId, status])
+  @@index([designerId, status])
+}
+
+model DeliveryTrackingEvent {
+  id                String          @id @default(uuid())
+  deliveryRequestId String
+  status            DeliveryStatus
+  note              String?
+  createdAt         DateTime        @default(now())
+  deliveryRequest   DeliveryRequest @relation(fields: [deliveryRequestId], references: [id], onDelete: Cascade)
+
+  @@index([deliveryRequestId, createdAt])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model AiSession {
+  id              String           @id @default(uuid())
+  userId          String?
+  channel         AiSessionChannel
+  contextSnapshot Json?
+  startedAt       DateTime         @default(now())
+  endedAt         DateTime?
+  user            User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  messages        AiMessage[]
+
+  @@index([userId, startedAt])
+}
+
+model AiMessage {
+  id         String        @id @default(uuid())
+  sessionId  String
+  role       AiMessageRole
+  content    String
+  toolName   String?
+  toolInput  Json?
+  toolOutput Json?
+  createdAt  DateTime      @default(now())
+  session    AiSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+}
+
+model AdminAuditLog {
+  id           String   @id @default(uuid())
+  actorAdminId String
+  action       String
+  targetType   String
+  targetId     String?
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  actorAdmin   User     @relation("AuditActor", fields: [actorAdminId], references: [id], onDelete: Cascade)
+
+  @@index([actorAdminId, createdAt])
+  @@index([targetType, targetId])
+}
