@@ -1,20 +1,17 @@
-import { Body, Controller, Post, Query } from "@nestjs/common";
-import { IsUUID } from "class-validator";
+import { Body, Controller, Post, UseGuards } from "@nestjs/common";
 
+import { CurrentUser } from "../../common/decorators/current-user.decorator";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { AiRecommendationDto } from "./dto/ai-recommendation.dto";
 import { AiService } from "./ai.service";
 
-class UserQueryDto {
-  @IsUUID()
-  userId!: string;
-}
-
 @Controller("ai")
+@UseGuards(JwtAuthGuard)
 export class AiController {
   constructor(private readonly aiService: AiService) {}
 
   @Post("recommendations")
-  getRecommendations(@Query() query: UserQueryDto, @Body() payload: AiRecommendationDto) {
-    return this.aiService.recommend(query.userId, payload);
+  getRecommendations(@CurrentUser("sub") userId: string, @Body() payload: AiRecommendationDto) {
+    return this.aiService.recommend(userId, payload);
   }
 }

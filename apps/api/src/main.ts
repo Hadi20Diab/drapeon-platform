@@ -30,7 +30,7 @@ async function bootstrap(): Promise<void> {
   );
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new ApiResponseInterceptor());
-  await app.get(PrismaService).enableShutdownHooks(app);
+  app.get(PrismaService).enableShutdownHooks(app);
 
   await app.listen(port);
 

@@ -1,25 +1,22 @@
-import { Body, Controller, Get, Patch, Query } from "@nestjs/common";
-import { IsUUID } from "class-validator";
+import { Body, Controller, Get, Patch, UseGuards } from "@nestjs/common";
 
+import { CurrentUser } from "../../common/decorators/current-user.decorator";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { UpdateBodyMeasurementsDto } from "./dto/update-body-measurements.dto";
 import { UsersService } from "./users.service";
 
-class UserQueryDto {
-  @IsUUID()
-  userId!: string;
-}
-
 @Controller("users")
+@UseGuards(JwtAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get("me")
-  getMe(@Query() query: UserQueryDto) {
-    return this.usersService.getCurrentUserProfile(query.userId);
+  getMe(@CurrentUser("sub") userId: string) {
+    return this.usersService.getCurrentUserProfile(userId);
   }
 
   @Patch("me/measurements")
-  updateMeasurements(@Query() query: UserQueryDto, @Body() payload: UpdateBodyMeasurementsDto) {
-    return this.usersService.updateMeasurements(query.userId, payload);
+  updateMeasurements(@CurrentUser("sub") userId: string, @Body() payload: UpdateBodyMeasurementsDto) {
+    return this.usersService.updateMeasurements(userId, payload);
   }
 }

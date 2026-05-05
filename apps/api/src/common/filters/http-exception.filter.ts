@@ -25,7 +25,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const errorResponse =
       exception instanceof HttpException ? exception.getResponse() : "Internal server error";
 
-    if (statusCode >= HttpStatus.INTERNAL_SERVER_ERROR) {
+    if (statusCode >= Number(HttpStatus.INTERNAL_SERVER_ERROR)) {
       this.logger.error(
         `Unhandled exception on ${request.method} ${request.url}`,
         exception instanceof Error ? exception.stack : JSON.stringify(exception)

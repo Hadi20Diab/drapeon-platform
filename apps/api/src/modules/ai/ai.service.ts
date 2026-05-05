@@ -67,7 +67,7 @@ export class AiService {
       take: 8
     });
 
-    return products.map((product) => ({
+    return products.map((product: (typeof products)[number]) => ({
       id: product.id,
       title: product.title,
       rentalPrice: Number(product.rentalPrice),
