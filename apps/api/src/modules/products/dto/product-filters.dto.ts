@@ -1,10 +1,6 @@
 import { Type } from "class-transformer";
 import { IsEnum, IsInt, IsNumber, IsOptional, IsPositive, IsString, Min } from "class-validator";
-
-export enum ProductCategory {
-  SUIT = "SUIT",
-  DRESS = "DRESS"
-}
+import { ProductCategory } from "@prisma/client";
 
 export class ProductFiltersDto {
   @IsOptional()

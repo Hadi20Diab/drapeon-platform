@@ -1,23 +1,118 @@
-import { Injectable } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
 
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { BookingStatus, DeliveryStatus, DesignerApprovalStatus } from "@prisma/client";
+
+import { PrismaService } from "../../prisma/prisma.service";
 import { CreateStoreDto } from "./dto/create-store.dto";
 
 @Injectable()
 export class DesignersService {
-  createStore(designerId: string, payload: CreateStoreDto) {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async createOrUpdateStore(userId: string, payload: CreateStoreDto) {
+    const baseSlug = this.toSlug(payload.storeName);
+    const existingByUser = await this.prisma.designer.findUnique({
+      where: { userId },
+      select: { id: true, slug: true }
+    });
+    const slug = existingByUser?.slug ?? (await this.resolveUniqueSlug(baseSlug));
+
+    return this.prisma.designer.upsert({
+      where: { userId },
+      create: {
+        userId,
+        storeName: payload.storeName,
+        slug,
+        bio: payload.description,
+        location: payload.location,
+        approvalStatus: DesignerApprovalStatus.PENDING
+      },
+      update: {
+        storeName: payload.storeName,
+        bio: payload.description,
+        location: payload.location
+      }
+    });
+  }
+
+  async getDashboard(userId: string) {
+    const designer = await this.prisma.designer.findUnique({
+      where: { userId },
+      select: { id: true }
+    });
+
+    if (!designer) {
+      throw new NotFoundException("Designer profile was not found");
+    }
+
+    const [productsCount, pendingAppointments, openDeliveries] = await this.prisma.$transaction([
+      this.prisma.product.count({
+        where: { designerId: designer.id }
+      }),
+      this.prisma.booking.count({
+        where: {
+          designerId: designer.id,
+          status: {
+            in: [BookingStatus.PENDING, BookingStatus.CONFIRMED]
+          }
+        }
+      }),
+      this.prisma.deliveryRequest.count({
+        where: {
+          designerId: designer.id,
+          status: {
+            in: [
+              DeliveryStatus.PENDING,
+              DeliveryStatus.APPROVED,
+              DeliveryStatus.PACKING,
+              DeliveryStatus.IN_TRANSIT
+            ]
+          }
+        }
+      })
+    ]);
+
     return {
-      designerId,
-      ...payload,
-      approvalStatus: "PENDING"
+      designerId: designer.id,
+      productsCount,
+      pendingAppointments,
+      openDeliveries
     };
   }
 
-  getDashboard(designerId: string) {
-    return {
-      designerId,
-      productsCount: 0,
-      pendingAppointments: 0,
-      openDeliveries: 0
-    };
+  async getDesignerIdByUserId(userId: string): Promise<string> {
+    const designer = await this.prisma.designer.findUnique({
+      where: { userId },
+      select: { id: true }
+    });
+
+    if (!designer) {
+      throw new NotFoundException("Designer profile was not found");
+    }
+
+    return designer.id;
+  }
+
+  private async resolveUniqueSlug(baseSlug: string): Promise<string> {
+    const existing = await this.prisma.designer.findUnique({
+      where: { slug: baseSlug },
+      select: { id: true }
+    });
+
+    if (!existing) {
+      return baseSlug;
+    }
+
+    return `${baseSlug}-${randomUUID().slice(0, 8)}`;
+  }
+
+  private toSlug(value: string): string {
+    return value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .replace(/-{2,}/g, "-");
   }
 }

@@ -1,7 +1,7 @@
 import {
   IsArray,
-  IsBoolean,
   IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsPositive,
@@ -11,8 +11,8 @@ import {
   ValidateNested
 } from "class-validator";
 import { Type } from "class-transformer";
+import { ProductCategory } from "@prisma/client";
 
-import { ProductCategory } from "./product-filters.dto";
 
 class ProductImageDto {
   @IsUrl()
@@ -30,12 +30,13 @@ class ProductVariantDto {
   @IsString()
   color!: string;
 
-  @IsNumber()
+  @IsInt()
   @IsPositive()
-  stock!: number;
+  stockTotal!: number;
 
-  @IsBoolean()
-  isAvailable!: boolean;
+  @IsOptional()
+  @IsString()
+  sku?: string;
 }
 
 export class CreateProductDto {

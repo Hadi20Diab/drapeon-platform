@@ -1,25 +1,26 @@
-import { Body, Controller, Get, Post, Query } from "@nestjs/common";
-import { IsUUID } from "class-validator";
+import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
+import { UserRole } from "@prisma/client";
 
+import { CurrentUser } from "../../common/decorators/current-user.decorator";
+import { Roles } from "../auth/decorators/roles.decorator";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { RolesGuard } from "../auth/guards/roles.guard";
 import { CreateStoreDto } from "./dto/create-store.dto";
 import { DesignersService } from "./designers.service";
 
-class DesignerQueryDto {
-  @IsUUID()
-  designerId!: string;
-}
-
 @Controller("designers")
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.DESIGNER)
 export class DesignersController {
   constructor(private readonly designersService: DesignersService) {}
 
   @Post("store")
-  createStore(@Query() query: DesignerQueryDto, @Body() payload: CreateStoreDto) {
-    return this.designersService.createStore(query.designerId, payload);
+  createStore(@CurrentUser("sub") userId: string, @Body() payload: CreateStoreDto) {
+    return this.designersService.createOrUpdateStore(userId, payload);
   }
 
   @Get("dashboard")
-  getDashboard(@Query() query: DesignerQueryDto) {
-    return this.designersService.getDashboard(query.designerId);
+  getDashboard(@CurrentUser("sub") userId: string) {
+    return this.designersService.getDashboard(userId);
   }
 }
