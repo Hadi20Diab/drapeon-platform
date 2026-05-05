@@ -11,7 +11,8 @@ const envSchema = z.object({
   JWT_REFRESH_TTL: z.coerce.number().int().positive().default(2_592_000),
   THROTTLE_TTL: z.coerce.number().int().positive().default(60),
   THROTTLE_LIMIT: z.coerce.number().int().positive().default(120),
-  GEMINI_API_KEY: z.string().min(8)
+  GEMINI_API_KEY: z.string().min(8),
+  GEMINI_MODEL: z.string().min(1).default("gemini-3-flash-preview")
 });
 
 export type EnvVariables = z.infer<typeof envSchema>;
