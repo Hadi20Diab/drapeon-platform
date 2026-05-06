@@ -1,7 +1,8 @@
-import { component$ } from "@builder.io/qwik";
+import { $, component$, useSignal } from "@builder.io/qwik";
 import { routeLoader$ } from "@builder.io/qwik-city";
 
 import { fetchProductDetails } from "../../../lib/api";
+import { addToCart, addToWishlist } from "../../../lib/commerce";
 
 export const useProductDetails = routeLoader$(async ({ params, status }) => {
   const product = await fetchProductDetails(params.id);
@@ -15,6 +16,7 @@ export const useProductDetails = routeLoader$(async ({ params, status }) => {
 
 export default component$(() => {
   const product = useProductDetails();
+  const notice = useSignal("");
 
   if (!product.value) {
     return (
@@ -30,6 +32,14 @@ export default component$(() => {
 
   const item = product.value;
   const image = item.imageUrl ?? item.images?.[0] ?? null;
+  const addCart = $(() => {
+    addToCart(item);
+    notice.value = "Added to cart.";
+  });
+  const addWishlist = $(() => {
+    addToWishlist(item);
+    notice.value = "Saved to wishlist.";
+  });
 
   return (
     <section class="section-wrap mt-12">
@@ -120,16 +130,21 @@ export default component$(() => {
           </div>
 
           <div class="mt-8 flex flex-wrap gap-3">
-            <button class="btn-primary" type="button">
+            <button class="btn-primary" type="button" onClick$={addCart}>
               Rent Look
             </button>
-            <button class="btn-secondary" type="button">
-              Request Delivery
+            <button class="btn-secondary" type="button" onClick$={addWishlist}>
+              Wishlist
             </button>
-            <a href="/assistant" class="btn-secondary">
-              Ask Stylist
+            <a href="/cart" class="btn-secondary">
+              View Cart
             </a>
           </div>
+          {notice.value && (
+            <p class="mt-4 border border-brand-olive/30 bg-brand-olive/10 px-4 py-3 text-sm font-semibold text-brand-olive">
+              {notice.value}
+            </p>
+          )}
         </article>
       </div>
     </section>

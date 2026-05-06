@@ -27,6 +27,12 @@ export const SiteHeader = component$(() => {
           <a href="/auth" class="transition hover:text-brand-gold">
             Sign In
           </a>
+          <a href="/wishlist" class="transition hover:text-brand-gold">
+            Wishlist
+          </a>
+          <a href="/cart" class="transition hover:text-brand-gold">
+            Cart
+          </a>
         </nav>
 
         <a
