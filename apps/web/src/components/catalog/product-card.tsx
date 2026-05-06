@@ -6,10 +6,21 @@ interface ProductCardProps {
   product: CatalogProduct;
 }
 
+const swatchClassByColor: Record<string, string> = {
+  Black: "bg-[#111111]",
+  "Midnight Blue": "bg-[#17233f]",
+  Ivory: "bg-[#f8f0df]",
+  Emerald: "bg-[#1f6f52]",
+  Burgundy: "bg-[#7b1730]",
+  Champagne: "bg-[#d9bf86]",
+  Sand: "bg-[#c9b38f]",
+  "Slate Grey": "bg-[#66707a]"
+};
+
 export const ProductCard = component$<ProductCardProps>(({ product }) => {
   return (
-    <article class="luxury-card group overflow-hidden transition duration-500 hover:-translate-y-1">
-      <div class="relative h-72 overflow-hidden">
+    <article class="group border-b border-brand-ink/10 bg-transparent pb-5 transition duration-500 hover:-translate-y-1">
+      <div class="image-sheen relative aspect-[4/5] overflow-hidden bg-brand-ink">
         <img
           src={
             product.imageUrl ??
@@ -21,27 +32,40 @@ export const ProductCard = component$<ProductCardProps>(({ product }) => {
           class="h-full w-full object-cover transition duration-700 group-hover:scale-105"
           loading="lazy"
         />
-        <span class="absolute left-4 top-4 rounded-full bg-brand-ink px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-sand">
+        <span class="absolute left-3 top-3 bg-brand-sand px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-brand-ink">
           {product.category}
         </span>
+        <a
+          href={`/catalog?product=${product.id}`}
+          class="absolute bottom-3 right-3 bg-brand-ink px-4 py-3 text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-brand-sand opacity-0 transition group-hover:opacity-100"
+        >
+          View
+        </a>
       </div>
 
-      <div class="space-y-4 p-5">
-        <div class="space-y-1">
-          <h3 class="font-display text-2xl leading-none text-brand-ink">{product.title}</h3>
-          <p class="text-sm text-brand-ink/60">{product.designer.storeName}</p>
+      <div class="space-y-4 pt-4">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h3 class="font-display text-[1.72rem] leading-[0.95] text-brand-ink">{product.title}</h3>
+            <p class="mt-2 text-sm font-semibold text-brand-ink/60">{product.designer.storeName}</p>
+          </div>
+          <p class="shrink-0 text-right text-lg font-extrabold text-brand-ink">${product.rentalPrice}</p>
         </div>
 
-        <div class="flex items-center justify-between">
-          <p class="text-sm text-brand-ink/60">from</p>
-          <p class="text-xl font-semibold text-brand-ink">${product.rentalPrice}/day</p>
-        </div>
-
-        <div class="flex items-center justify-between text-xs uppercase tracking-[0.12em] text-brand-ink/70">
-          <span>Sizes: {product.sizeOptions.slice(0, 3).join(" / ")}</span>
-          <span>{product.colorOptions[0]}</span>
+        <div class="flex flex-wrap items-center justify-between gap-3 text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-brand-ink/60">
+          <span>{product.sizeOptions.slice(0, 4).join(" / ")}</span>
+          <div class="flex items-center gap-1.5">
+            {product.colorOptions.slice(0, 3).map((color) => (
+              <span
+                key={color}
+                class={`h-3 w-3 border border-brand-ink/20 ${swatchClassByColor[color] ?? "bg-brand-olive"}`}
+                title={color}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </article>
   );
 });
+

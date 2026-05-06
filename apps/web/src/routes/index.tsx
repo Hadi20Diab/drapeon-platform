@@ -9,73 +9,111 @@ export const useFeaturedProducts = routeLoader$(async () => {
   return fetchCatalogProducts(6);
 });
 
+const heroImage =
+  "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=2200&q=85";
+
 export default component$(() => {
   const products = useFeaturedProducts();
 
   return (
     <>
-      <section class="section-wrap mt-14 animate-rise rounded-[32px] border border-brand-stone/70 bg-gradient-to-br from-[#f9f1e6] via-[#f4e9da] to-[#ecdcc8] p-8 shadow-soft md:p-12">
-        <div class="grid gap-10 md:grid-cols-[1.2fr_1fr] md:items-center">
-          <div class="space-y-6">
-            <p class="inline-block rounded-full border border-brand-gold/50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-brand-ink/80">
-              Luxury Rental House
-            </p>
-            <h1 class="font-display text-5xl leading-[0.95] text-brand-ink md:text-7xl">
-              Suit & Dress
-              <br />
-              Rental, Refined
-            </h1>
-            <p class="max-w-xl text-base leading-7 text-brand-ink/75 md:text-lg">
-              Rent statement looks from independent designers, reserve fitting
-              appointments, and get AI-powered suggestions tuned to your body profile.
-            </p>
-            <div class="flex flex-wrap gap-3">
-              <a
-                href="/catalog"
-                class="rounded-full bg-brand-ink px-6 py-3 text-sm font-semibold uppercase tracking-[0.12em] text-brand-sand transition hover:bg-brand-gold hover:text-brand-ink"
-              >
-                Explore Catalog
-              </a>
-              <a
-                href="/assistant"
-                class="rounded-full border border-brand-ink/30 px-6 py-3 text-sm font-semibold uppercase tracking-[0.12em] text-brand-ink transition hover:border-brand-gold hover:text-brand-gold"
-              >
-                Ask AI Stylist
-              </a>
-            </div>
-          </div>
+      <section class="relative min-h-[calc(100vh-80px)] overflow-hidden bg-brand-ink text-brand-sand">
+        <img
+          src={heroImage}
+          alt="Editorial formalwear fitting room"
+          width={2200}
+          height={1467}
+          class="absolute inset-0 h-full w-full object-cover opacity-[0.62]"
+        />
+        <div class="absolute inset-0 bg-gradient-to-r from-brand-ink via-brand-ink/60 to-transparent" />
+        <div class="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-brand-ink to-transparent" />
 
-          <div class="luxury-card overflow-hidden">
-            <img
-              src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1600&q=80"
-              alt="Luxury fitting room"
-              width={1600}
-              height={1900}
-              class="h-[420px] w-full object-cover"
-            />
+        <div class="section-wrap relative flex min-h-[calc(100vh-80px)] items-end pb-10 pt-28">
+          <div class="grid w-full gap-10 lg:grid-cols-[1fr_360px] lg:items-end">
+            <div class="max-w-4xl animate-rise">
+              <p class="eyebrow text-brand-gold">Multi-vendor formalwear rental</p>
+              <h1 class="mt-5 font-display text-[4.35rem] leading-[0.85] text-brand-sand md:text-[7.6rem]">
+                Dress the event before it happens.
+              </h1>
+              <p class="mt-7 max-w-2xl text-base leading-8 text-brand-sand/75 md:text-lg">
+                Discover rental-ready suits and dresses from independent designers, reserve fittings,
+                request delivery, and let the AI stylist work from real inventory.
+              </p>
+              <div class="mt-8 flex flex-wrap gap-3">
+                <a href="/catalog" class="btn-primary border border-brand-sand bg-brand-sand text-brand-ink">
+                  Explore Catalog
+                </a>
+                <a href="/assistant" class="btn-secondary border-brand-sand/50 text-brand-sand">
+                  Ask AI Stylist
+                </a>
+              </div>
+            </div>
+
+            <div class="glass-panel grid grid-cols-3 divide-x divide-brand-ink/10 p-5 text-brand-ink">
+              <div>
+                <p class="font-display text-4xl">168</p>
+                <p class="mt-1 text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-brand-ink/60">
+                  Pieces
+                </p>
+              </div>
+              <div class="pl-5">
+                <p class="font-display text-4xl">14</p>
+                <p class="mt-1 text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-brand-ink/60">
+                  Designers
+                </p>
+              </div>
+              <div class="pl-5">
+                <p class="font-display text-4xl">220</p>
+                <p class="mt-1 text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-brand-ink/60">
+                  Fittings
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <section class="section-wrap mt-16 space-y-8">
+      <section class="section-wrap mt-16 grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+        <div class="border-y border-brand-ink/10 py-8">
+          <p class="eyebrow">Experience</p>
+          <h2 class="mt-3 font-display text-5xl leading-none text-brand-ink md:text-6xl">
+            Rental feels better when the service is tailored.
+          </h2>
+        </div>
+        <div class="grid gap-3 md:grid-cols-3">
+          {["Fit profile", "Designer calendar", "Delivery request"].map((item, index) => (
+            <article key={item} class="luxury-card min-h-44 p-5">
+              <p class="font-display text-5xl text-brand-rose">0{index + 1}</p>
+              <h3 class="mt-5 text-sm font-extrabold uppercase tracking-[0.12em] text-brand-ink">
+                {item}
+              </h3>
+              <p class="mt-3 text-sm leading-6 text-brand-ink/60">
+                {index === 0 &&
+                  "Measurements and preferences travel with every styling request."}
+                {index === 1 &&
+                  "Book fittings against designer availability with approval workflows."}
+                {index === 2 &&
+                  "Reserve the look, then track delivery status from request to arrival."}
+              </p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section class="section-wrap mt-20 space-y-8">
         <div class="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-gold">
-              Featured Selection
-            </p>
-            <h2 class="font-display text-4xl text-brand-ink md:text-5xl">
-              Editor’s Current Picks
+            <p class="eyebrow">Featured Selection</p>
+            <h2 class="mt-2 font-display text-5xl leading-none text-brand-ink md:text-6xl">
+              Current Picks
             </h2>
           </div>
-          <a
-            href="/catalog"
-            class="text-sm font-semibold uppercase tracking-[0.16em] text-brand-ink/70 transition hover:text-brand-gold"
-          >
-            View Full Catalog
+          <a href="/catalog" class="btn-secondary">
+            View Catalog
           </a>
         </div>
 
-        <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div class="grid gap-7 md:grid-cols-2 xl:grid-cols-3">
           {products.value.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
@@ -95,3 +133,4 @@ export const head: DocumentHead = {
     }
   ]
 };
+

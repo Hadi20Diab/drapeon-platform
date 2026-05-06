@@ -4,20 +4,21 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        display: ["'Cormorant Garamond'", "serif"],
-        body: ["'Manrope'", "sans-serif"]
+        display: ["'Bodoni Moda'", "serif"],
+        body: ["'Plus Jakarta Sans'", "sans-serif"]
       },
       colors: {
         brand: {
-          ink: "#14110f",
-          gold: "#ab8f53",
-          sand: "#f5efe4",
-          rose: "#d8c0b7",
-          stone: "#d3cabf"
+          ink: "#101010",
+          gold: "#b66a3c",
+          sand: "#fffaf2",
+          rose: "#9b1232",
+          stone: "#d8d0c4",
+          olive: "#3f5942"
         }
       },
       boxShadow: {
-        soft: "0 12px 40px -18px rgba(17, 17, 17, 0.45)"
+        soft: "0 24px 70px -44px rgba(16, 16, 16, 0.7)"
       },
       keyframes: {
         rise: {
