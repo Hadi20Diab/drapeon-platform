@@ -15,6 +15,20 @@ export interface CatalogProduct {
   colorOptions: string[];
 }
 
+export interface AuthUser {
+  id: string;
+  email: string;
+  role: "USER" | "DESIGNER" | "ADMIN";
+}
+
+export interface AuthSession {
+  user: AuthUser;
+  tokens: {
+    accessToken: string;
+    refreshToken: string;
+  };
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   data: T;
@@ -171,8 +185,34 @@ function extractData<T>(payload: ApiEnvelope<T> | T): T {
     : (payload as T);
 }
 
+function apiBaseUrl(): string {
+  return import.meta.env.PUBLIC_API_URL ?? "http://localhost:4000";
+}
+
+async function requestApi<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${apiBaseUrl()}/api${path}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {})
+    }
+  });
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const message =
+      payload?.message ??
+      payload?.error ??
+      (Array.isArray(payload?.errors) ? payload.errors.join(", ") : null) ??
+      "Request failed";
+    throw new Error(message);
+  }
+
+  return extractData<T>(payload);
+}
+
 export async function fetchCatalogProducts(limit = 24): Promise<CatalogProduct[]> {
-  const apiBase = import.meta.env.PUBLIC_API_URL ?? "http://localhost:4000";
+  const apiBase = apiBaseUrl();
   const endpoint = `${apiBase}/api/products?limit=${limit}`;
 
   try {
@@ -195,7 +235,7 @@ export async function fetchCatalogProducts(limit = 24): Promise<CatalogProduct[]
 }
 
 export async function fetchProductDetails(id: string): Promise<CatalogProduct | null> {
-  const apiBase = import.meta.env.PUBLIC_API_URL ?? "http://localhost:4000";
+  const apiBase = apiBaseUrl();
 
   try {
     const response = await fetch(`${apiBase}/api/products/${id}`);
@@ -208,4 +248,31 @@ export async function fetchProductDetails(id: string): Promise<CatalogProduct | 
   } catch {
     return null;
   }
+}
+
+export async function loginUser(payload: {
+  email: string;
+  password: string;
+}): Promise<AuthSession> {
+  return requestApi<AuthSession>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function registerUser(payload: {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  role: "USER" | "DESIGNER";
+}): Promise<AuthSession> {
+  return requestApi<AuthSession>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function persistAuthSession(session: AuthSession): void {
+  localStorage.setItem("drapeon.auth", JSON.stringify(session));
 }

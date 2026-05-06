@@ -24,13 +24,16 @@ export const SiteHeader = component$(() => {
           <a href="/admin/dashboard" class="transition hover:text-brand-gold">
             Admin
           </a>
+          <a href="/auth" class="transition hover:text-brand-gold">
+            Sign In
+          </a>
         </nav>
 
         <a
-          href="/assistant"
+          href="/auth"
           class="btn-primary px-4 py-2"
         >
-          Style Me
+          Join
         </a>
       </div>
     </header>
