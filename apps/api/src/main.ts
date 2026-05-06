@@ -15,7 +15,12 @@ async function bootstrap(): Promise<void> {
   const configService = app.get(ConfigService);
   const apiPrefix = configService.get<string>("API_PREFIX", "api");
   const port = configService.get<number>("PORT", 4000);
+  const webOrigin = configService.get<string>("WEB_ORIGIN", "http://localhost:5173");
 
+  app.enableCors({
+    origin: [webOrigin, "http://localhost:5174"],
+    credentials: true
+  });
   app.setGlobalPrefix(apiPrefix);
   app.useGlobalPipes(
     new ValidationPipe({

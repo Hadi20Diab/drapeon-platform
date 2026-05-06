@@ -4,6 +4,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(4000),
   API_PREFIX: z.string().min(1).default("api"),
+  WEB_ORIGIN: z.string().url().optional(),
   DATABASE_URL: z.string().url(),
   DIRECT_URL: z.string().url().optional(),
   JWT_ACCESS_SECRET: z.string().min(32),
