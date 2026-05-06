@@ -18,6 +18,9 @@ const swatchClassByColor: Record<string, string> = {
 };
 
 export const ProductCard = component$<ProductCardProps>(({ product }) => {
+  const sizes = Array.isArray(product.sizeOptions) ? product.sizeOptions : [];
+  const colors = Array.isArray(product.colorOptions) ? product.colorOptions : [];
+
   return (
     <article class="group border-b border-brand-ink/10 bg-transparent pb-5 transition duration-500 hover:-translate-y-1">
       <div class="image-sheen relative aspect-[4/5] overflow-hidden bg-brand-ink">
@@ -53,15 +56,16 @@ export const ProductCard = component$<ProductCardProps>(({ product }) => {
         </div>
 
         <div class="flex flex-wrap items-center justify-between gap-3 text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-brand-ink/60">
-          <span>{product.sizeOptions.slice(0, 4).join(" / ")}</span>
+          <span>{sizes.length > 0 ? sizes.slice(0, 4).join(" / ") : "One size"}</span>
           <div class="flex items-center gap-1.5">
-            {product.colorOptions.slice(0, 3).map((color) => (
+            {colors.slice(0, 3).map((color) => (
               <span
                 key={color}
                 class={`h-3 w-3 border border-brand-ink/20 ${swatchClassByColor[color] ?? "bg-brand-olive"}`}
                 title={color}
               />
             ))}
+            {colors.length === 0 && <span class="text-[0.62rem] text-brand-ink/50">N/A</span>}
           </div>
         </div>
       </div>

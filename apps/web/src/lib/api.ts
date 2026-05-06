@@ -21,6 +21,14 @@ interface ProductListPayload {
   items: CatalogProduct[];
 }
 
+function normalizeProduct(product: CatalogProduct): CatalogProduct {
+  return {
+    ...product,
+    sizeOptions: Array.isArray(product.sizeOptions) ? product.sizeOptions : [],
+    colorOptions: Array.isArray(product.colorOptions) ? product.colorOptions : []
+  };
+}
+
 export const FALLBACK_PRODUCTS: CatalogProduct[] = [
   {
     id: "fallback-1",
@@ -74,7 +82,7 @@ export async function fetchCatalogProducts(limit = 8): Promise<CatalogProduct[]>
       return FALLBACK_PRODUCTS;
     }
 
-    return payload.data.items;
+    return payload.data.items.map(normalizeProduct);
   } catch {
     return FALLBACK_PRODUCTS;
   }
