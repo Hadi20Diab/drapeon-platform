@@ -22,7 +22,10 @@ export const ProductCard = component$<ProductCardProps>(({ product }) => {
   const colors = Array.isArray(product.colorOptions) ? product.colorOptions : [];
 
   return (
-    <article class="group border-b border-brand-ink/10 bg-transparent pb-5 transition duration-500 hover:-translate-y-1">
+    <a
+      href={`/catalog/${product.id}`}
+      class="group block border-b border-brand-ink/10 bg-transparent pb-5 transition duration-500 hover:-translate-y-1"
+    >
       <div class="image-sheen relative aspect-[4/5] overflow-hidden bg-brand-ink">
         <img
           src={
@@ -38,12 +41,11 @@ export const ProductCard = component$<ProductCardProps>(({ product }) => {
         <span class="absolute left-3 top-3 bg-brand-sand px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-brand-ink">
           {product.category}
         </span>
-        <a
-          href={`/catalog?product=${product.id}`}
+        <span
           class="absolute bottom-3 right-3 bg-brand-ink px-4 py-3 text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-brand-sand opacity-0 transition group-hover:opacity-100"
         >
           View
-        </a>
+        </span>
       </div>
 
       <div class="space-y-4 pt-4">
@@ -69,7 +71,6 @@ export const ProductCard = component$<ProductCardProps>(({ product }) => {
           </div>
         </div>
       </div>
-    </article>
+    </a>
   );
 });
-
