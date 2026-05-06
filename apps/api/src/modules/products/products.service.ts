@@ -87,6 +87,10 @@ export class ProductsService {
             take: 1,
             orderBy: { sortOrder: "asc" }
           },
+          variants: {
+            where: { isActive: true },
+            orderBy: [{ sizeLabel: "asc" }, { color: "asc" }]
+          },
           designer: {
             select: {
               id: true,
