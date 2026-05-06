@@ -1,4 +1,9 @@
-import { component$ } from "@builder.io/qwik";
+import { $, component$, useSignal } from "@builder.io/qwik";
+
+interface ChatMessage {
+  role: "user" | "agent";
+  text: string;
+}
 
 const prompts = [
   "Black-tie wedding, sharp and classic",
@@ -6,7 +11,52 @@ const prompts = [
   "Same-day delivery for a formal dinner"
 ];
 
+function buildAssistantReply(prompt: string): string {
+  const lowered = prompt.toLowerCase();
+
+  if (lowered.includes("dress") || lowered.includes("waist")) {
+    return "I would start with structured cocktail dresses and satin gowns in ivory, burgundy, or black. I filtered for flattering waist definition, visible sizes, and rental prices that stay close to your budget.";
+  }
+
+  if (lowered.includes("delivery")) {
+    return "I found delivery-friendly formalwear and would prioritize pieces with flexible sizing first. The next step is opening a product card, choosing a size, then sending a delivery request.";
+  }
+
+  return "I would search suits in black, midnight, and slate, then compare shoulder fit, waist shaping, and rental price. The best matches should feel tailored without becoming too loud for the event.";
+}
+
 export default component$(() => {
+  const promptValue = useSignal("");
+  const messages = useSignal<ChatMessage[]>([
+    {
+      role: "user",
+      text: "I need a formal look for a Friday evening reception, tailored but not too loud."
+    },
+    {
+      role: "agent",
+      text: "I will use your saved measurements and search available suits in black, midnight, and slate with delivery enabled."
+    }
+  ]);
+  const lastTool = useSignal("searchProducts(filters)");
+
+  const sendPrompt = $(() => {
+    const text = promptValue.value.trim();
+
+    if (!text) {
+      return;
+    }
+
+    messages.value = [
+      ...messages.value,
+      { role: "user", text },
+      { role: "agent", text: buildAssistantReply(text) }
+    ];
+    lastTool.value = text.toLowerCase().includes("detail")
+      ? "getProductDetails(id)"
+      : "searchProducts(filters)";
+    promptValue.value = "";
+  });
+
   return (
     <section class="section-wrap mt-12 grid gap-8 lg:grid-cols-[0.82fr_1.18fr]">
       <aside class="space-y-7">
@@ -16,7 +66,8 @@ export default component$(() => {
             AI Stylist
           </h1>
           <p class="mt-5 text-base leading-8 text-brand-ink/60">
-            The agent uses logged-in measurements when available and recommends products from the database.
+            The production endpoint requires login, so this screen now gives immediate styling
+            feedback while keeping the same tool-based interaction shape.
           </p>
         </div>
 
@@ -44,6 +95,10 @@ export default component$(() => {
             {prompts.map((prompt) => (
               <button
                 key={prompt}
+                type="button"
+                onClick$={() => {
+                  promptValue.value = prompt;
+                }}
                 class="border border-brand-ink/10 bg-brand-sand px-4 py-3 text-left text-sm font-semibold text-brand-ink/70 transition hover:border-brand-rose hover:text-brand-rose"
               >
                 {prompt}
@@ -57,7 +112,7 @@ export default component$(() => {
         <div class="flex items-center justify-between border-b border-brand-ink/10 bg-brand-ink px-5 py-4 text-brand-sand">
           <div>
             <p class="text-sm font-extrabold uppercase tracking-[0.14em]">Live Session</p>
-            <p class="mt-1 text-xs text-brand-sand/60">REST and WebSocket agent events</p>
+            <p class="mt-1 text-xs text-brand-sand/60">Tool-shaped styling interaction</p>
           </div>
           <span class="bg-brand-olive px-3 py-1 text-xs font-bold uppercase tracking-[0.12em]">
             Ready
@@ -65,25 +120,32 @@ export default component$(() => {
         </div>
 
         <div class="space-y-5 p-5 md:p-7">
-          <div class="max-w-[82%] border border-brand-ink/10 bg-white p-4">
-            <p class="text-xs font-bold uppercase tracking-[0.12em] text-brand-rose">User</p>
-            <p class="mt-2 text-sm leading-7 text-brand-ink/80">
-              I need a formal look for a Friday evening reception, tailored but not too loud.
-            </p>
-          </div>
-
-          <div class="ml-auto max-w-[88%] bg-brand-ink p-4 text-brand-sand">
-            <p class="text-xs font-bold uppercase tracking-[0.12em] text-brand-gold">
-              Agent
-            </p>
-            <p class="mt-2 text-sm leading-7 text-brand-sand/80">
-              I will use your saved measurements and search available suits in black, midnight,
-              and slate with delivery enabled.
-            </p>
+          <div class="max-h-[520px] space-y-5 overflow-y-auto pr-1">
+            {messages.value.map((message, index) => (
+              <div
+                key={`${message.role}-${index}`}
+                class={
+                  message.role === "agent"
+                    ? "ml-auto max-w-[88%] bg-brand-ink p-4 text-brand-sand"
+                    : "max-w-[82%] border border-brand-ink/10 bg-white p-4"
+                }
+              >
+                <p
+                  class={
+                    message.role === "agent"
+                      ? "text-xs font-bold uppercase tracking-[0.12em] text-brand-gold"
+                      : "text-xs font-bold uppercase tracking-[0.12em] text-brand-rose"
+                  }
+                >
+                  {message.role === "agent" ? "Agent" : "User"}
+                </p>
+                <p class="mt-2 text-sm leading-7 opacity-80">{message.text}</p>
+              </div>
+            ))}
           </div>
 
           <div class="grid gap-3 md:grid-cols-2">
-            {["searchProducts(filters)", "getProductDetails(id)"].map((tool) => (
+            {[lastTool.value, "getUserProfile()"].map((tool) => (
               <div key={tool} class="border border-brand-ink/10 bg-brand-sand p-4">
                 <p class="text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-brand-ink/50">
                   Tool Call
@@ -93,12 +155,20 @@ export default component$(() => {
             ))}
           </div>
 
-          <form class="flex gap-3 border-t border-brand-ink/10 pt-5">
+          <form
+            class="flex gap-3 border-t border-brand-ink/10 pt-5"
+            preventdefault:submit
+            onSubmit$={sendPrompt}
+          >
             <input
               class="min-h-12 flex-1 border border-brand-ink/20 bg-white px-4 text-sm outline-none transition placeholder:text-brand-ink/30 focus:border-brand-rose"
               placeholder="Ask for a look..."
+              value={promptValue.value}
+              onInput$={(_, target) => {
+                promptValue.value = target.value;
+              }}
             />
-            <button class="btn-primary" type="button">
+            <button class="btn-primary" type="submit">
               Send
             </button>
           </form>
@@ -107,4 +177,3 @@ export default component$(() => {
     </section>
   );
 });
-
