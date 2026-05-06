@@ -1,4 +1,4 @@
-import { $, component$, isServer, useSignal, useTask$ } from "@builder.io/qwik";
+import { $, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
 
 import { readCart, removeFromCart, type StoredCommerceItem } from "../../lib/commerce";
 
@@ -6,12 +6,7 @@ export default component$(() => {
   const items = useSignal<StoredCommerceItem[]>([]);
   const total = useSignal(0);
 
-  useTask$(() => {
-    if (isServer) {
-      return;
-    }
-
-    items.value = readCart();
+  useVisibleTask$(() => {items.value = readCart();
     total.value = items.value.reduce(
       (sum, item) => sum + item.rentalPrice * item.quantity,
       0
@@ -103,3 +98,5 @@ export default component$(() => {
     </section>
   );
 });
+
+

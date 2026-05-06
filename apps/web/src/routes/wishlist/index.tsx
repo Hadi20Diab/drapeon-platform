@@ -1,4 +1,4 @@
-import { $, component$, isServer, useSignal, useTask$ } from "@builder.io/qwik";
+import { $, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
 
 import {
   addToCart,
@@ -11,12 +11,7 @@ export default component$(() => {
   const items = useSignal<StoredCommerceItem[]>([]);
   const notice = useSignal("");
 
-  useTask$(() => {
-    if (isServer) {
-      return;
-    }
-
-    items.value = readWishlist();
+  useVisibleTask$(() => {items.value = readWishlist();
   });
 
   const moveToCart = $((item: StoredCommerceItem) => {
@@ -71,3 +66,5 @@ export default component$(() => {
     </section>
   );
 });
+
+

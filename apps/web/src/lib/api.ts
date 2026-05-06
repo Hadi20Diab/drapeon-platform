@@ -46,9 +46,57 @@ export interface TapCheckoutResponse {
 
 export interface DesignerDashboard {
   designerId: string;
+  storeName: string;
+  approvalStatus: string;
+  location: string | null;
   productsCount: number;
   pendingAppointments: number;
   openDeliveries: number;
+  rentalOrdersCount: number;
+  estimatedCommissionRate: number;
+  products: Array<{
+    id: string;
+    title: string;
+    status: string;
+    rentalPrice: number | string;
+    variants: Array<{
+      sizeLabel: string;
+      color: string;
+      stockTotal: number;
+      stockReserved: number;
+    }>;
+  }>;
+  orders: Array<{
+    id: string;
+    status: string;
+    totalAmount: number | string;
+    rentalStartDate: string;
+    rentalEndDate: string;
+    user: {
+      email: string;
+    };
+  }>;
+  appointments: Array<{
+    id: string;
+    status: string;
+    startsAt: string;
+    endsAt: string;
+    product: {
+      title: string;
+    };
+    user: {
+      email: string;
+    };
+  }>;
+  deliveries: Array<{
+    id: string;
+    status: string;
+    deliveryAddress: string;
+    scheduledFor: string | null;
+    user: {
+      email: string;
+    };
+  }>;
 }
 
 export interface AdminDashboard {
@@ -325,16 +373,36 @@ export async function registerUser(payload: {
 }
 
 export function persistAuthSession(session: AuthSession): void {
-  localStorage.setItem("drapeon.auth", JSON.stringify(session));
+  sessionStorage.setItem("drapeon.auth", JSON.stringify(session));
+  localStorage.removeItem("drapeon.auth");
 }
 
 export function readAuthSession(): AuthSession | null {
   try {
-    const raw = localStorage.getItem("drapeon.auth");
-    return raw ? (JSON.parse(raw) as AuthSession) : null;
+    const sessionValue = sessionStorage.getItem("drapeon.auth");
+
+    if (sessionValue) {
+      return JSON.parse(sessionValue) as AuthSession;
+    }
+
+    const legacyLocalValue = localStorage.getItem("drapeon.auth");
+
+    if (!legacyLocalValue) {
+      return null;
+    }
+
+    sessionStorage.setItem("drapeon.auth", legacyLocalValue);
+    localStorage.removeItem("drapeon.auth");
+
+    return JSON.parse(legacyLocalValue) as AuthSession;
   } catch {
     return null;
   }
+}
+
+export function clearAuthSession(): void {
+  sessionStorage.removeItem("drapeon.auth");
+  localStorage.removeItem("drapeon.auth");
 }
 
 export async function createTapCheckout(payload: {

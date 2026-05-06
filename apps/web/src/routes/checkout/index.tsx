@@ -1,4 +1,4 @@
-import { $, component$, isServer, useSignal, useTask$ } from "@builder.io/qwik";
+import { $, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
 
 import { createTapCheckout, readAuthSession, type AuthSession } from "../../lib/api";
 import { readCart, type StoredCommerceItem } from "../../lib/commerce";
@@ -14,12 +14,7 @@ export default component$(() => {
   const error = useSignal("");
   const isSubmitting = useSignal(false);
 
-  useTask$(() => {
-    if (isServer) {
-      return;
-    }
-
-    items.value = readCart();
+  useVisibleTask$(() => {items.value = readCart();
     auth.value = readAuthSession();
 
     if (auth.value) {
@@ -182,3 +177,5 @@ export default component$(() => {
     </section>
   );
 });
+
+
