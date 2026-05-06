@@ -14,7 +14,12 @@ const envSchema = z.object({
   THROTTLE_TTL: z.coerce.number().int().positive().default(60),
   THROTTLE_LIMIT: z.coerce.number().int().positive().default(120),
   GEMINI_API_KEY: z.string().min(8),
-  GEMINI_MODEL: z.string().min(1).default("gemini-3-flash-preview")
+  GEMINI_MODEL: z.string().min(1).default("gemini-3-flash-preview"),
+  TAP_SECRET_KEY: z.string().optional(),
+  TAP_MERCHANT_ID: z.string().optional(),
+  TAP_CURRENCY: z.string().length(3).default("USD"),
+  TAP_REDIRECT_URL: z.string().url().optional(),
+  TAP_POST_URL: z.string().url().optional()
 });
 
 export type EnvVariables = z.infer<typeof envSchema>;

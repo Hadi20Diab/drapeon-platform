@@ -29,6 +29,21 @@ export interface AuthSession {
   };
 }
 
+export interface TapCheckoutResponse {
+  mode: "configuration_required" | "tap_checkout" | "tap_split_checkout";
+  provider: "tap";
+  chargeId?: string;
+  checkoutUrl: string | null;
+  totals: {
+    subtotal: number;
+    commissionRate: number;
+    commissionAmount: number;
+    designerAmount: number;
+    currency: string;
+  };
+  message?: string;
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   data: T;
@@ -275,4 +290,43 @@ export async function registerUser(payload: {
 
 export function persistAuthSession(session: AuthSession): void {
   localStorage.setItem("drapeon.auth", JSON.stringify(session));
+}
+
+export function readAuthSession(): AuthSession | null {
+  try {
+    const raw = localStorage.getItem("drapeon.auth");
+    return raw ? (JSON.parse(raw) as AuthSession) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function createTapCheckout(payload: {
+  items: Array<{
+    productId: string;
+    title: string;
+    unitPrice: number;
+    quantity: number;
+    designerDestinationId?: string;
+  }>;
+  customer: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phoneNumber?: string;
+  };
+}): Promise<TapCheckoutResponse> {
+  const session = readAuthSession();
+
+  if (!session) {
+    throw new Error("Please sign in before checkout.");
+  }
+
+  return requestApi<TapCheckoutResponse>("/payments/tap/checkout", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${session.tokens.accessToken}`
+    },
+    body: JSON.stringify(payload)
+  });
 }

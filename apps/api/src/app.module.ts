@@ -11,6 +11,7 @@ import { BookingsModule } from "./modules/bookings/bookings.module";
 import { DeliveryModule } from "./modules/delivery/delivery.module";
 import { DesignersModule } from "./modules/designers/designers.module";
 import { ProductsModule } from "./modules/products/products.module";
+import { PaymentsModule } from "./modules/payments/payments.module";
 import { UsersModule } from "./modules/users/users.module";
 import { PrismaModule } from "./prisma/prisma.module";
 
@@ -35,6 +36,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     UsersModule,
     DesignersModule,
     ProductsModule,
+    PaymentsModule,
     BookingsModule,
     DeliveryModule,
     AiModule
