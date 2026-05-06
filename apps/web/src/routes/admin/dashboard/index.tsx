@@ -1,4 +1,4 @@
-import { $, component$, isServer, useSignal, useTask$ } from "@builder.io/qwik";
+import { $, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
 
 import {
   approveDesigner,
@@ -15,12 +15,7 @@ export default component$(() => {
     dashboard.value = await fetchAdminDashboard();
   });
 
-  useTask$(async () => {
-    if (isServer) {
-      return;
-    }
-
-    try {
+  useVisibleTask$(async () => {try {
       await loadDashboard();
     } catch {
       error.value = "Sign in as an admin to load live platform operations.";
@@ -135,6 +130,68 @@ export default component$(() => {
           </div>
         </aside>
       </div>
+
+      <div class="grid gap-6 xl:grid-cols-[1fr_1fr_0.8fr]">
+        <article class="luxury-card overflow-hidden">
+          <div class="border-b border-brand-ink/10 px-5 py-4">
+            <p class="text-sm font-extrabold uppercase tracking-[0.14em] text-brand-ink">
+              User Management
+            </p>
+          </div>
+          {(dashboard.value?.recentUsers ?? []).map((user) => (
+            <div key={user.id} class="grid gap-3 border-b border-brand-ink/10 px-5 py-4 last:border-0 md:grid-cols-[1fr_auto]">
+              <div>
+                <p class="font-semibold text-brand-ink">{user.email}</p>
+                <p class="mt-1 text-sm text-brand-ink/50">{user.role}</p>
+              </div>
+              <span class="self-start bg-brand-sand px-3 py-1 text-xs font-bold text-brand-ink/70">
+                {user.status}
+              </span>
+            </div>
+          ))}
+          {!dashboard.value && (
+            <p class="px-5 py-6 text-sm font-semibold text-brand-ink/60">
+              User rows appear after admin sign in.
+            </p>
+          )}
+        </article>
+
+        <article class="luxury-card overflow-hidden">
+          <div class="border-b border-brand-ink/10 px-5 py-4">
+            <p class="text-sm font-extrabold uppercase tracking-[0.14em] text-brand-ink">
+              Payment Operations
+            </p>
+          </div>
+          {[
+            ["Marketplace commission", "7.5%"],
+            ["Provider", "Tap Payments"],
+            ["Split payout", "Destination onboarding required"],
+            ["Webhook", "/api/payments/tap/webhook"]
+          ].map(([label, value]) => (
+            <div key={label} class="border-b border-brand-ink/10 px-5 py-4 last:border-0">
+              <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-brand-ink/50">
+                {label}
+              </p>
+              <p class="mt-2 font-semibold text-brand-ink">{value}</p>
+            </div>
+          ))}
+        </article>
+
+        <aside class="glass-panel p-5">
+          <p class="text-sm font-extrabold uppercase tracking-[0.14em] text-brand-ink">
+            Admin Actions
+          </p>
+          <div class="mt-5 grid gap-3">
+            {["Review designers", "Monitor rentals", "Check payment webhooks", "Audit admin activity"].map((action) => (
+              <button key={action} type="button" class="border border-brand-ink/10 bg-white/70 px-4 py-3 text-left text-sm font-semibold text-brand-ink/70">
+                {action}
+              </button>
+            ))}
+          </div>
+        </aside>
+      </div>
     </section>
   );
 });
+
+

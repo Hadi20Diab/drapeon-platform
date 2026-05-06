@@ -39,14 +39,23 @@ export class DesignersService {
   async getDashboard(userId: string) {
     const designer = await this.prisma.designer.findUnique({
       where: { userId },
-      select: { id: true }
+      select: { id: true, storeName: true, approvalStatus: true, location: true }
     });
 
     if (!designer) {
       throw new NotFoundException("Designer profile was not found");
     }
 
-    const [productsCount, pendingAppointments, openDeliveries] = await this.prisma.$transaction([
+    const [
+      productsCount,
+      pendingAppointments,
+      openDeliveries,
+      rentalOrdersCount,
+      products,
+      orders,
+      appointments,
+      deliveries
+    ] = await this.prisma.$transaction([
       this.prisma.product.count({
         where: { designerId: designer.id }
       }),
@@ -70,14 +79,99 @@ export class DesignersService {
             ]
           }
         }
+      }),
+      this.prisma.rentalOrder.count({
+        where: { designerId: designer.id }
+      }),
+      this.prisma.product.findMany({
+        where: { designerId: designer.id },
+        take: 6,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          rentalPrice: true,
+          variants: {
+            select: {
+              sizeLabel: true,
+              color: true,
+              stockTotal: true,
+              stockReserved: true
+            }
+          }
+        }
+      }),
+      this.prisma.rentalOrder.findMany({
+        where: { designerId: designer.id },
+        take: 6,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          status: true,
+          totalAmount: true,
+          rentalStartDate: true,
+          rentalEndDate: true,
+          user: {
+            select: {
+              email: true
+            }
+          }
+        }
+      }),
+      this.prisma.booking.findMany({
+        where: { designerId: designer.id },
+        take: 6,
+        orderBy: { startsAt: "asc" },
+        select: {
+          id: true,
+          status: true,
+          startsAt: true,
+          endsAt: true,
+          product: {
+            select: {
+              title: true
+            }
+          },
+          user: {
+            select: {
+              email: true
+            }
+          }
+        }
+      }),
+      this.prisma.deliveryRequest.findMany({
+        where: { designerId: designer.id },
+        take: 6,
+        orderBy: { requestedAt: "desc" },
+        select: {
+          id: true,
+          status: true,
+          deliveryAddress: true,
+          scheduledFor: true,
+          user: {
+            select: {
+              email: true
+            }
+          }
+        }
       })
     ]);
 
     return {
       designerId: designer.id,
+      storeName: designer.storeName,
+      approvalStatus: designer.approvalStatus,
+      location: designer.location,
       productsCount,
       pendingAppointments,
-      openDeliveries
+      openDeliveries,
+      rentalOrdersCount,
+      estimatedCommissionRate: 0.075,
+      products,
+      orders,
+      appointments,
+      deliveries
     };
   }
 
