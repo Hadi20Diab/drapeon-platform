@@ -27,7 +27,7 @@ export const ProductCard = component$<ProductCardProps>(({ product }) => {
         <img
           src={
             product.imageUrl ??
-            "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=80"
+            "https://www.reetaus.com/cdn/shop/products/M148BC_ReetAus_Men_sdrapedshirt_Black_grey_2_1400x.jpg?v=1666689003"
           }
           alt={product.title}
           width={960}
