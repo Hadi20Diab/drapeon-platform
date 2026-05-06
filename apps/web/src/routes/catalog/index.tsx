@@ -49,28 +49,56 @@ function matchesProduct(
 
 export default component$(() => {
   const products = useCatalogProducts();
+  const searchQuery = useSignal("");
   const selectedCategory = useSignal("");
   const selectedSize = useSignal("");
   const selectedColor = useSignal("");
   const selectedRental = useSignal("");
   const sortMode = useSignal<SortMode>("editorial");
+  const page = useSignal(1);
+  const pageSize = 12;
+
+  const availableSizes = useComputed$(() =>
+    [...new Set(products.value.flatMap((product) => product.sizeOptions))].sort()
+  );
+  const availableColors = useComputed$(() =>
+    [...new Set(products.value.flatMap((product) => product.colorOptions))].sort()
+  );
 
   const filteredProducts = useComputed$(() => {
-    const visible = products.value.filter((product) =>
-      matchesProduct(
-        product,
-        selectedCategory.value,
-        selectedSize.value,
-        selectedColor.value,
-        selectedRental.value
-      )
-    );
+    const query = searchQuery.value.trim().toLowerCase();
+    const visible = products.value.filter((product) => {
+      const searchMatch =
+        !query ||
+        product.title.toLowerCase().includes(query) ||
+        product.designer.storeName.toLowerCase().includes(query);
+
+      return (
+        searchMatch &&
+        matchesProduct(
+          product,
+          selectedCategory.value,
+          selectedSize.value,
+          selectedColor.value,
+          selectedRental.value
+        )
+      );
+    });
 
     if (sortMode.value === "price") {
       return [...visible].sort((a, b) => a.rentalPrice - b.rentalPrice);
     }
 
     return visible;
+  });
+  const totalPages = useComputed$(() =>
+    Math.max(1, Math.ceil(filteredProducts.value.length / pageSize))
+  );
+  const paginatedProducts = useComputed$(() => {
+    const safePage = Math.min(page.value, totalPages.value);
+    const start = (safePage - 1) * pageSize;
+
+    return filteredProducts.value.slice(start, start + pageSize);
   });
 
   return (
@@ -102,7 +130,9 @@ export default component$(() => {
                 selectedSize.value = "";
                 selectedColor.value = "";
                 selectedRental.value = "";
+                searchQuery.value = "";
                 sortMode.value = "editorial";
+                page.value = 1;
               }}
             >
               Reset
@@ -122,6 +152,7 @@ export default component$(() => {
                     onClick$={() => {
                       selectedCategory.value =
                         selectedCategory.value === filter.value ? "" : filter.value;
+                      page.value = 1;
                     }}
                     class={`border px-3 py-2 text-xs font-bold transition ${
                       selectedCategory.value === filter.value
@@ -140,12 +171,13 @@ export default component$(() => {
                 Size
               </p>
               <div class="mt-3 flex flex-wrap gap-2">
-                {filters.size.map((size) => (
+                {availableSizes.value.map((size) => (
                   <button
                     key={size}
                     type="button"
                     onClick$={() => {
                       selectedSize.value = selectedSize.value === size ? "" : size;
+                      page.value = 1;
                     }}
                     class={`border px-3 py-2 text-xs font-bold transition ${
                       selectedSize.value === size
@@ -164,12 +196,13 @@ export default component$(() => {
                 Color
               </p>
               <div class="mt-3 flex flex-wrap gap-2">
-                {filters.color.map((color) => (
+                {availableColors.value.map((color) => (
                   <button
                     key={color}
                     type="button"
                     onClick$={() => {
                       selectedColor.value = selectedColor.value === color ? "" : color;
+                      page.value = 1;
                     }}
                     class={`border px-3 py-2 text-xs font-bold transition ${
                       selectedColor.value === color
@@ -195,6 +228,7 @@ export default component$(() => {
                     onClick$={() => {
                       selectedRental.value =
                         selectedRental.value === filter.value ? "" : filter.value;
+                      page.value = 1;
                     }}
                     class={`border px-3 py-2 text-xs font-bold transition ${
                       selectedRental.value === filter.value
@@ -215,6 +249,15 @@ export default component$(() => {
             <p class="text-sm font-semibold text-brand-ink/60">
               Showing {filteredProducts.value.length} curated pieces
             </p>
+            <input
+              class="min-h-11 w-full border border-brand-ink/20 bg-white px-4 text-sm font-semibold outline-none placeholder:text-brand-ink/30 focus:border-brand-rose md:w-[320px]"
+              placeholder="Search by product or designer"
+              value={searchQuery.value}
+              onInput$={(_, target) => {
+                searchQuery.value = target.value;
+                page.value = 1;
+              }}
+            />
             <div class="flex overflow-hidden border border-brand-ink/20 text-xs font-extrabold uppercase tracking-[0.12em]">
               {[
                 { label: "Editorial", value: "editorial" as const },
@@ -226,6 +269,7 @@ export default component$(() => {
                   type="button"
                   onClick$={() => {
                     sortMode.value = mode.value;
+                    page.value = 1;
                   }}
                   class={
                     sortMode.value === mode.value
@@ -241,7 +285,7 @@ export default component$(() => {
 
           {filteredProducts.value.length > 0 ? (
             <div class="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
-              {filteredProducts.value.map((product) => (
+              {paginatedProducts.value.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>
@@ -251,6 +295,52 @@ export default component$(() => {
               <p class="mt-3 text-sm leading-6 text-brand-ink/60">
                 Clear one filter or reset the catalog to see more seeded inventory.
               </p>
+            </div>
+          )}
+
+          {filteredProducts.value.length > pageSize && (
+            <div class="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-brand-ink/10 pt-6">
+              <p class="text-sm font-semibold text-brand-ink/60">
+                Page {Math.min(page.value, totalPages.value)} of {totalPages.value}
+              </p>
+              <div class="flex items-center gap-2">
+                <button
+                  class="btn-secondary disabled:opacity-40"
+                  type="button"
+                  disabled={page.value <= 1}
+                  onClick$={() => {
+                    page.value = Math.max(1, page.value - 1);
+                  }}
+                >
+                  Previous
+                </button>
+                {Array.from({ length: totalPages.value }, (_, index) => index + 1).map((pageNumber) => (
+                  <button
+                    key={pageNumber}
+                    type="button"
+                    onClick$={() => {
+                      page.value = pageNumber;
+                    }}
+                    class={
+                      page.value === pageNumber
+                        ? "h-11 w-11 bg-brand-ink text-sm font-extrabold text-brand-sand"
+                        : "h-11 w-11 border border-brand-ink/20 text-sm font-extrabold text-brand-ink/70"
+                    }
+                  >
+                    {pageNumber}
+                  </button>
+                ))}
+                <button
+                  class="btn-secondary disabled:opacity-40"
+                  type="button"
+                  disabled={page.value >= totalPages.value}
+                  onClick$={() => {
+                    page.value = Math.min(totalPages.value, page.value + 1);
+                  }}
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </div>
