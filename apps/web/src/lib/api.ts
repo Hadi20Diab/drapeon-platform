@@ -44,6 +44,42 @@ export interface TapCheckoutResponse {
   message?: string;
 }
 
+export interface DesignerDashboard {
+  designerId: string;
+  productsCount: number;
+  pendingAppointments: number;
+  openDeliveries: number;
+}
+
+export interface AdminDashboard {
+  metrics: {
+    usersCount: number;
+    pendingDesignersCount: number;
+    ordersCount: number;
+    deliveriesCount: number;
+  };
+  pendingDesigners: Array<{
+    id: string;
+    storeName: string;
+    location: string | null;
+    user: {
+      email: string;
+    };
+  }>;
+  recentUsers: Array<{
+    id: string;
+    email: string;
+    role: string;
+    status: string;
+  }>;
+  auditLogs: Array<{
+    id: string;
+    action: string;
+    targetType: string;
+    targetId: string | null;
+  }>;
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   data: T;
@@ -328,5 +364,29 @@ export async function createTapCheckout(payload: {
       Authorization: `Bearer ${session.tokens.accessToken}`
     },
     body: JSON.stringify(payload)
+  });
+}
+
+function authHeaders(): Record<string, string> {
+  const session = readAuthSession();
+  return session ? { Authorization: `Bearer ${session.tokens.accessToken}` } : {};
+}
+
+export async function fetchDesignerDashboard(): Promise<DesignerDashboard> {
+  return requestApi<DesignerDashboard>("/designers/dashboard", {
+    headers: authHeaders()
+  });
+}
+
+export async function fetchAdminDashboard(): Promise<AdminDashboard> {
+  return requestApi<AdminDashboard>("/admin/dashboard", {
+    headers: authHeaders()
+  });
+}
+
+export async function approveDesigner(designerId: string): Promise<void> {
+  await requestApi(`/admin/designers/${designerId}/approve`, {
+    method: "PATCH",
+    headers: authHeaders()
   });
 }

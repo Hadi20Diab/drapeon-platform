@@ -1,10 +1,6 @@
-import { component$ } from "@builder.io/qwik";
+import { component$, isServer, useSignal, useTask$ } from "@builder.io/qwik";
 
-const metrics = [
-  { label: "Active pieces", value: "168", tone: "text-brand-ink" },
-  { label: "Appointments", value: "220", tone: "text-brand-rose" },
-  { label: "Rental orders", value: "95", tone: "text-brand-olive" }
-];
+import { fetchDesignerDashboard, type DesignerDashboard } from "../../../lib/api";
 
 const tasks = [
   "Approve fitting request for Friday 18:00",
@@ -13,6 +9,39 @@ const tasks = [
 ];
 
 export default component$(() => {
+  const dashboard = useSignal<DesignerDashboard | null>(null);
+  const error = useSignal("");
+
+  useTask$(async () => {
+    if (isServer) {
+      return;
+    }
+
+    try {
+      dashboard.value = await fetchDesignerDashboard();
+    } catch {
+      error.value = "Sign in as a designer to load live dashboard metrics.";
+    }
+  });
+
+  const metrics = [
+    {
+      label: "Active pieces",
+      value: dashboard.value?.productsCount ?? "-",
+      tone: "text-brand-ink"
+    },
+    {
+      label: "Appointments",
+      value: dashboard.value?.pendingAppointments ?? "-",
+      tone: "text-brand-rose"
+    },
+    {
+      label: "Open deliveries",
+      value: dashboard.value?.openDeliveries ?? "-",
+      tone: "text-brand-olive"
+    }
+  ];
+
   return (
     <section class="section-wrap mt-12 space-y-8">
       <div class="grid gap-8 border-b border-brand-ink/10 pb-8 lg:grid-cols-[1fr_360px] lg:items-end">
@@ -26,6 +55,12 @@ export default component$(() => {
           Add Product
         </a>
       </div>
+
+      {error.value && (
+        <p class="border border-brand-rose/30 bg-brand-rose/10 px-4 py-3 text-sm font-semibold text-brand-rose">
+          {error.value}
+        </p>
+      )}
 
       <div class="grid gap-5 md:grid-cols-3">
         {metrics.map((metric) => (
@@ -45,14 +80,18 @@ export default component$(() => {
               Inventory Focus
             </p>
           </div>
-          {["Midnight tuxedo", "Pearl satin gown", "Burgundy ceremony suit"].map((item, index) => (
+          {["Product management", "Orders", "Appointments"].map((item, index) => (
             <div key={item} class="grid grid-cols-[1fr_auto] gap-4 border-b border-brand-ink/10 px-5 py-4 last:border-0">
               <div>
                 <p class="font-semibold text-brand-ink">{item}</p>
-                <p class="mt-1 text-sm text-brand-ink/50">Variant health and availability coverage</p>
+                <p class="mt-1 text-sm text-brand-ink/50">
+                  {index === 0 && "Upload images, variants, pricing, and availability."}
+                  {index === 1 && "Track rental orders and Tap settlement readiness."}
+                  {index === 2 && "Review fitting requests and confirmation status."}
+                </p>
               </div>
               <span class="self-start bg-brand-sand px-3 py-1 text-xs font-bold text-brand-ink/70">
-                {index + 3} sizes
+                Open
               </span>
             </div>
           ))}
@@ -75,4 +114,3 @@ export default component$(() => {
     </section>
   );
 });
-
