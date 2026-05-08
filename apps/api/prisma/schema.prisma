@@ -145,6 +145,12 @@ model Designer {
   slug           String                 @unique
   bio            String
   location       String?
+  stripeAccountId String?               @unique
+  stripeOnboardingComplete Boolean      @default(false)
+  stripeChargesEnabled Boolean          @default(false)
+  stripePayoutsEnabled Boolean          @default(false)
+  stripeDetailsSubmitted Boolean        @default(false)
+  stripeAccountCreatedAt DateTime?
   approvalStatus DesignerApprovalStatus @default(PENDING)
   approvedById   String?
   approvedAt     DateTime?
@@ -158,6 +164,7 @@ model Designer {
   deliveries     DeliveryRequest[]
 
   @@index([approvalStatus])
+  @@index([stripeAccountId])
 }
 
 model Product {
