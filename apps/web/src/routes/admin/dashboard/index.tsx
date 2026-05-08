@@ -1,197 +1,175 @@
-import { $, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
+import { component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
 
-import {
-  approveDesigner,
-  fetchAdminDashboard,
-  type AdminDashboard
-} from "../../../lib/api";
+import { AdminEmptyState, AdminShell, AdminSkeleton, compactNumber, money, statusClass } from "../../../components/admin/admin-shell";
+import { fetchAdminDashboard, type AdminDashboard } from "../../../lib/api";
 
 export default component$(() => {
   const dashboard = useSignal<AdminDashboard | null>(null);
   const error = useSignal("");
-  const notice = useSignal("");
 
-  const loadDashboard = $(async () => {
-    dashboard.value = await fetchAdminDashboard();
-  });
-
-  useVisibleTask$(async () => {try {
-      await loadDashboard();
-    } catch {
-      error.value = "Sign in as an admin to load live platform operations.";
-    }
-  });
-
-  const approve = $(async (designerId: string) => {
-    error.value = "";
-    notice.value = "";
-
+  useVisibleTask$(async () => {
     try {
-      await approveDesigner(designerId);
-      await loadDashboard();
-      notice.value = "Designer approved.";
-    } catch {
-      error.value = "Could not approve designer with the current session.";
+      dashboard.value = await fetchAdminDashboard();
+    } catch (caught) {
+      error.value = caught instanceof Error ? caught.message : "Sign in as an admin to load the control center.";
     }
   });
 
+  const maxRevenue = Math.max(...(dashboard.value?.revenueSeries ?? []).map((row) => row.value), 1);
+  const maxUsers = Math.max(...(dashboard.value?.userGrowthSeries ?? []).map((row) => row.value), 1);
   const metrics = [
-    { label: "Users", value: dashboard.value?.metrics.usersCount ?? "-" },
-    {
-      label: "Designers Pending",
-      value: dashboard.value?.metrics.pendingDesignersCount ?? "-"
-    },
-    { label: "Orders", value: dashboard.value?.metrics.ordersCount ?? "-" },
-    { label: "Deliveries", value: dashboard.value?.metrics.deliveriesCount ?? "-" }
+    { label: "Total Users", value: compactNumber(dashboard.value?.metrics.totalUsers), caption: `${dashboard.value?.growth.userGrowthRate ?? 0}% this month` },
+    { label: "Active Designers", value: compactNumber(dashboard.value?.metrics.activeDesigners), caption: "approved vendor stores" },
+    { label: "Gross Revenue", value: money(dashboard.value?.metrics.revenue), caption: `${dashboard.value?.growth.revenueGrowthRate ?? 0}% revenue growth` },
+    { label: "Pending Approvals", value: compactNumber(dashboard.value?.metrics.pendingApprovals), caption: "designer decisions" },
+    { label: "Rentals Today", value: compactNumber(dashboard.value?.metrics.rentalsToday), caption: "new rental flow" },
+    { label: "Platform Fees", value: money(dashboard.value?.metrics.platformRevenue), caption: "7.5% marketplace take" }
   ];
 
   return (
-    <section class="section-wrap mt-12 space-y-8">
-      <div class="grid gap-8 border-b border-brand-ink/10 pb-8 lg:grid-cols-[1fr_420px] lg:items-end">
-        <div>
-          <p class="eyebrow">Admin Command Center</p>
-          <h1 class="mt-2 font-display text-6xl leading-none text-brand-ink md:text-7xl">
-            Operations
-          </h1>
-        </div>
-        <div class="glass-panel p-4">
-          <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-brand-ink/50">
-            System Health
-          </p>
-          <p class="mt-2 text-xl font-extrabold text-brand-olive">Healthy</p>
-        </div>
-      </div>
-
+    <AdminShell
+      active="Overview"
+      eyebrow="Admin Command"
+      title="Marketplace Control Room"
+      subtitle="A live executive surface for trust, payouts, moderation, customer activity, and operational pressure across Vesture."
+      action="Review Designers"
+      actionHref="/admin/designers"
+    >
       {error.value && (
-        <p class="border border-brand-rose/30 bg-brand-rose/10 px-4 py-3 text-sm font-semibold text-brand-rose">
-          {error.value}
-        </p>
-      )}
-      {notice.value && (
-        <p class="border border-brand-olive/30 bg-brand-olive/10 px-4 py-3 text-sm font-semibold text-brand-olive">
-          {notice.value}
-        </p>
+        <p class="border border-brand-rose/30 bg-brand-rose/10 px-4 py-3 text-sm font-semibold text-brand-rose">{error.value}</p>
       )}
 
-      <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-        {metrics.map((metric) => (
-          <article key={metric.label} class="luxury-card p-6">
-            <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-brand-ink/50">
-              {metric.label}
-            </p>
-            <p class="mt-5 font-display text-6xl text-brand-ink">{metric.value}</p>
-          </article>
-        ))}
-      </div>
+      {!dashboard.value && !error.value && <AdminSkeleton />}
 
-      <div class="grid gap-6 lg:grid-cols-[1fr_0.85fr]">
-        <article class="luxury-card overflow-hidden">
-          <div class="border-b border-brand-ink/10 px-5 py-4">
-            <p class="text-sm font-extrabold uppercase tracking-[0.14em] text-brand-ink">
-              Designer Approvals
-            </p>
-          </div>
-          {(dashboard.value?.pendingDesigners ?? []).map((designer) => (
-            <div key={designer.id} class="grid gap-4 border-b border-brand-ink/10 px-5 py-4 last:border-0 md:grid-cols-[1fr_auto] md:items-center">
-              <div>
-                <p class="font-semibold text-brand-ink">{designer.storeName}</p>
-                <p class="mt-1 text-sm text-brand-ink/50">
-                  {designer.user.email} {designer.location ? `- ${designer.location}` : ""}
-                </p>
-              </div>
-              <button class="btn-primary" type="button" onClick$={() => approve(designer.id)}>
-                Approve
-              </button>
-            </div>
-          ))}
-          {dashboard.value?.pendingDesigners.length === 0 && (
-            <p class="px-5 py-6 text-sm font-semibold text-brand-ink/60">
-              No pending designers.
-            </p>
-          )}
-        </article>
-
-        <aside class="bg-brand-ink p-6 text-brand-sand">
-          <p class="text-sm font-extrabold uppercase tracking-[0.14em] text-brand-gold">
-            Audit Stream
-          </p>
-          <div class="mt-5 grid gap-4">
-            {(dashboard.value?.auditLogs ?? []).map((event) => (
-              <div key={event.id} class="border-b border-brand-sand/10 pb-4">
-                <p class="font-semibold">{event.action}</p>
-                <p class="mt-1 text-xs text-brand-sand/50">
-                  {event.targetType} {event.targetId ?? ""}
-                </p>
-              </div>
-            ))}
-            {dashboard.value?.auditLogs.length === 0 && (
-              <p class="text-sm text-brand-sand/60">No audit events yet.</p>
-            )}
-          </div>
-        </aside>
-      </div>
-
-      <div class="grid gap-6 xl:grid-cols-[1fr_1fr_0.8fr]">
-        <article class="luxury-card overflow-hidden">
-          <div class="border-b border-brand-ink/10 px-5 py-4">
-            <p class="text-sm font-extrabold uppercase tracking-[0.14em] text-brand-ink">
-              User Management
-            </p>
-          </div>
-          {(dashboard.value?.recentUsers ?? []).map((user) => (
-            <div key={user.id} class="grid gap-3 border-b border-brand-ink/10 px-5 py-4 last:border-0 md:grid-cols-[1fr_auto]">
-              <div>
-                <p class="font-semibold text-brand-ink">{user.email}</p>
-                <p class="mt-1 text-sm text-brand-ink/50">{user.role}</p>
-              </div>
-              <span class="self-start bg-brand-sand px-3 py-1 text-xs font-bold text-brand-ink/70">
-                {user.status}
-              </span>
-            </div>
-          ))}
-          {!dashboard.value && (
-            <p class="px-5 py-6 text-sm font-semibold text-brand-ink/60">
-              User rows appear after admin sign in.
-            </p>
-          )}
-        </article>
-
-        <article class="luxury-card overflow-hidden">
-          <div class="border-b border-brand-ink/10 px-5 py-4">
-            <p class="text-sm font-extrabold uppercase tracking-[0.14em] text-brand-ink">
-              Payment Operations
-            </p>
-          </div>
-          {[
-            ["Marketplace commission", "7.5%"],
-            ["Provider", "Stripe Connect"],
-            ["Split payout", "Express onboarding required"],
-            ["Webhook", "/api/payments/stripe/webhook"]
-          ].map(([label, value]) => (
-            <div key={label} class="border-b border-brand-ink/10 px-5 py-4 last:border-0">
-              <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-brand-ink/50">
-                {label}
-              </p>
-              <p class="mt-2 font-semibold text-brand-ink">{value}</p>
-            </div>
-          ))}
-        </article>
-
-        <aside class="glass-panel p-5">
-          <p class="text-sm font-extrabold uppercase tracking-[0.14em] text-brand-ink">
-            Admin Actions
-          </p>
-          <div class="mt-5 grid gap-3">
-            {["Review designers", "Monitor rentals", "Check payment webhooks", "Audit admin activity"].map((action) => (
-              <button key={action} type="button" class="border border-brand-ink/10 bg-white/70 px-4 py-3 text-left text-sm font-semibold text-brand-ink/70">
-                {action}
-              </button>
+      {dashboard.value && (
+        <>
+          <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {metrics.map((metric, index) => (
+              <article key={metric.label} class="luxury-card group overflow-hidden p-6 transition hover:-translate-y-1">
+                <div class="flex items-start justify-between gap-4">
+                  <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-brand-ink/50">{metric.label}</p>
+                  <span class="font-display text-3xl text-brand-rose">0{index + 1}</span>
+                </div>
+                <p class="mt-6 font-display text-5xl leading-none text-brand-ink">{metric.value}</p>
+                <p class="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-brand-ink/42">{metric.caption}</p>
+              </article>
             ))}
           </div>
-        </aside>
-      </div>
-    </section>
+
+          <div class="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
+            <article class="luxury-card p-6">
+              <div class="flex flex-wrap items-end justify-between gap-4">
+                <div>
+                  <p class="eyebrow">Revenue Chart</p>
+                  <h2 class="mt-2 font-display text-5xl leading-none text-brand-ink">Money Movement</h2>
+                </div>
+                <p class="text-right text-sm font-bold text-brand-ink/50">
+                  Platform month<br />
+                  <span class="font-display text-3xl text-brand-ink">{money(dashboard.value.growth.revenueThisMonth)}</span>
+                </p>
+              </div>
+              <div class="mt-8 flex h-72 items-end gap-3 border-l border-b border-brand-ink/10 px-3 pb-3">
+                {dashboard.value.revenueSeries.map((row) => (
+                  <div key={row.month} class="flex flex-1 flex-col items-center gap-3">
+                    <div class="flex h-56 w-full items-end bg-brand-sand/60">
+                      <div class="w-full bg-brand-ink transition-all duration-700" style={{ height: `${Math.max(7, (row.value / maxRevenue) * 100)}%` }} />
+                    </div>
+                    <span class="text-xs font-extrabold uppercase tracking-[0.12em] text-brand-ink/45">{row.month}</span>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <aside class="glass-panel p-6">
+              <p class="eyebrow">Growth Signal</p>
+              <h2 class="mt-2 font-display text-5xl leading-none text-brand-ink">User Curve</h2>
+              <div class="mt-8 grid gap-3">
+                {dashboard.value.userGrowthSeries.map((row) => (
+                  <div key={row.month} class="grid grid-cols-[46px_1fr_44px] items-center gap-3">
+                    <span class="text-xs font-extrabold uppercase tracking-[0.12em] text-brand-ink/45">{row.month}</span>
+                    <span class="h-3 bg-brand-sand">
+                      <span class="block h-3 bg-brand-rose" style={{ width: `${Math.max(6, (row.value / maxUsers) * 100)}%` }} />
+                    </span>
+                    <span class="text-right text-sm font-extrabold text-brand-ink">{row.value}</span>
+                  </div>
+                ))}
+              </div>
+              <div class="mt-8 border-t border-brand-ink/10 pt-5">
+                <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-brand-ink/45">Activity events</p>
+                <p class="mt-2 font-display text-5xl leading-none text-brand-ink">{compactNumber(dashboard.value.metrics.platformActivity)}</p>
+              </div>
+            </aside>
+          </div>
+
+          <div class="grid gap-6 xl:grid-cols-3">
+            <article class="luxury-card overflow-hidden xl:col-span-2">
+              <div class="border-b border-brand-ink/10 px-5 py-4">
+                <p class="text-sm font-extrabold uppercase tracking-[0.14em] text-brand-ink">Top Performing Designers</p>
+              </div>
+              {dashboard.value.topDesigners.length === 0 && <AdminEmptyState title="No revenue yet" body="Top designers appear once completed rentals are recorded." />}
+              {dashboard.value.topDesigners.map((designer, index) => (
+                <div key={designer.designerId} class="grid gap-4 border-b border-brand-ink/10 px-5 py-4 last:border-0 md:grid-cols-[44px_1fr_auto] md:items-center">
+                  <span class="font-display text-4xl text-brand-rose">{index + 1}</span>
+                  <div>
+                    <p class="font-semibold text-brand-ink">{designer.storeName}</p>
+                    <p class="mt-1 text-sm text-brand-ink/50">{designer.rentals} rentals - {designer.location ?? "Location pending"}</p>
+                  </div>
+                  <div class="text-left md:text-right">
+                    <p class="font-display text-3xl text-brand-ink">{money(designer.revenue)}</p>
+                    <span class={`mt-1 inline-flex border px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] ${statusClass(designer.stripePayoutsEnabled ? "paid" : "pending")}`}>
+                      {designer.stripePayoutsEnabled ? "Payout Ready" : "Stripe Pending"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </article>
+
+            <aside class="luxury-card overflow-hidden">
+              <div class="border-b border-brand-ink/10 px-5 py-4">
+                <p class="text-sm font-extrabold uppercase tracking-[0.14em] text-brand-ink">Risk Alerts</p>
+              </div>
+              {dashboard.value.alerts.length === 0 && <AdminEmptyState title="Quiet board" body="No approval, delivery, or moderation alerts need attention right now." />}
+              {dashboard.value.alerts.map((alert) => (
+                <a key={alert.id} href={alert.href} class="block border-b border-brand-ink/10 px-5 py-4 transition last:border-0 hover:bg-white">
+                  <p class="font-semibold text-brand-ink">{alert.title}</p>
+                  <p class="mt-1 text-sm leading-6 text-brand-ink/55">{alert.body}</p>
+                </a>
+              ))}
+            </aside>
+          </div>
+
+          <div class="grid gap-6 xl:grid-cols-2">
+            <article class="luxury-card overflow-hidden">
+              <div class="border-b border-brand-ink/10 px-5 py-4">
+                <p class="text-sm font-extrabold uppercase tracking-[0.14em] text-brand-ink">Recent Platform Activity</p>
+              </div>
+              {dashboard.value.recentActivities.map((activity) => (
+                <div key={activity.id} class="border-b border-brand-ink/10 px-5 py-4 last:border-0">
+                  <p class="font-semibold text-brand-ink">{activity.action.replaceAll(".", " /")}</p>
+                  <p class="mt-1 text-sm text-brand-ink/50">{activity.actorEmail ?? "System"} - {activity.targetType}</p>
+                </div>
+              ))}
+              {dashboard.value.recentActivities.length === 0 && <AdminEmptyState title="No audit yet" body="Admin actions will be logged here once controls are used." />}
+            </article>
+
+            <article class="luxury-card overflow-hidden">
+              <div class="border-b border-brand-ink/10 px-5 py-4">
+                <p class="text-sm font-extrabold uppercase tracking-[0.14em] text-brand-ink">Pending Designer Approvals</p>
+              </div>
+              {dashboard.value.pendingDesigners.map((designer) => (
+                <a key={designer.id} href="/admin/designers" class="grid gap-2 border-b border-brand-ink/10 px-5 py-4 last:border-0 hover:bg-white md:grid-cols-[1fr_auto] md:items-center">
+                  <div>
+                    <p class="font-semibold text-brand-ink">{designer.storeName}</p>
+                    <p class="mt-1 text-sm text-brand-ink/50">{designer.user.email} - {designer.location ?? "Location pending"}</p>
+                  </div>
+                  <span class={`border px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] ${statusClass(designer.approvalStatus)}`}>{designer.approvalStatus}</span>
+                </a>
+              ))}
+              {dashboard.value.pendingDesigners.length === 0 && <AdminEmptyState title="All clear" body="There are no designer applications waiting for approval." />}
+            </article>
+          </div>
+        </>
+      )}
+    </AdminShell>
   );
 });
-
-

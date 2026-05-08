@@ -271,33 +271,146 @@ export interface DesignerNotification {
   createdAt: string;
 }
 
-export interface AdminDashboard {
-  metrics: {
-    usersCount: number;
-    pendingDesignersCount: number;
-    ordersCount: number;
-    deliveriesCount: number;
+export interface AdminSeriesPoint {
+  month: string;
+  value: number;
+}
+
+export interface AdminAlert {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  href: string;
+  createdAt: string;
+}
+
+export interface AdminAuditActivity {
+  id: string;
+  action: string;
+  targetType: string;
+  targetId: string | null;
+  createdAt: string;
+  actorEmail?: string;
+}
+
+export interface AdminUserRow {
+  id: string;
+  email: string;
+  role: string;
+  status: string;
+  isEmailVerified: boolean;
+  createdAt: string;
+  profile?: {
+    firstName?: string;
+    lastName?: string;
+    phoneNumber?: string | null;
+    avatarUrl?: string | null;
+  } | null;
+  _count?: {
+    bookings: number;
+    rentalOrders: number;
+    aiSessions: number;
   };
-  pendingDesigners: Array<{
+  designerProfile?: {
     id: string;
     storeName: string;
-    location: string | null;
-    user: {
-      email: string;
-    };
-  }>;
-  recentUsers: Array<{
+    approvalStatus: string;
+    stripeChargesEnabled: boolean;
+  } | null;
+}
+
+export interface AdminDesignerRow {
+  id: string;
+  storeName: string;
+  slug: string;
+  bio: string;
+  location: string | null;
+  approvalStatus: string;
+  stripeAccountId: string | null;
+  stripeOnboardingComplete: boolean;
+  stripeChargesEnabled: boolean;
+  stripePayoutsEnabled: boolean;
+  stripeDetailsSubmitted: boolean;
+  createdAt: string;
+  user: {
     id: string;
     email: string;
-    role: string;
     status: string;
-  }>;
-  auditLogs: Array<{
+  };
+  _count?: {
+    products: number;
+    rentalOrders: number;
+    bookings: number;
+  };
+  revenue?: number;
+  platformFees?: number;
+}
+
+export interface AdminProductRow {
+  id: string;
+  title: string;
+  category: string;
+  status: string;
+  rentalPrice: number;
+  buyPrice: number | null;
+  createdAt: string;
+  tags: string[];
+  images: Array<{ url: string; altText?: string | null }>;
+  designer: {
     id: string;
-    action: string;
-    targetType: string;
-    targetId: string | null;
+    storeName: string;
+    approvalStatus: string;
+  };
+  _count: {
+    orderItems: number;
+    bookings: number;
+  };
+}
+
+export interface PaginatedAdmin<T> {
+  items: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+  };
+}
+
+export interface AdminDashboard {
+  metrics: {
+    totalUsers: number;
+    activeDesigners: number;
+    revenue: number;
+    platformRevenue: number;
+    rentalsToday: number;
+    pendingApprovals: number;
+    platformActivity: number;
+  };
+  growth: {
+    usersThisMonth: number;
+    usersLastMonth: number;
+    userGrowthRate: number;
+    revenueThisMonth: number;
+    revenueLastMonth: number;
+    revenueGrowthRate: number;
+  };
+  revenueSeries: AdminSeriesPoint[];
+  userGrowthSeries: AdminSeriesPoint[];
+  rentalPerformance: Array<{ status: string; count: number }>;
+  pendingDesigners: AdminDesignerRow[];
+  recentUsers: AdminUserRow[];
+  recentActivities: AdminAuditActivity[];
+  topDesigners: Array<{
+    designerId: string;
+    storeName: string;
+    location: string | null;
+    revenue: number;
+    platformFees: number;
+    rentals: number;
+    stripePayoutsEnabled: boolean;
   }>;
+  alerts: AdminAlert[];
 }
 
 interface ApiEnvelope<T> {
@@ -748,6 +861,97 @@ export async function fetchAdminDashboard(): Promise<AdminDashboard> {
 export async function approveDesigner(designerId: string): Promise<void> {
   await requestApi(`/admin/designers/${designerId}/approve`, {
     method: "PATCH",
+    headers: authHeaders()
+  });
+}
+
+export async function fetchAdminUsers(query = ""): Promise<PaginatedAdmin<AdminUserRow>> {
+  return requestApi<PaginatedAdmin<AdminUserRow>>(`/admin/users${query}`, {
+    headers: authHeaders()
+  });
+}
+
+export async function updateAdminUserStatus(userId: string, status: string): Promise<AdminUserRow> {
+  return requestApi<AdminUserRow>(`/admin/users/${userId}/status`, {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify({ status })
+  });
+}
+
+export async function resetAdminUserAccount(userId: string): Promise<void> {
+  await requestApi(`/admin/users/${userId}/reset`, {
+    method: "POST",
+    headers: authHeaders()
+  });
+}
+
+export async function fetchAdminDesigners(query = ""): Promise<PaginatedAdmin<AdminDesignerRow>> {
+  return requestApi<PaginatedAdmin<AdminDesignerRow>>(`/admin/designers${query}`, {
+    headers: authHeaders()
+  });
+}
+
+export async function updateAdminDesignerApproval(
+  designerId: string,
+  status: string
+): Promise<AdminDesignerRow> {
+  return requestApi<AdminDesignerRow>(`/admin/designers/${designerId}/approval`, {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify({ status })
+  });
+}
+
+export async function fetchAdminProducts(query = ""): Promise<PaginatedAdmin<AdminProductRow>> {
+  return requestApi<PaginatedAdmin<AdminProductRow>>(`/admin/products${query}`, {
+    headers: authHeaders()
+  });
+}
+
+export async function updateAdminProductStatus(
+  productId: string,
+  status: string
+): Promise<AdminProductRow> {
+  return requestApi<AdminProductRow>(`/admin/products/${productId}/status`, {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify({ status })
+  });
+}
+
+export async function fetchAdminOperations<T = unknown>(): Promise<T> {
+  return requestApi<T>("/admin/operations", {
+    headers: authHeaders()
+  });
+}
+
+export async function fetchAdminPayments<T = unknown>(query = ""): Promise<T> {
+  return requestApi<T>(`/admin/payments${query}`, {
+    headers: authHeaders()
+  });
+}
+
+export async function fetchAdminAnalytics<T = unknown>(query = ""): Promise<T> {
+  return requestApi<T>(`/admin/analytics${query}`, {
+    headers: authHeaders()
+  });
+}
+
+export async function fetchAdminAiMonitoring<T = unknown>(query = ""): Promise<T> {
+  return requestApi<T>(`/admin/ai${query}`, {
+    headers: authHeaders()
+  });
+}
+
+export async function fetchAdminNotifications<T = unknown>(): Promise<T> {
+  return requestApi<T>("/admin/notifications", {
+    headers: authHeaders()
+  });
+}
+
+export async function fetchAdminSettings<T = unknown>(): Promise<T> {
+  return requestApi<T>("/admin/settings", {
     headers: authHeaders()
   });
 }
