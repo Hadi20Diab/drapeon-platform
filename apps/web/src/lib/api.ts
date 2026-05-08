@@ -628,6 +628,17 @@ export async function createDesignerProduct(
   });
 }
 
+export async function updateDesignerProduct(
+  productId: string,
+  payload: DesignerProductPayload
+): Promise<DesignerProduct> {
+  return requestApi<DesignerProduct>(`/designers/products/${productId}`, {
+    method: "PUT",
+    headers: authHeaders(),
+    body: JSON.stringify(payload)
+  });
+}
+
 export async function updateDesignerProductStatus(
   productId: string,
   status: "DRAFT" | "ACTIVE" | "ARCHIVED"
