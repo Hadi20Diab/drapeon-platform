@@ -5,6 +5,7 @@ import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { DesignerApprovalStatus, UserRole } from "@prisma/client";
 
+import { StripeConnectService } from "../../integrations/stripe/stripe-connect.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
@@ -30,7 +31,8 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly stripeConnectService: StripeConnectService
   ) {}
 
   async register(payload: RegisterDto): Promise<AuthResponse> {
@@ -46,6 +48,14 @@ export class AuthService {
     const role = payload.role === RegistrationRole.DESIGNER ? UserRole.DESIGNER : UserRole.USER;
     const passwordHash = this.hashPassword(payload.password);
     const slugBase = `${payload.firstName}-${payload.lastName}`.toLowerCase();
+    const stripeAccount =
+      role === UserRole.DESIGNER
+        ? await this.stripeConnectService.createDesignerAccount({
+            email: payload.email,
+            firstName: payload.firstName,
+            lastName: payload.lastName
+          })
+        : null;
     const user = await this.prisma.user.create({
       data: {
         email: payload.email,
@@ -64,6 +74,8 @@ export class AuthService {
                   storeName: `${payload.firstName} ${payload.lastName} Atelier`,
                   slug: `${this.toSlug(slugBase)}-${randomUUID().slice(0, 8)}`,
                   bio: "Designer profile initialized during registration",
+                  stripeAccountId: stripeAccount?.id,
+                  stripeAccountCreatedAt: stripeAccount ? new Date() : undefined,
                   approvalStatus: DesignerApprovalStatus.PENDING
                 }
               }

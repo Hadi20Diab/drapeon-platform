@@ -23,4 +23,14 @@ export class DesignersController {
   getDashboard(@CurrentUser("sub") userId: string) {
     return this.designersService.getDashboard(userId);
   }
+
+  @Post("stripe/onboarding-link")
+  createStripeOnboardingLink(@CurrentUser("sub") userId: string) {
+    return this.designersService.createStripeOnboardingLink(userId);
+  }
+
+  @Post("stripe/refresh-status")
+  refreshStripeStatus(@CurrentUser("sub") userId: string) {
+    return this.designersService.refreshStripeStatus(userId);
+  }
 }

@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
 
+import { StripeConnectService } from "../../integrations/stripe/stripe-connect.service";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
@@ -23,7 +24,7 @@ import { JwtAccessStrategy } from "./strategies/jwt-access.strategy";
     })
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtAccessStrategy, JwtAuthGuard, RolesGuard],
+  providers: [AuthService, JwtAccessStrategy, JwtAuthGuard, RolesGuard, StripeConnectService],
   exports: [AuthService, PassportModule, JwtModule, JwtAuthGuard, RolesGuard]
 })
 export class AuthModule {}

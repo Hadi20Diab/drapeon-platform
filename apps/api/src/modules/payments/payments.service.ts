@@ -1,143 +1,170 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { ProductStatus } from "@prisma/client";
 
-import { CreateTapCheckoutDto } from "./dto/create-tap-checkout.dto";
-
-const marketplaceCommissionRate = 0.075;
-
-interface TapChargeResponse {
-  id?: string;
-  transaction?: {
-    url?: string;
-  };
-}
+import { StripeConnectService } from "../../integrations/stripe/stripe-connect.service";
+import { PrismaService } from "../../prisma/prisma.service";
+import { CreateStripeCheckoutDto } from "./dto/create-stripe-checkout.dto";
 
 @Injectable()
 export class PaymentsService {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+    private readonly stripeConnectService: StripeConnectService
+  ) {}
 
-  async createTapCheckout(payload: CreateTapCheckoutDto) {
+  async createStripeCheckout(userId: string, payload: CreateStripeCheckoutDto) {
     if (payload.items.length === 0) {
       throw new BadRequestException("Cart is empty");
     }
 
-    const currency = this.configService.get<string>("TAP_CURRENCY", "USD");
-    const subtotal = this.roundMoney(
-      payload.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
-    );
-    const commissionAmount = this.roundMoney(subtotal * marketplaceCommissionRate);
-    const designerAmount = this.roundMoney(subtotal - commissionAmount);
-    const tapSecretKey = this.configService.get<string>("TAP_SECRET_KEY");
-    const redirectUrl =
-      this.configService.get<string>("TAP_REDIRECT_URL") ??
-      "http://localhost:5173/checkout/success";
+    const quantityByProductId = new Map<string, number>();
 
-    if (!tapSecretKey) {
+    for (const item of payload.items) {
+      quantityByProductId.set(
+        item.productId,
+        (quantityByProductId.get(item.productId) ?? 0) + item.quantity
+      );
+    }
+
+    const products = await this.prisma.product.findMany({
+      where: {
+        id: { in: [...quantityByProductId.keys()] },
+        status: ProductStatus.ACTIVE
+      },
+      select: {
+        id: true,
+        title: true,
+        rentalPrice: true,
+        currency: true,
+        designerId: true,
+        designer: {
+          select: {
+            storeName: true,
+            stripeAccountId: true,
+            stripeChargesEnabled: true,
+            stripePayoutsEnabled: true
+          }
+        }
+      }
+    });
+
+    if (products.length !== quantityByProductId.size) {
+      throw new BadRequestException("One or more cart items are no longer available");
+    }
+
+    const designerIds = new Set(products.map((product) => product.designerId));
+
+    if (designerIds.size > 1) {
+      throw new BadRequestException(
+        "Stripe Connect checkout currently supports one designer per payment."
+      );
+    }
+
+    const designer = products[0]?.designer;
+    const currency = this.stripeConnectService.getCurrency();
+    const subtotalCents = products.reduce((sum, product) => {
+      const quantity = quantityByProductId.get(product.id) ?? 1;
+      return sum + this.toCents(Number(product.rentalPrice)) * quantity;
+    }, 0);
+    const commissionCents = Math.round(
+      subtotalCents * this.stripeConnectService.getCommissionRate()
+    );
+    const designerCents = subtotalCents - commissionCents;
+
+    if (!this.stripeConnectService.isConfigured()) {
       return {
         mode: "configuration_required",
+        provider: "stripe",
         checkoutUrl: null,
-        provider: "tap",
-        totals: {
-          subtotal,
-          commissionRate: marketplaceCommissionRate,
-          commissionAmount,
-          designerAmount,
-          currency
-        },
-        message: "Set TAP_SECRET_KEY to create a real Tap hosted checkout session."
+        totals: this.formatTotals(subtotalCents, commissionCents, designerCents, currency),
+        message: "Set STRIPE_SECRET_KEY to create a real Stripe Checkout session."
       };
     }
 
-    const firstDestinationId = payload.items.find((item) => item.designerDestinationId)
-      ?.designerDestinationId;
-    const chargePayload: Record<string, unknown> = {
-      amount: subtotal,
-      currency,
-      customer_initiated: true,
-      threeDSecure: true,
-      save_card: false,
-      description: "Drapeon rental checkout",
-      metadata: {
-        commission_rate: marketplaceCommissionRate.toString(),
-        commission_amount: commissionAmount.toString()
-      },
-      customer: {
-        first_name: payload.customer.firstName,
-        last_name: payload.customer.lastName,
-        email: payload.customer.email,
-        ...(payload.customer.phoneNumber
-          ? {
-              phone: {
-                country_code: "961",
-                number: payload.customer.phoneNumber.replace(/\D/g, "")
-              }
+    if (!designer?.stripeAccountId) {
+      return {
+        mode: "stripe_onboarding_required",
+        provider: "stripe",
+        checkoutUrl: null,
+        totals: this.formatTotals(subtotalCents, commissionCents, designerCents, currency),
+        message: `${designer?.storeName ?? "This designer"} needs to finish Stripe Connect onboarding before checkout.`
+      };
+    }
+
+    const webOrigin = this.configService.get<string>("WEB_ORIGIN", "http://localhost:5173");
+    const session = await this.stripeConnectService.createCheckoutSession({
+      mode: "payment",
+      customer_email: payload.customer?.email,
+      client_reference_id: userId,
+      line_items: products.map((product) => ({
+        quantity: quantityByProductId.get(product.id) ?? 1,
+        price_data: {
+          currency,
+          product_data: {
+            name: product.title,
+            metadata: {
+              productId: product.id
             }
-          : {})
+          },
+          unit_amount: this.toCents(Number(product.rentalPrice))
+        }
+      })),
+      payment_intent_data: {
+        application_fee_amount: commissionCents,
+        transfer_data: {
+          destination: designer.stripeAccountId
+        },
+        metadata: {
+          platform: "drapeon",
+          commission_bps: this.stripeConnectService.getCommissionBasisPoints().toString()
+        }
       },
-      source: {
-        id: "src_all"
+      metadata: {
+        userId,
+        designerAccountId: designer.stripeAccountId,
+        commissionCents: commissionCents.toString()
       },
-      redirect: {
-        url: redirectUrl
-      }
-    };
-
-    const merchantId = this.configService.get<string>("TAP_MERCHANT_ID");
-    const postUrl = this.configService.get<string>("TAP_POST_URL");
-
-    if (merchantId) {
-      chargePayload.merchant = { id: merchantId };
-    }
-
-    if (postUrl) {
-      chargePayload.post = { url: postUrl };
-    }
-
-    if (firstDestinationId) {
-      chargePayload.destinations = {
-        destination: [
-          {
-            id: firstDestinationId,
-            amount: designerAmount,
-            currency
-          }
-        ]
-      };
-    }
-
-    const response = await fetch("https://api.tap.company/v2/charges/", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${tapSecretKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(chargePayload)
+      success_url:
+        this.configService.get<string>("STRIPE_SUCCESS_URL") ??
+        `${webOrigin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: this.configService.get<string>("STRIPE_CANCEL_URL") ?? `${webOrigin}/checkout`
     });
-    const responseBody = (await response.json()) as TapChargeResponse & {
-      errors?: unknown;
-      message?: string;
-    };
-
-    if (!response.ok) {
-      throw new BadRequestException(responseBody.message ?? "Tap checkout creation failed");
-    }
 
     return {
-      mode: firstDestinationId ? "tap_split_checkout" : "tap_checkout",
-      provider: "tap",
-      chargeId: responseBody.id,
-      checkoutUrl: responseBody.transaction?.url ?? null,
-      totals: {
-        subtotal,
-        commissionRate: marketplaceCommissionRate,
-        commissionAmount,
-        designerAmount,
-        currency
-      }
+      mode: "stripe_connect_checkout",
+      provider: "stripe",
+      sessionId: session?.id,
+      checkoutUrl: session?.url ?? null,
+      totals: this.formatTotals(subtotalCents, commissionCents, designerCents, currency)
     };
   }
 
-  private roundMoney(value: number): number {
-    return Math.round(value * 100) / 100;
+  handleStripeWebhook(payload: unknown) {
+    return {
+      received: true,
+      provider: "stripe",
+      payload
+    };
+  }
+
+  private formatTotals(
+    subtotalCents: number,
+    commissionCents: number,
+    designerCents: number,
+    currency: string
+  ) {
+    return {
+      subtotal: subtotalCents / 100,
+      commissionRate: this.stripeConnectService.getCommissionRate(),
+      commissionAmount: commissionCents / 100,
+      designerAmount: designerCents / 100,
+      currency
+    };
+  }
+
+  private toCents(value: number): number {
+    return Math.round(value * 100);
   }
 }
