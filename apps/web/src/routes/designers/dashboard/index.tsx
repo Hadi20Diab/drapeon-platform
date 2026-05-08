@@ -62,7 +62,7 @@ export default component$(() => {
       title="Studio Overview"
       subtitle="A focused operating room for products, rentals, appointments, revenue, and customer attention."
       action="New Product"
-      actionHref="/designers/products"
+      actionHref="/designers/products/create"
     >
       {error.value && (
         <p class="border border-brand-rose/30 bg-brand-rose/10 px-4 py-3 text-sm font-semibold text-brand-rose">

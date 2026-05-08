@@ -277,6 +277,7 @@ export class DesignersService {
 
   async createDesignerProduct(userId: string, payload: DesignerProductDto) {
     const designer = await this.getDesignerForUser(userId);
+    this.assertStripeReadyForProductCreation(designer);
     const slug = await this.resolveUniqueProductSlug(this.toSlug(payload.title));
     const variants = this.buildVariants(payload);
 
@@ -729,6 +730,27 @@ export class DesignersService {
 
     if (product.designerId !== designerId) {
       throw new ForbiddenException("You cannot manage this product");
+    }
+  }
+
+  private assertStripeReadyForProductCreation(designer: {
+    stripeAccountId: string | null;
+    stripeOnboardingComplete: boolean;
+    stripeChargesEnabled: boolean;
+    stripePayoutsEnabled: boolean;
+    stripeDetailsSubmitted: boolean;
+  }) {
+    const isReady =
+      Boolean(designer.stripeAccountId) &&
+      designer.stripeOnboardingComplete &&
+      designer.stripeChargesEnabled &&
+      designer.stripePayoutsEnabled &&
+      designer.stripeDetailsSubmitted;
+
+    if (!isReady) {
+      throw new ForbiddenException(
+        "Finish Stripe Connect onboarding before creating rental products."
+      );
     }
   }
 

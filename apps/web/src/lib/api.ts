@@ -584,6 +584,30 @@ async function requestApi<T>(path: string, init?: RequestInit): Promise<T> {
   const payload = await response.json().catch(() => null);
 
   if (!response.ok) {
+    const hasRetried =
+      init?.headers instanceof Headers
+        ? init.headers.has("X-Drapeon-Auth-Retry")
+        : Array.isArray(init?.headers)
+          ? init.headers.some(([key]) => key.toLowerCase() === "x-drapeon-auth-retry")
+          : Boolean(init?.headers?.["X-Drapeon-Auth-Retry"]);
+
+    if (response.status === 401 && path !== "/auth/refresh" && !hasRetried) {
+      const refreshed = await refreshAuthSession();
+
+      if (refreshed) {
+        const retryHeaders = {
+          ...(init?.headers ?? {}),
+          Authorization: `Bearer ${refreshed.tokens.accessToken}`,
+          "X-Drapeon-Auth-Retry": "1"
+        };
+
+        return requestApi<T>(path, {
+          ...init,
+          headers: retryHeaders
+        });
+      }
+    }
+
     const message =
       payload?.message ??
       payload?.error ??
@@ -593,6 +617,32 @@ async function requestApi<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return extractData<T>(payload);
+}
+
+async function refreshAuthSession(): Promise<AuthSession | null> {
+  const session = readAuthSession();
+
+  if (!session?.tokens.refreshToken) {
+    return null;
+  }
+
+  try {
+    const tokens = await requestApi<AuthSession["tokens"]>("/auth/refresh", {
+      method: "POST",
+      body: JSON.stringify({ refreshToken: session.tokens.refreshToken })
+    });
+    const refreshedSession: AuthSession = {
+      ...session,
+      tokens
+    };
+
+    persistAuthSession(refreshedSession);
+
+    return refreshedSession;
+  } catch {
+    clearAuthSession();
+    return null;
+  }
 }
 
 export async function fetchCatalogProducts(limit = 24): Promise<CatalogProduct[]> {
@@ -737,6 +787,18 @@ export async function createDesignerProduct(
   return requestApi<DesignerProduct>("/designers/products", {
     method: "POST",
     headers: authHeaders(),
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function sendContactMessage(payload: {
+  name: string;
+  email: string;
+  topic: string;
+  message: string;
+}): Promise<{ delivered: boolean; provider: string; message: string }> {
+  return requestApi<{ delivered: boolean; provider: string; message: string }>("/contact", {
+    method: "POST",
     body: JSON.stringify(payload)
   });
 }

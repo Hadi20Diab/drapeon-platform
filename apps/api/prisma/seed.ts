@@ -109,6 +109,20 @@ const dressTitles = [
   "Pleated Statement Dress"
 ];
 
+const suitProductImages = [
+  "https://images.unsplash.com/photo-1593032465175-481ac7f401a0?auto=format&fit=crop&w=1200&q=85",
+  "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=1200&q=85",
+  "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1200&q=85",
+  "https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&w=1200&q=85"
+];
+
+const dressProductImages = [
+  "https://images.unsplash.com/photo-1550639525-c97d455acf70?auto=format&fit=crop&w=1200&q=85",
+  "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=1200&q=85",
+  "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=85",
+  "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&w=1200&q=85"
+];
+
 function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -357,6 +371,9 @@ async function main(): Promise<void> {
       const colors = pickMany(palette, 2);
       const sizes = pickMany(sizeOptionsByCategory[category], 3);
       const imageSeed = encodeURIComponent(`${designer.slug}-${productCounter}`);
+      const imagePool = category === ProductCategory.SUIT ? suitProductImages : dressProductImages;
+      const primaryImage = imagePool[productCounter % imagePool.length]!;
+      const secondaryImage = imagePool[(productCounter + 1) % imagePool.length]!;
       const variants = sizes.flatMap((sizeLabel) =>
         colors.map((color) => ({
           sizeLabel,
@@ -383,12 +400,12 @@ async function main(): Promise<void> {
           images: {
             create: [
               {
-                url: `https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=80&seed=${imageSeed}-1`,
+                url: `${primaryImage}&seed=${imageSeed}-1`,
                 altText: `${title} front`,
                 sortOrder: 0
               },
               {
-                url: `https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=1200&q=80&seed=${imageSeed}-2`,
+                url: `${secondaryImage}&seed=${imageSeed}-2`,
                 altText: `${title} detail`,
                 sortOrder: 1
               }

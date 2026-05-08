@@ -9,6 +9,7 @@ import { AdminModule } from "./modules/admin/admin.module";
 import { AiModule } from "./modules/ai/ai.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { BookingsModule } from "./modules/bookings/bookings.module";
+import { ContactModule } from "./modules/contact/contact.module";
 import { DeliveryModule } from "./modules/delivery/delivery.module";
 import { DesignersModule } from "./modules/designers/designers.module";
 import { ProductsModule } from "./modules/products/products.module";
@@ -36,6 +37,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     AuthModule,
     AdminModule,
     UsersModule,
+    ContactModule,
     DesignersModule,
     ProductsModule,
     PaymentsModule,

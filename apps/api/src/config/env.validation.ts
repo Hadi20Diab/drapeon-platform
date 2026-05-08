@@ -23,7 +23,11 @@ const envSchema = z.object({
   STRIPE_SUCCESS_URL: z.string().min(1).optional(),
   STRIPE_CANCEL_URL: z.string().url().optional(),
   STRIPE_CONNECT_REFRESH_URL: z.string().url().optional(),
-  STRIPE_CONNECT_RETURN_URL: z.string().url().optional()
+  STRIPE_CONNECT_RETURN_URL: z.string().url().optional(),
+  BREVO_API_KEY: z.string().optional(),
+  CONTACT_TO_EMAIL: z.string().email().optional(),
+  CONTACT_FROM_EMAIL: z.string().email().optional(),
+  CONTACT_FROM_NAME: z.string().optional()
 });
 
 export type EnvVariables = z.infer<typeof envSchema>;
