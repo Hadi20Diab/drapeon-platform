@@ -8,8 +8,8 @@ export default component$(() => {
         Payment received
       </h1>
       <p class="mt-5 max-w-2xl text-base leading-8 text-brand-ink/60">
-        Tap redirected back to Drapeon. The webhook endpoint is ready for server-side payment
-        confirmation once your Tap account is fully configured.
+        Stripe redirected back to Drapeon. The Connect checkout session can now be reconciled
+        through the Stripe webhook endpoint once your account is fully configured.
       </p>
       <a href="/catalog" class="btn-primary mt-8">
         Continue Browsing

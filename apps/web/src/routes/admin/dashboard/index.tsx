@@ -164,9 +164,9 @@ export default component$(() => {
           </div>
           {[
             ["Marketplace commission", "7.5%"],
-            ["Provider", "Tap Payments"],
-            ["Split payout", "Destination onboarding required"],
-            ["Webhook", "/api/payments/tap/webhook"]
+            ["Provider", "Stripe Connect"],
+            ["Split payout", "Express onboarding required"],
+            ["Webhook", "/api/payments/stripe/webhook"]
           ].map(([label, value]) => (
             <div key={label} class="border-b border-brand-ink/10 px-5 py-4 last:border-0">
               <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-brand-ink/50">

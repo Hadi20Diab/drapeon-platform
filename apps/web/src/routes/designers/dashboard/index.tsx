@@ -1,22 +1,50 @@
-import { component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
+import { $, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
 
-import { fetchDesignerDashboard, type DesignerDashboard } from "../../../lib/api";
+import {
+  createStripeOnboardingLink,
+  fetchDesignerDashboard,
+  type DesignerDashboard
+} from "../../../lib/api";
 
 const fallbackTasks = [
   "Approve new fitting requests",
   "Check low stock variants",
-  "Confirm Tap destination onboarding"
+  "Finish Stripe Connect onboarding"
 ];
 
 export default component$(() => {
   const dashboard = useSignal<DesignerDashboard | null>(null);
   const error = useSignal("");
+  const paymentNotice = useSignal("");
+  const isStartingOnboarding = useSignal(false);
 
   useVisibleTask$(async () => {
     try {
       dashboard.value = await fetchDesignerDashboard();
     } catch {
       error.value = "Sign in as a designer to load live dashboard metrics.";
+    }
+  });
+
+  const startStripeOnboarding = $(async () => {
+    error.value = "";
+    paymentNotice.value = "";
+    isStartingOnboarding.value = true;
+
+    try {
+      const result = await createStripeOnboardingLink();
+
+      if (result.url) {
+        window.location.href = result.url;
+        return;
+      }
+
+      paymentNotice.value =
+        result.message ?? "Stripe Connect onboarding is not ready yet. Add STRIPE_SECRET_KEY.";
+    } catch (caught) {
+      error.value = caught instanceof Error ? caught.message : "Could not start Stripe onboarding.";
+    } finally {
+      isStartingOnboarding.value = false;
     }
   });
 
@@ -61,15 +89,24 @@ export default component$(() => {
           <a href="/catalog" class="btn-primary justify-self-start lg:justify-self-end">
             Add Product
           </a>
-          <a href="/checkout" class="btn-secondary justify-self-start lg:justify-self-end">
-            Payment Setup
-          </a>
+          <button
+            type="button"
+            class="btn-secondary justify-self-start lg:justify-self-end"
+            onClick$={startStripeOnboarding}
+          >
+            {isStartingOnboarding.value ? "Opening Stripe..." : "Stripe Setup"}
+          </button>
         </div>
       </div>
 
       {error.value && (
         <p class="border border-brand-rose/30 bg-brand-rose/10 px-4 py-3 text-sm font-semibold text-brand-rose">
           {error.value}
+        </p>
+      )}
+      {paymentNotice.value && (
+        <p class="border border-brand-gold/30 bg-brand-gold/10 px-4 py-3 text-sm font-semibold text-brand-ink">
+          {paymentNotice.value}
         </p>
       )}
 
@@ -136,6 +173,18 @@ export default component$(() => {
             </p>
             <p class="mt-2 font-display text-4xl text-brand-ink">
               {((dashboard.value?.estimatedCommissionRate ?? 0.075) * 100).toFixed(1)}%
+            </p>
+          </div>
+          <div class="mt-6 border-t border-brand-ink/10 pt-5">
+            <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-brand-ink/50">
+              Stripe status
+            </p>
+            <p class="mt-2 text-sm font-semibold leading-6 text-brand-ink/70">
+              {dashboard.value?.stripeOnboardingComplete
+                ? "Ready for charges and payouts"
+                : dashboard.value?.stripeAccountId
+                  ? "Account created, onboarding pending"
+                  : "Stripe account not created yet"}
             </p>
           </div>
         </aside>

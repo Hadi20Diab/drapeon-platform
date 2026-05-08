@@ -29,10 +29,10 @@ export interface AuthSession {
   };
 }
 
-export interface TapCheckoutResponse {
-  mode: "configuration_required" | "tap_checkout" | "tap_split_checkout";
-  provider: "tap";
-  chargeId?: string;
+export interface StripeCheckoutResponse {
+  mode: "configuration_required" | "stripe_onboarding_required" | "stripe_connect_checkout";
+  provider: "stripe";
+  sessionId?: string;
   checkoutUrl: string | null;
   totals: {
     subtotal: number;
@@ -41,6 +41,13 @@ export interface TapCheckoutResponse {
     designerAmount: number;
     currency: string;
   };
+  message?: string;
+}
+
+export interface StripeOnboardingResponse {
+  mode: "configuration_required" | "stripe_connect_onboarding";
+  url: string | null;
+  stripeAccountId?: string;
   message?: string;
 }
 
@@ -54,6 +61,11 @@ export interface DesignerDashboard {
   openDeliveries: number;
   rentalOrdersCount: number;
   estimatedCommissionRate: number;
+  stripeAccountId: string | null;
+  stripeOnboardingComplete: boolean;
+  stripeChargesEnabled: boolean;
+  stripePayoutsEnabled: boolean;
+  stripeDetailsSubmitted: boolean;
   products: Array<{
     id: string;
     title: string;
@@ -405,28 +417,22 @@ export function clearAuthSession(): void {
   localStorage.removeItem("drapeon.auth");
 }
 
-export async function createTapCheckout(payload: {
+export async function createStripeCheckout(payload: {
   items: Array<{
     productId: string;
-    title: string;
-    unitPrice: number;
     quantity: number;
-    designerDestinationId?: string;
   }>;
-  customer: {
-    firstName: string;
-    lastName: string;
+  customer?: {
     email: string;
-    phoneNumber?: string;
   };
-}): Promise<TapCheckoutResponse> {
+}): Promise<StripeCheckoutResponse> {
   const session = readAuthSession();
 
   if (!session) {
     throw new Error("Please sign in before checkout.");
   }
 
-  return requestApi<TapCheckoutResponse>("/payments/tap/checkout", {
+  return requestApi<StripeCheckoutResponse>("/payments/stripe/checkout", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${session.tokens.accessToken}`
@@ -442,6 +448,13 @@ function authHeaders(): Record<string, string> {
 
 export async function fetchDesignerDashboard(): Promise<DesignerDashboard> {
   return requestApi<DesignerDashboard>("/designers/dashboard", {
+    headers: authHeaders()
+  });
+}
+
+export async function createStripeOnboardingLink(): Promise<StripeOnboardingResponse> {
+  return requestApi<StripeOnboardingResponse>("/designers/stripe/onboarding-link", {
+    method: "POST",
     headers: authHeaders()
   });
 }
