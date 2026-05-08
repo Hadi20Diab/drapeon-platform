@@ -38,12 +38,12 @@ export const SiteHeader = component$(() => {
           <a href="/contactus" class="transition hover:text-brand-gold">
             Contact
           </a>
-          <a href="/designers/dashboard" class="transition hover:text-brand-gold">
+          {/* <a href="/designers/dashboard" class="transition hover:text-brand-gold">
             Designer
-          </a>
-          <a href="/admin/dashboard" class="transition hover:text-brand-gold">
+          </a> */}
+          {/* <a href="/admin/dashboard" class="transition hover:text-brand-gold">
             Admin
-          </a>
+          </a> */}
           <a href="/wishlist" class="transition hover:text-brand-gold">
             Wishlist
           </a>
