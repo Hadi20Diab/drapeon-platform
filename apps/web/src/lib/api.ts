@@ -56,10 +56,14 @@ export interface DesignerDashboard {
   storeName: string;
   approvalStatus: string;
   location: string | null;
+  brandColor?: string | null;
   productsCount: number;
   pendingAppointments: number;
   openDeliveries: number;
   rentalOrdersCount: number;
+  activeRentalsCount: number;
+  revenue: number;
+  monthRevenue: number;
   estimatedCommissionRate: number;
   stripeAccountId: string | null;
   stripeOnboardingComplete: boolean;
@@ -71,6 +75,9 @@ export interface DesignerDashboard {
     title: string;
     status: string;
     rentalPrice: number | string;
+    buyPrice?: number | string | null;
+    tags?: string[];
+    images?: Array<{ url: string; altText?: string | null }>;
     variants: Array<{
       sizeLabel: string;
       color: string;
@@ -85,8 +92,16 @@ export interface DesignerDashboard {
     rentalStartDate: string;
     rentalEndDate: string;
     user: {
+      id?: string;
       email: string;
+      profile?: {
+        firstName?: string;
+        lastName?: string;
+        phoneNumber?: string | null;
+      } | null;
     };
+    items?: DesignerOrderItem[];
+    deliveryRequest?: DesignerDeliveryRequest | null;
   }>;
   appointments: Array<{
     id: string;
@@ -94,10 +109,20 @@ export interface DesignerDashboard {
     startsAt: string;
     endsAt: string;
     product: {
+      id?: string;
       title: string;
     };
+    variant?: {
+      sizeLabel: string;
+      color: string;
+    } | null;
     user: {
+      id?: string;
       email: string;
+      profile?: {
+        firstName?: string;
+        lastName?: string;
+      } | null;
     };
   }>;
   deliveries: Array<{
@@ -109,6 +134,141 @@ export interface DesignerDashboard {
       email: string;
     };
   }>;
+  revenueSeries: Array<{ month: string; revenue: number }>;
+  mostRentedProducts: Array<{
+    productId: string;
+    title: string;
+    imageUrl: string | null;
+    rentals: number;
+    revenue: number;
+  }>;
+  notifications: DesignerNotification[];
+  conversations: DesignerConversation[];
+}
+
+export interface DesignerOrderItem {
+  id: string;
+  quantity: number;
+  rentalDays: number;
+  unitPrice: number | string;
+  lineTotal: number | string;
+  product: {
+    id: string;
+    title: string;
+    images?: Array<{ url: string }>;
+  };
+  variant?: {
+    sizeLabel: string;
+    color: string;
+  } | null;
+}
+
+export interface DesignerDeliveryRequest {
+  id: string;
+  status: string;
+  deliveryAddress: string;
+  contactPhone?: string | null;
+  instructions?: string | null;
+  trackingEvents?: Array<{
+    id: string;
+    status: string;
+    note?: string | null;
+    createdAt: string;
+  }>;
+}
+
+export interface DesignerProduct {
+  id: string;
+  title: string;
+  description: string;
+  category: "SUIT" | "DRESS" | string;
+  status: "DRAFT" | "ACTIVE" | "ARCHIVED" | string;
+  rentalPrice: number | string;
+  buyPrice?: number | string | null;
+  tags: string[];
+  images: Array<{ id?: string; url: string; altText?: string | null }>;
+  variants: Array<{
+    id?: string;
+    sizeLabel: string;
+    color: string;
+    stockTotal: number;
+    stockReserved: number;
+  }>;
+  rentalCount?: number;
+  rentalRevenue?: number;
+}
+
+export interface DesignerProductPayload {
+  title: string;
+  description: string;
+  category: "SUIT" | "DRESS";
+  rentalPrice: number;
+  buyPrice?: number;
+  sizes: string[];
+  colors: string[];
+  stockQuantity: number;
+  availabilityDates?: string[];
+  images: string[];
+  tags?: string[];
+  status?: "DRAFT" | "ACTIVE" | "ARCHIVED";
+}
+
+export interface DesignerProductList {
+  items: DesignerProduct[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+  };
+}
+
+export interface DesignerConversation {
+  id: string;
+  subject: string;
+  status: string;
+  unreadForDesigner: number;
+  lastMessageAt?: string | null;
+  customer: {
+    id: string;
+    email: string;
+    profile?: {
+      firstName?: string;
+      lastName?: string;
+    } | null;
+  };
+  messages: Array<{
+    id: string;
+    body: string;
+    senderRole: string;
+    createdAt: string;
+  }>;
+}
+
+export interface DesignerConversationDetails extends DesignerConversation {
+  messages: Array<{
+    id: string;
+    body: string;
+    senderRole: string;
+    createdAt: string;
+    readAt?: string | null;
+    sender: {
+      email: string;
+      profile?: {
+        firstName?: string;
+        lastName?: string;
+      } | null;
+    };
+  }>;
+}
+
+export interface DesignerNotification {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  targetUrl?: string | null;
+  readAt?: string | null;
+  createdAt: string;
 }
 
 export interface AdminDashboard {
@@ -449,6 +609,115 @@ function authHeaders(): Record<string, string> {
 export async function fetchDesignerDashboard(): Promise<DesignerDashboard> {
   return requestApi<DesignerDashboard>("/designers/dashboard", {
     headers: authHeaders()
+  });
+}
+
+export async function fetchDesignerProducts(query = ""): Promise<DesignerProductList> {
+  return requestApi<DesignerProductList>(`/designers/products${query}`, {
+    headers: authHeaders()
+  });
+}
+
+export async function createDesignerProduct(
+  payload: DesignerProductPayload
+): Promise<DesignerProduct> {
+  return requestApi<DesignerProduct>("/designers/products", {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function updateDesignerProductStatus(
+  productId: string,
+  status: "DRAFT" | "ACTIVE" | "ARCHIVED"
+): Promise<DesignerProduct> {
+  return requestApi<DesignerProduct>(`/designers/products/${productId}/status`, {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify({ status })
+  });
+}
+
+export async function fetchDesignerOrders(): Promise<DesignerDashboard["orders"]> {
+  return requestApi<DesignerDashboard["orders"]>("/designers/orders", {
+    headers: authHeaders()
+  });
+}
+
+export async function updateDesignerOrderStatus(orderId: string, status: string): Promise<void> {
+  await requestApi(`/designers/orders/${orderId}/status`, {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify({ status })
+  });
+}
+
+export async function fetchDesignerAppointments(): Promise<DesignerDashboard["appointments"]> {
+  return requestApi<DesignerDashboard["appointments"]>("/designers/appointments", {
+    headers: authHeaders()
+  });
+}
+
+export async function updateDesignerAppointmentStatus(
+  appointmentId: string,
+  status: string
+): Promise<void> {
+  await requestApi(`/designers/appointments/${appointmentId}/status`, {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify({ status })
+  });
+}
+
+export async function fetchDesignerConversations(): Promise<DesignerConversation[]> {
+  return requestApi<DesignerConversation[]>("/designers/conversations", {
+    headers: authHeaders()
+  });
+}
+
+export async function fetchDesignerConversation(
+  conversationId: string
+): Promise<DesignerConversationDetails> {
+  return requestApi<DesignerConversationDetails>(`/designers/conversations/${conversationId}`, {
+    headers: authHeaders()
+  });
+}
+
+export async function sendDesignerMessage(conversationId: string, body: string): Promise<void> {
+  await requestApi(`/designers/conversations/${conversationId}/messages`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ body })
+  });
+}
+
+export async function fetchDesignerNotifications(): Promise<DesignerNotification[]> {
+  return requestApi<DesignerNotification[]>("/designers/notifications", {
+    headers: authHeaders()
+  });
+}
+
+export async function markDesignerNotificationRead(notificationId: string): Promise<void> {
+  await requestApi(`/designers/notifications/${notificationId}/read`, {
+    method: "PATCH",
+    headers: authHeaders()
+  });
+}
+
+export async function updateDesignerSettings(payload: {
+  storeName?: string;
+  description?: string;
+  location?: string;
+  brandColor?: string;
+  websiteUrl?: string;
+  instagramUrl?: string;
+  tiktokUrl?: string;
+}): Promise<void> {
+  await requestApi("/designers/settings", {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify(payload)
   });
 }
 
