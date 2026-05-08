@@ -27,16 +27,19 @@
     "@builder.io/qwik-city": "^1.19.2",
     "@eslint/js": "^9",
     "@types/node": "20.19.0",
+    "autoprefixer": "^10.4.21",
     "eslint": "9.32.0",
     "eslint-plugin-qwik": "^1.19.2",
     "globals": "16.4.0",
+    "postcss": "^8.5.6",
     "prettier": "3.6.2",
+    "tailwindcss": "^3.4.17",
     "typescript": "5.4.5",
     "typescript-eslint": "8.38.0",
-    "autoprefixer": "^10.4.21",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.17",
     "vite": "7.3.1",
     "vite-tsconfig-paths": "^4.2.1"
+  },
+  "dependencies": {
+    "socket.io-client": "^4.8.3"
   }
 }
