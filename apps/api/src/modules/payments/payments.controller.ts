@@ -1,4 +1,5 @@
-import { Body, Controller, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Headers, Post, Req, UseGuards } from "@nestjs/common";
+import { Request } from "express";
 
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
@@ -19,7 +20,15 @@ export class PaymentsController {
   }
 
   @Post("stripe/webhook")
-  handleStripeWebhook(@Body() payload: unknown) {
-    return this.paymentsService.handleStripeWebhook(payload);
+  handleStripeWebhook(
+    @Req() request: Request & { rawBody?: Buffer },
+    @Body() payload: unknown,
+    @Headers("stripe-signature") signature?: string
+  ) {
+    return this.paymentsService.handleStripeWebhook({
+      payload,
+      rawBody: request.rawBody,
+      signature
+    });
   }
 }

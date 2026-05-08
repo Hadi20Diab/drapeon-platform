@@ -141,12 +141,85 @@ export class PaymentsService {
     };
   }
 
-  handleStripeWebhook(payload: unknown) {
+  async handleStripeWebhook(input: {
+    payload: unknown;
+    rawBody?: Buffer;
+    signature?: string;
+  }) {
+    const webhookSecret = this.configService.get<string>("STRIPE_WEBHOOK_SECRET")?.trim();
+    let event: { type?: string; data?: { object?: unknown } };
+
+    if (webhookSecret) {
+      if (!input.rawBody || !input.signature) {
+        throw new BadRequestException("Missing Stripe webhook signature");
+      }
+
+      try {
+        event = this.stripeConnectService.constructWebhookEvent(
+          input.rawBody,
+          input.signature,
+          webhookSecret
+        );
+      } catch {
+        throw new BadRequestException("Invalid Stripe webhook signature");
+      }
+    } else {
+      event = input.payload as { type?: string; data?: { object?: unknown } };
+    }
+
+    await this.processStripeEvent(event);
+
     return {
       received: true,
       provider: "stripe",
-      payload
+      eventType: event.type ?? "unknown"
     };
+  }
+
+  private async processStripeEvent(event: { type?: string; data?: { object?: unknown } }) {
+    switch (event.type) {
+      case "account.updated":
+        await this.syncConnectedAccount(event.data?.object);
+        break;
+      case "checkout.session.completed":
+      case "checkout.session.async_payment_succeeded":
+      case "checkout.session.async_payment_failed":
+      case "payment_intent.succeeded":
+      case "payment_intent.payment_failed":
+      case "charge.refunded":
+      case "refund.created":
+      case "refund.updated":
+      case "payout.paid":
+      case "payout.failed":
+        break;
+      default:
+        break;
+    }
+  }
+
+  private async syncConnectedAccount(accountPayload: unknown) {
+    const account = accountPayload as {
+      id?: string;
+      charges_enabled?: boolean;
+      payouts_enabled?: boolean;
+      details_submitted?: boolean;
+    };
+
+    if (!account.id) {
+      return;
+    }
+
+    await this.prisma.designer.updateMany({
+      where: { stripeAccountId: account.id },
+      data: {
+        stripeChargesEnabled: Boolean(account.charges_enabled),
+        stripePayoutsEnabled: Boolean(account.payouts_enabled),
+        stripeDetailsSubmitted: Boolean(account.details_submitted),
+        stripeOnboardingComplete: Boolean(
+          account.charges_enabled && account.payouts_enabled && account.details_submitted
+        )
+      }
+    });
   }
 
   private formatTotals(

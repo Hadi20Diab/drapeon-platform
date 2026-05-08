@@ -13,7 +13,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:push": "prisma db push",
-    "prisma:seed": "ts-node --skipProject --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\",\\\"moduleResolution\\\":\\\"Node\\\"}\" prisma/seed.ts"
+    "prisma:seed": "ts-node --skipProject --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\",\\\"moduleResolution\\\":\\\"Node\\\"}\" prisma/seed.ts",
+    "prisma:reseed": "prisma db push && ts-node --skipProject --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\",\\\"moduleResolution\\\":\\\"Node\\\"}\" prisma/seed.ts"
   },
   "prisma": {
     "seed": "ts-node --skipProject --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\",\\\"moduleResolution\\\":\\\"Node\\\"}\" prisma/seed.ts"

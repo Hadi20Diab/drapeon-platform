@@ -9,6 +9,7 @@
     "dev": "pnpm -r --parallel dev",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
+    "api:reseed": "pnpm -C apps/api prisma:reseed",
     "format": "pnpm -r format"
   },
   "pnpm": {

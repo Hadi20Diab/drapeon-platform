@@ -12,6 +12,7 @@ type StripeClient = Stripe.Stripe;
 type StripeAccount = Awaited<ReturnType<StripeClient["accounts"]["create"]>>;
 type StripeAccountLink = Awaited<ReturnType<StripeClient["accountLinks"]["create"]>>;
 type StripeCheckoutSessionParams = Parameters<StripeClient["checkout"]["sessions"]["create"]>[0];
+type StripeConstructEvent = StripeClient["webhooks"]["constructEvent"];
 
 @Injectable()
 export class StripeConnectService {
@@ -101,6 +102,20 @@ export class StripeConnectService {
     }
 
     return stripe.checkout.sessions.create(payload);
+  }
+
+  constructWebhookEvent(
+    payload: Buffer | string,
+    signature: string,
+    secret: string
+  ): ReturnType<StripeConstructEvent> {
+    const stripe = this.getClient();
+
+    if (!stripe) {
+      throw new Error("Stripe is not configured");
+    }
+
+    return stripe.webhooks.constructEvent(payload, signature, secret);
   }
 
   private getClient(): StripeClient | null {

@@ -16,6 +16,7 @@ import {
 } from "@prisma/client";
 
 const prisma = new PrismaClient();
+const SEEDED_STRIPE_ACCOUNT_ID = "acct_1TUj5ZLhJyHSphBA";
 
 const firstNames = [
   "Lina",
@@ -159,6 +160,9 @@ async function main(): Promise<void> {
   await prisma.aiMessage.deleteMany();
   await prisma.aiSession.deleteMany();
   await prisma.adminAuditLog.deleteMany();
+  await prisma.designerMessage.deleteMany();
+  await prisma.designerConversation.deleteMany();
+  await prisma.designerNotification.deleteMany();
   await prisma.bodyMeasurement.deleteMany();
   await prisma.userProfile.deleteMany();
   await prisma.designer.deleteMany();
@@ -216,7 +220,7 @@ async function main(): Promise<void> {
     const storeName = `${firstName} ${lastName} Atelier`;
     const email = `designer${i}@drapeon.local`;
     const approvedBy = pickOne(adminUsers);
-    const approved = chance(0.85);
+    const approved = i === 1 ? true : chance(0.85);
 
     const designerUser = await prisma.user.create({
       data: {
@@ -244,7 +248,13 @@ async function main(): Promise<void> {
               ? DesignerApprovalStatus.APPROVED
               : DesignerApprovalStatus.PENDING,
             approvedById: approved ? approvedBy.id : null,
-            approvedAt: approved ? new Date() : null
+            approvedAt: approved ? new Date() : null,
+            stripeAccountId: i === 1 ? SEEDED_STRIPE_ACCOUNT_ID : null,
+            stripeAccountCreatedAt: i === 1 ? new Date() : null,
+            stripeOnboardingComplete: i === 1,
+            stripeChargesEnabled: i === 1,
+            stripePayoutsEnabled: i === 1,
+            stripeDetailsSubmitted: i === 1
           }
         }
       },
