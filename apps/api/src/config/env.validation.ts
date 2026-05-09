@@ -27,7 +27,9 @@ const envSchema = z.object({
   BREVO_API_KEY: z.string().optional(),
   CONTACT_TO_EMAIL: z.string().email().optional(),
   CONTACT_FROM_EMAIL: z.string().email().optional(),
-  CONTACT_FROM_NAME: z.string().optional()
+  CONTACT_FROM_NAME: z.string().optional(),
+  EMAIL_VERIFICATION_TTL: z.coerce.number().int().positive().default(86_400),
+  PASSWORD_RESET_TTL: z.coerce.number().int().positive().default(3_600)
 });
 
 export type EnvVariables = z.infer<typeof envSchema>;

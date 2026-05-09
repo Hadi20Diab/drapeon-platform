@@ -1,15 +1,23 @@
 import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
 
-import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
-import { DesignerApprovalStatus, UserRole } from "@prisma/client";
+import { DesignerApprovalStatus, Prisma, UserRole } from "@prisma/client";
 
+import { MailService } from "../../integrations/mail/mail.service";
 import { StripeConnectService } from "../../integrations/stripe/stripe-connect.service";
 import { PrismaService } from "../../prisma/prisma.service";
+import { ForgotPasswordDto } from "./dto/forgot-password.dto";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
 import { RegisterDto, RegistrationRole } from "./dto/register.dto";
+import { ResetPasswordDto } from "./dto/reset-password.dto";
+import { VerifyEmailDto } from "./dto/verify-email.dto";
 import { AuthJwtPayload } from "./interfaces/auth-jwt-payload.interface";
 
 interface AuthTokenPair {
@@ -22,8 +30,10 @@ interface AuthResponse {
     id: string;
     email: string;
     role: AuthJwtPayload["role"];
+    isEmailVerified: boolean;
   };
   tokens: AuthTokenPair;
+  verificationEmailSent?: boolean;
 }
 
 @Injectable()
@@ -32,7 +42,8 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    private readonly stripeConnectService: StripeConnectService
+    private readonly stripeConnectService: StripeConnectService,
+    private readonly mailService: MailService
   ) {}
 
   async register(payload: RegisterDto): Promise<AuthResponse> {
@@ -64,7 +75,10 @@ export class AuthService {
         profile: {
           create: {
             firstName: payload.firstName,
-            lastName: payload.lastName
+            lastName: payload.lastName,
+            measurements: {
+              create: this.toMeasurementCreateInput(payload.measurements)
+            }
           }
         },
         ...(role === UserRole.DESIGNER
@@ -83,6 +97,7 @@ export class AuthService {
           : {})
       }
     });
+    const verificationEmailSent = await this.dispatchVerificationEmail(user.id, payload.email, payload.firstName);
     const tokens = await this.issueTokens({
       sub: user.id,
       email: user.email,
@@ -94,9 +109,11 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
-        role: user.role
+        role: user.role,
+        isEmailVerified: user.isEmailVerified
       },
-      tokens
+      tokens,
+      verificationEmailSent
     };
   }
 
@@ -107,6 +124,7 @@ export class AuthService {
         id: true,
         email: true,
         role: true,
+        isEmailVerified: true,
         passwordHash: true
       }
     });
@@ -126,7 +144,8 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
-        role: user.role
+        role: user.role,
+        isEmailVerified: user.isEmailVerified
       },
       tokens
     };
@@ -142,6 +161,123 @@ export class AuthService {
     } catch {
       throw new UnauthorizedException("Invalid refresh token");
     }
+  }
+
+  async verifyEmail(payload: VerifyEmailDto): Promise<{ verified: boolean; message: string }> {
+    const tokenHash = this.hashToken(payload.token);
+    const tokenRecord = await this.prisma.emailVerificationToken.findUnique({
+      where: { tokenHash },
+      include: {
+        user: {
+          select: {
+            id: true,
+            isEmailVerified: true
+          }
+        }
+      }
+    });
+
+    if (!this.hasUsableToken(tokenRecord)) {
+      throw new UnauthorizedException("Verification link is invalid or has expired.");
+    }
+    const verificationToken = tokenRecord as NonNullable<typeof tokenRecord>;
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: verificationToken.userId },
+        data: { isEmailVerified: true }
+      }),
+      this.prisma.emailVerificationToken.update({
+        where: { id: verificationToken.id },
+        data: { consumedAt: new Date() }
+      }),
+      this.prisma.emailVerificationToken.updateMany({
+        where: {
+          userId: verificationToken.userId,
+          id: { not: verificationToken.id },
+          consumedAt: null
+        },
+        data: { consumedAt: new Date() }
+      })
+    ]);
+
+    return {
+      verified: true,
+      message: verificationToken.user.isEmailVerified
+        ? "Email address is already verified."
+        : "Email address verified successfully."
+    };
+  }
+
+  async forgotPassword(payload: ForgotPasswordDto): Promise<{ delivered: boolean; message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: payload.email },
+      include: { profile: { select: { firstName: true } } }
+    });
+
+    if (!user) {
+      return {
+        delivered: true,
+        message: "If an account exists for this email, a reset link has been sent."
+      };
+    }
+
+    const token = await this.issueOneTimeToken("password-reset", user.id);
+    const delivered = await this.sendPasswordResetEmail(
+      user.email,
+      user.profile?.firstName ?? "there",
+      token.rawToken
+    );
+
+    return {
+      delivered,
+      message: delivered
+        ? "If an account exists for this email, a reset link has been sent."
+        : "Password reset email is not configured yet."
+    };
+  }
+
+  async resetPassword(payload: ResetPasswordDto): Promise<{ reset: boolean; message: string }> {
+    const tokenHash = this.hashToken(payload.token);
+    const tokenRecord = await this.prisma.passwordResetToken.findUnique({
+      where: { tokenHash }
+    });
+
+    if (!this.hasUsableToken(tokenRecord)) {
+      throw new UnauthorizedException("Reset link is invalid or has expired.");
+    }
+    const resetToken = tokenRecord as NonNullable<typeof tokenRecord>;
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: resetToken.userId },
+        data: { passwordHash: this.hashPassword(payload.password) }
+      }),
+      this.prisma.passwordResetToken.update({
+        where: { id: resetToken.id },
+        data: { consumedAt: new Date() }
+      }),
+      this.prisma.passwordResetToken.updateMany({
+        where: {
+          userId: resetToken.userId,
+          id: { not: resetToken.id },
+          consumedAt: null
+        },
+        data: { consumedAt: new Date() }
+      }),
+      this.prisma.refreshToken.updateMany({
+        where: {
+          userId: resetToken.userId,
+          revokedAt: null
+        },
+        data: { revokedAt: new Date() }
+      })
+    ]);
+
+    return {
+      reset: true,
+      message: "Password updated successfully."
+    };
   }
 
   private async issueTokens(payload: AuthJwtPayload): Promise<AuthTokenPair> {
@@ -198,6 +334,21 @@ export class AuthService {
     return createHash("sha256").update(value).digest("hex");
   }
 
+  private toMeasurementCreateInput(
+    measurements: RegisterDto["measurements"]
+  ): Prisma.BodyMeasurementUncheckedCreateWithoutProfileInput {
+    return {
+      heightCm: measurements.heightCm,
+      weightKg: measurements.weightKg,
+      chestCm: measurements.chestCm,
+      waistCm: measurements.waistCm,
+      hipCm: measurements.hipCm,
+      shoulderCm: measurements.shoulderCm,
+      inseamCm: measurements.inseamCm,
+      notes: measurements.notes
+    };
+  }
+
   private hashPassword(password: string): string {
     const salt = randomBytes(16).toString("hex");
     const digest = scryptSync(password, salt, 64).toString("hex");
@@ -220,6 +371,136 @@ export class AuthService {
     }
 
     return timingSafeEqual(storedBuffer, candidateBuffer);
+  }
+
+  private async dispatchVerificationEmail(
+    userId: string,
+    email: string,
+    firstName: string
+  ): Promise<boolean> {
+    const token = await this.issueOneTimeToken("email-verification", userId);
+    return this.sendVerificationEmail(email, firstName, token.rawToken);
+  }
+
+  private async issueOneTimeToken(
+    type: "email-verification" | "password-reset",
+    userId: string
+  ): Promise<{ rawToken: string }> {
+    const rawToken = randomBytes(32).toString("hex");
+    const expiresAt = new Date(
+      Date.now() +
+        this.configService.getOrThrow<number>(
+          type === "email-verification" ? "EMAIL_VERIFICATION_TTL" : "PASSWORD_RESET_TTL"
+        ) *
+          1000
+    );
+
+    if (type === "email-verification") {
+      await this.prisma.emailVerificationToken.deleteMany({
+        where: {
+          userId,
+          consumedAt: null
+        }
+      });
+      await this.prisma.emailVerificationToken.create({
+        data: {
+          userId,
+          tokenHash: this.hashToken(rawToken),
+          expiresAt
+        }
+      });
+    } else {
+      await this.prisma.passwordResetToken.deleteMany({
+        where: {
+          userId,
+          consumedAt: null
+        }
+      });
+      await this.prisma.passwordResetToken.create({
+        data: {
+          userId,
+          tokenHash: this.hashToken(rawToken),
+          expiresAt
+        }
+      });
+    }
+
+    return { rawToken };
+  }
+
+  private async sendVerificationEmail(
+    email: string,
+    firstName: string,
+    token: string
+  ): Promise<boolean> {
+    if (!this.mailService.isConfigured()) {
+      return false;
+    }
+
+    const verifyUrl = this.buildWebUrl(`/auth/verify-email?token=${encodeURIComponent(token)}`);
+    await this.mailService.sendEmail({
+      to: [{ email, name: firstName }],
+      subject: "Verify your Drapeon account",
+      textContent: [
+        `Hi ${firstName},`,
+        "",
+        "Welcome to Drapeon.",
+        "Verify your email address to confirm your account:",
+        verifyUrl,
+        "",
+        "If you did not create this account, you can ignore this message."
+      ].join("\n")
+    });
+
+    return true;
+  }
+
+  private async sendPasswordResetEmail(
+    email: string,
+    firstName: string,
+    token: string
+  ): Promise<boolean> {
+    if (!this.mailService.isConfigured()) {
+      return false;
+    }
+
+    const resetUrl = this.buildWebUrl(`/auth/reset-password?token=${encodeURIComponent(token)}`);
+    await this.mailService.sendEmail({
+      to: [{ email, name: firstName }],
+      subject: "Reset your Drapeon password",
+      textContent: [
+        `Hi ${firstName},`,
+        "",
+        "We received a request to reset your password.",
+        "Use the link below to choose a new password:",
+        resetUrl,
+        "",
+        "If you did not request this change, you can ignore this message."
+      ].join("\n")
+    });
+
+    return true;
+  }
+
+  private buildWebUrl(path: string): string {
+    const origin = this.configService.get<string>("WEB_ORIGIN") ?? "http://localhost:5173";
+    return new URL(path, origin).toString();
+  }
+
+  private hasUsableToken(
+    tokenRecord:
+      | {
+          expiresAt: Date;
+          consumedAt: Date | null;
+        }
+      | null
+      | undefined
+  ): boolean {
+    return Boolean(
+      tokenRecord &&
+        tokenRecord.consumedAt == null &&
+        tokenRecord.expiresAt.getTime() >= Date.now()
+    );
   }
 
   private toSlug(value: string): string {

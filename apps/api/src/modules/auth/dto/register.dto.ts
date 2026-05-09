@@ -1,8 +1,53 @@
-import { IsEmail, IsEnum, IsOptional, IsString, MinLength } from "class-validator";
+import { Type } from "class-transformer";
+import {
+  IsEmail,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  IsString,
+  MinLength,
+  ValidateNested
+} from "class-validator";
 
 export enum RegistrationRole {
   USER = "USER",
   DESIGNER = "DESIGNER"
+}
+
+export class RegisterBodyMeasurementsDto {
+  @IsNumber()
+  @IsPositive()
+  heightCm!: number;
+
+  @IsNumber()
+  @IsPositive()
+  weightKg!: number;
+
+  @IsNumber()
+  @IsPositive()
+  chestCm!: number;
+
+  @IsNumber()
+  @IsPositive()
+  waistCm!: number;
+
+  @IsNumber()
+  @IsPositive()
+  hipCm!: number;
+
+  @IsNumber()
+  @IsPositive()
+  shoulderCm!: number;
+
+  @IsNumber()
+  @IsPositive()
+  inseamCm!: number;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  notes?: string;
 }
 
 export class RegisterDto {
@@ -24,4 +69,8 @@ export class RegisterDto {
   @IsOptional()
   @IsEnum(RegistrationRole)
   role?: RegistrationRole;
+
+  @ValidateNested()
+  @Type(() => RegisterBodyMeasurementsDto)
+  measurements!: RegisterBodyMeasurementsDto;
 }
