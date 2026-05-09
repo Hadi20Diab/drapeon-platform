@@ -1,19 +1,20 @@
 import { Injectable, ServiceUnavailableException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
+import { MailService } from "../../integrations/mail/mail.service";
 import { ContactMessageDto } from "./dto/contact-message.dto";
 
 @Injectable()
 export class ContactService {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly mailService: MailService
+  ) {}
 
   async sendMessage(payload: ContactMessageDto) {
-    const apiKey = this.configService.get<string>("BREVO_API_KEY")?.trim();
     const toEmail = this.configService.get<string>("CONTACT_TO_EMAIL", "hello@drapeon.test");
-    const senderEmail = this.configService.get<string>("CONTACT_FROM_EMAIL", "no-reply@drapeon.test");
-    const senderName = this.configService.get<string>("CONTACT_FROM_NAME", "Drapeon Contact");
 
-    if (!apiKey) {
+    if (!this.mailService.isConfigured()) {
       return {
         delivered: false,
         provider: "brevo",
@@ -21,14 +22,8 @@ export class ContactService {
       };
     }
 
-    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "api-key": apiKey
-      },
-      body: JSON.stringify({
-        sender: { name: senderName, email: senderEmail },
+    try {
+      await this.mailService.sendEmail({
         to: [{ email: toEmail }],
         replyTo: { email: payload.email, name: payload.name },
         subject: `Drapeon contact: ${payload.topic}`,
@@ -39,11 +34,30 @@ export class ContactService {
           "",
           payload.message
         ].join("\n")
-      })
-    });
+      });
 
-    if (!response.ok) {
-      throw new ServiceUnavailableException("Could not send contact message right now.");
+      await this.mailService.sendEmail({
+        to: [{ email: payload.email, name: payload.name }],
+        subject: "We received your Drapeon message",
+        textContent: [
+          `Hi ${payload.name},`,
+          "",
+          "Thanks for reaching out to Drapeon.",
+          `We received your message about "${payload.topic}" and our team will reply as soon as possible.`,
+          "",
+          "For reference, here is a copy of your message:",
+          payload.message,
+          "",
+          "Best,",
+          "Drapeon"
+        ].join("\n")
+      });
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) {
+        throw new ServiceUnavailableException("Could not send contact message right now.");
+      }
+
+      throw error;
     }
 
     return {

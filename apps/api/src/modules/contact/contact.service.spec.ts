@@ -1,5 +1,6 @@
 import { ServiceUnavailableException } from "@nestjs/common";
 
+import { MailService } from "../../integrations/mail/mail.service";
 import { ContactService } from "./contact.service";
 
 function config(values: Record<string, string | undefined>) {
@@ -21,7 +22,9 @@ describe("ContactService", () => {
   });
 
   it("returns a configuration response when Brevo is not configured", async () => {
-    const service = new ContactService(config({}) as any);
+    const service = new ContactService(config({}) as any, {
+      isConfigured: jest.fn(() => false)
+    } as unknown as MailService);
 
     await expect(service.sendMessage(payload)).resolves.toEqual({
       delivered: false,
@@ -31,33 +34,38 @@ describe("ContactService", () => {
   });
 
   it("sends contact messages through Brevo when configured", async () => {
-    const fetchMock = jest.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true } as Response);
-    const service = new ContactService(
-      config({
-        BREVO_API_KEY: "brevo-key",
-        CONTACT_TO_EMAIL: "team@example.com",
-        CONTACT_FROM_EMAIL: "no-reply@example.com",
-        CONTACT_FROM_NAME: "Drapeon"
-      }) as any
-    );
+    const sendEmail = jest.fn().mockResolvedValue(undefined);
+    const service = new ContactService(config({ CONTACT_TO_EMAIL: "team@example.com" }) as any, {
+      isConfigured: jest.fn(() => true),
+      sendEmail
+    } as unknown as MailService);
 
     await expect(service.sendMessage(payload)).resolves.toEqual({
       delivered: true,
       provider: "brevo",
       message: "Message sent. The Drapeon team will reply by email."
     });
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://api.brevo.com/v3/smtp/email",
+    expect(sendEmail).toHaveBeenNthCalledWith(
+      1,
       expect.objectContaining({
-        method: "POST",
-        headers: expect.objectContaining({ "api-key": "brevo-key" })
+        to: [{ email: "team@example.com" }],
+        replyTo: { email: payload.email, name: payload.name }
+      })
+    );
+    expect(sendEmail).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        to: [{ email: payload.email, name: payload.name }],
+        subject: "We received your Drapeon message"
       })
     );
   });
 
   it("surfaces delivery failures", async () => {
-    jest.spyOn(globalThis, "fetch").mockResolvedValue({ ok: false } as Response);
-    const service = new ContactService(config({ BREVO_API_KEY: "brevo-key" }) as any);
+    const service = new ContactService(config({}) as any, {
+      isConfigured: jest.fn(() => true),
+      sendEmail: jest.fn().mockRejectedValue(new ServiceUnavailableException())
+    } as unknown as MailService);
 
     await expect(service.sendMessage(payload)).rejects.toThrow(ServiceUnavailableException);
   });
