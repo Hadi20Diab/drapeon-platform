@@ -19,6 +19,7 @@ export interface AuthUser {
   id: string;
   email: string;
   role: "USER" | "DESIGNER" | "ADMIN";
+  isEmailVerified: boolean;
 }
 
 export interface AuthSession {
@@ -27,6 +28,7 @@ export interface AuthSession {
     accessToken: string;
     refreshToken: string;
   };
+  verificationEmailSent?: boolean;
 }
 
 export interface StripeCheckoutResponse {
@@ -569,6 +571,36 @@ function extractData<T>(payload: ApiEnvelope<T> | T): T {
     : (payload as T);
 }
 
+function extractErrorMessage(payload: unknown): string | null {
+  if (typeof payload === "string") {
+    const message = payload.trim();
+    return message.length > 0 ? message : null;
+  }
+
+  if (Array.isArray(payload)) {
+    const messages = payload
+      .map((entry) => extractErrorMessage(entry))
+      .filter((entry): entry is string => Boolean(entry));
+    return messages.length > 0 ? messages.join(", ") : null;
+  }
+
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+  const errorRecord = payload as {
+    message?: unknown;
+    error?: unknown;
+    errors?: unknown;
+  };
+
+  return (
+    extractErrorMessage(errorRecord.message) ??
+    extractErrorMessage(errorRecord.error) ??
+    extractErrorMessage(errorRecord.errors) ??
+    null
+  );
+}
+
 function apiBaseUrl(): string {
   return import.meta.env.PUBLIC_API_URL ?? "http://localhost:4000";
 }
@@ -608,11 +640,7 @@ async function requestApi<T>(path: string, init?: RequestInit): Promise<T> {
       }
     }
 
-    const message =
-      payload?.message ??
-      payload?.error ??
-      (Array.isArray(payload?.errors) ? payload.errors.join(", ") : null) ??
-      "Request failed";
+    const message = extractErrorMessage(payload) ?? "Request failed";
     throw new Error(message);
   }
 
@@ -700,8 +728,46 @@ export async function registerUser(payload: {
   firstName: string;
   lastName: string;
   role: "USER" | "DESIGNER";
+  measurements: {
+    heightCm: number;
+    weightKg: number;
+    chestCm: number;
+    waistCm: number;
+    hipCm: number;
+    shoulderCm: number;
+    inseamCm: number;
+    notes?: string;
+  };
 }): Promise<AuthSession> {
   return requestApi<AuthSession>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function requestPasswordReset(payload: {
+  email: string;
+}): Promise<{ delivered: boolean; message: string }> {
+  return requestApi<{ delivered: boolean; message: string }>("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function resetPasswordWithToken(payload: {
+  token: string;
+  password: string;
+}): Promise<{ reset: boolean; message: string }> {
+  return requestApi<{ reset: boolean; message: string }>("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function verifyEmailToken(payload: {
+  token: string;
+}): Promise<{ verified: boolean; message: string }> {
+  return requestApi<{ verified: boolean; message: string }>("/auth/verify-email", {
     method: "POST",
     body: JSON.stringify(payload)
   });
