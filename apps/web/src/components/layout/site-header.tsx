@@ -1,12 +1,21 @@
 import { $, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
 
-import { clearAuthSession, readAuthSession, type AuthUser } from "../../lib/api";
+import {
+  clearAuthSession,
+  readAuthSession,
+  subscribeToAuthSession,
+  type AuthUser
+} from "../../lib/api";
 
 export const SiteHeader = component$(() => {
   const user = useSignal<AuthUser | null>(null);
 
   useVisibleTask$(() => {
     user.value = readAuthSession()?.user ?? null;
+
+    return subscribeToAuthSession((session) => {
+      user.value = session?.user ?? null;
+    });
   });
 
   const logout = $(() => {
@@ -50,12 +59,23 @@ export const SiteHeader = component$(() => {
           <a href="/cart" class="transition hover:text-brand-gold">
             Cart
           </a>
+          {user.value?.role === "USER" && (
+            <a href="/profile" class="transition hover:text-brand-gold">
+              Profile
+            </a>
+          )}
         </nav>
 
         {user.value ? (
           <div class="flex min-w-[132px] items-center justify-end gap-3">
             <a
-              href={user.value.role === "DESIGNER" ? "/designers/dashboard" : "/catalog"}
+              href={
+                user.value.role === "DESIGNER"
+                  ? "/designers/dashboard"
+                  : user.value.role === "ADMIN"
+                    ? "/admin/dashboard"
+                    : "/profile"
+              }
               class="hidden text-xs font-extrabold uppercase tracking-[0.12em] text-brand-ink/70 md:block"
             >
               {user.value.role}

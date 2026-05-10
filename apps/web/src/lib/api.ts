@@ -31,6 +31,43 @@ export interface AuthSession {
   verificationEmailSent?: boolean;
 }
 
+export interface UserProfile {
+  id: string;
+  userId: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber?: string | null;
+  avatarUrl?: string | null;
+  preferences?: Record<string, unknown> | null;
+  measurements?: {
+    heightCm?: number | string | null;
+    weightKg?: number | string | null;
+    chestCm?: number | string | null;
+    waistCm?: number | string | null;
+    hipCm?: number | string | null;
+    shoulderCm?: number | string | null;
+    inseamCm?: number | string | null;
+    notes?: string | null;
+  } | null;
+}
+
+export interface UserBooking {
+  id: string;
+  status: string;
+  type: string;
+  startsAt: string;
+  endsAt: string;
+  product: {
+    id: string;
+    title: string;
+    images?: Array<{ url: string }>;
+  };
+  designer: {
+    id: string;
+    storeName: string;
+  };
+}
+
 export interface StripeCheckoutResponse {
   mode: "configuration_required" | "stripe_onboarding_required" | "stripe_connect_checkout";
   provider: "stripe";
@@ -469,6 +506,8 @@ const dressImages = [
   "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1200&q=85",
   "https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=1200&q=85"
 ];
+const authStorageKey = "drapeon.auth";
+const authEventKey = "drapeon.auth:event";
 
 function uniqueValues(values: Array<string | null | undefined>): string[] {
   return [...new Set(values.filter((value): value is string => Boolean(value)))];
@@ -774,36 +813,65 @@ export async function verifyEmailToken(payload: {
 }
 
 export function persistAuthSession(session: AuthSession): void {
-  sessionStorage.setItem("drapeon.auth", JSON.stringify(session));
-  localStorage.removeItem("drapeon.auth");
+  const serialized = JSON.stringify(session);
+
+  localStorage.setItem(authStorageKey, serialized);
+  sessionStorage.setItem(authStorageKey, serialized);
+  localStorage.setItem(
+    authEventKey,
+    JSON.stringify({
+      type: "updated",
+      at: Date.now()
+    })
+  );
 }
 
 export function readAuthSession(): AuthSession | null {
   try {
-    const sessionValue = sessionStorage.getItem("drapeon.auth");
+    const primaryValue = localStorage.getItem(authStorageKey);
+
+    if (primaryValue) {
+      sessionStorage.setItem(authStorageKey, primaryValue);
+      return JSON.parse(primaryValue) as AuthSession;
+    }
+
+    const sessionValue = sessionStorage.getItem(authStorageKey);
 
     if (sessionValue) {
+      localStorage.setItem(authStorageKey, sessionValue);
       return JSON.parse(sessionValue) as AuthSession;
     }
-
-    const legacyLocalValue = localStorage.getItem("drapeon.auth");
-
-    if (!legacyLocalValue) {
-      return null;
-    }
-
-    sessionStorage.setItem("drapeon.auth", legacyLocalValue);
-    localStorage.removeItem("drapeon.auth");
-
-    return JSON.parse(legacyLocalValue) as AuthSession;
   } catch {
     return null;
   }
+
+  return null;
 }
 
 export function clearAuthSession(): void {
-  sessionStorage.removeItem("drapeon.auth");
-  localStorage.removeItem("drapeon.auth");
+  sessionStorage.removeItem(authStorageKey);
+  localStorage.removeItem(authStorageKey);
+  localStorage.setItem(
+    authEventKey,
+    JSON.stringify({
+      type: "cleared",
+      at: Date.now()
+    })
+  );
+}
+
+export function subscribeToAuthSession(listener: (session: AuthSession | null) => void): () => void {
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === authStorageKey || event.key === authEventKey) {
+      listener(readAuthSession());
+    }
+  };
+
+  window.addEventListener("storage", handleStorage);
+
+  return () => {
+    window.removeEventListener("storage", handleStorage);
+  };
 }
 
 export async function createStripeCheckout(payload: {
@@ -977,6 +1045,66 @@ export async function createStripeOnboardingLink(): Promise<StripeOnboardingResp
   return requestApi<StripeOnboardingResponse>("/designers/stripe/onboarding-link", {
     method: "POST",
     headers: authHeaders()
+  });
+}
+
+export async function fetchCurrentUserProfile(): Promise<UserProfile> {
+  return requestApi<UserProfile>("/users/me", {
+    headers: authHeaders()
+  });
+}
+
+export async function updateCurrentUserProfile(payload: {
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+  avatarUrl?: string;
+  preferences?: Record<string, unknown>;
+}): Promise<UserProfile> {
+  return requestApi<UserProfile>("/users/me", {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function updateCurrentUserMeasurements(payload: {
+  heightCm?: number;
+  weightKg?: number;
+  chestCm?: number;
+  waistCm?: number;
+  hipCm?: number;
+  shoulderCm?: number;
+  inseamCm?: number;
+  notes?: string;
+}): Promise<UserProfile["measurements"]> {
+  return requestApi<UserProfile["measurements"]>("/users/me/measurements", {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function fetchMyBookings(): Promise<UserBooking[]> {
+  return requestApi<UserBooking[]>("/bookings/me", {
+    headers: authHeaders()
+  });
+}
+
+export async function createFittingBooking(payload: {
+  productId: string;
+  designerId: string;
+  variantId?: string;
+  startsAt: string;
+  endsAt: string;
+}): Promise<UserBooking> {
+  return requestApi<UserBooking>("/bookings", {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({
+      ...payload,
+      type: "FITTING"
+    })
   });
 }
 
