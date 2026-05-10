@@ -1056,9 +1056,26 @@ export async function updateDesignerOrderStatus(orderId: string, status: string)
 }
 
 export async function fetchDesignerAppointments(): Promise<DesignerDashboard["appointments"]> {
-  return requestApi<DesignerDashboard["appointments"]>("/designers/appointments", {
+  const payload = await requestApi<
+    | DesignerDashboard["appointments"]
+    | { appointments?: DesignerDashboard["appointments"]; items?: DesignerDashboard["appointments"] }
+  >("/designers/appointments", {
     headers: authHeaders()
   });
+
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (payload && Array.isArray(payload.appointments)) {
+    return payload.appointments;
+  }
+
+  if (payload && Array.isArray(payload.items)) {
+    return payload.items;
+  }
+
+  return [];
 }
 
 export async function updateDesignerAppointmentStatus(

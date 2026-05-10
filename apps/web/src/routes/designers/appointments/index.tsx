@@ -115,6 +115,20 @@ function statusTone(status: string): string {
   }
 }
 
+function asAppointmentList(
+  value: DesignerDashboard["appointments"] | null | { appointments?: DesignerDashboard["appointments"] }
+): DesignerDashboard["appointments"] {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (value && Array.isArray(value.appointments)) {
+    return value.appointments;
+  }
+
+  return [];
+}
+
 export default component$(() => {
   const appointments = useSignal<DesignerDashboard["appointments"] | null>(null);
   const view = useSignal<"week" | "day">("week");
@@ -173,7 +187,7 @@ export default component$(() => {
     return next;
   });
 
-  const allAppointments = appointments.value ?? [];
+  const allAppointments = asAppointmentList(appointments.value);
   const filteredAppointments = allAppointments
     .filter((appointment) => {
       if (statusFilter.value === "ALL") {
