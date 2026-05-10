@@ -1,7 +1,13 @@
 import { $, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
 import { Link, routeLoader$ } from "@builder.io/qwik-city";
 
-import { fetchProductDetails } from "../../../lib/api";
+import {
+  createFittingBooking,
+  fetchProductDetails,
+  readAuthSession,
+  subscribeToAuthSession,
+  type AuthUser
+} from "../../../lib/api";
 import { addToCart, isInWishlist, toggleWishlist } from "../../../lib/commerce";
 
 export const useProductDetails = routeLoader$(async ({ params, status }) => {
@@ -18,6 +24,13 @@ export default component$(() => {
   const product = useProductDetails();
   const notice = useSignal("");
   const wishlisted = useSignal(false);
+  const bookingError = useSignal("");
+  const bookingNotice = useSignal("");
+  const isBooking = useSignal(false);
+  const bookingDate = useSignal(new Date(Date.now() + 86400000).toISOString().slice(0, 10));
+  const bookingTime = useSignal("14:00");
+  const bookingDuration = useSignal("60");
+  const authUser = useSignal<AuthUser | null>(null);
 
   if (!product.value) {
     return (
@@ -36,6 +49,11 @@ export default component$(() => {
 
   useVisibleTask$(() => {
     wishlisted.value = isInWishlist(item.id);
+    authUser.value = readAuthSession()?.user ?? null;
+
+    return subscribeToAuthSession((session) => {
+      authUser.value = session?.user ?? null;
+    });
   });
 
   const addCart = $(() => {
@@ -46,6 +64,54 @@ export default component$(() => {
     const result = toggleWishlist(item);
     wishlisted.value = result.active;
     notice.value = result.active ? "Saved to wishlist." : "Removed from wishlist.";
+  });
+
+  const requestFitting = $(async () => {
+    bookingError.value = "";
+    bookingNotice.value = "";
+    isBooking.value = true;
+
+    try {
+      const session = readAuthSession();
+
+      if (!session) {
+        bookingError.value = "Sign in as a client to request a fitting session.";
+        return;
+      }
+
+      if (session.user.role !== "USER") {
+        bookingError.value = "Fitting requests are available from client accounts only.";
+        return;
+      }
+
+      if (!item.designer.id) {
+        bookingError.value = "This designer profile is missing. Please try another product.";
+        return;
+      }
+
+      const startAt = new Date(`${bookingDate.value}T${bookingTime.value}:00`);
+
+      if (Number.isNaN(startAt.getTime())) {
+        bookingError.value = "Choose a valid fitting date and time.";
+        return;
+      }
+
+      const endAt = new Date(startAt.getTime() + Number(bookingDuration.value) * 60 * 1000);
+
+      await createFittingBooking({
+        productId: item.id,
+        designerId: item.designer.id,
+        startsAt: startAt.toISOString(),
+        endsAt: endAt.toISOString()
+      });
+
+      bookingNotice.value = "Fitting request submitted. You can review it from your profile.";
+    } catch (caught) {
+      bookingError.value =
+        caught instanceof Error ? caught.message : "Could not submit the fitting request.";
+    } finally {
+      isBooking.value = false;
+    }
   });
 
   return (
@@ -190,6 +256,94 @@ export default component$(() => {
               {notice.value}
             </p>
           )}
+
+          <article class="luxury-card mt-8 p-5">
+            <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p class="eyebrow">Fitting Session</p>
+                <h2 class="mt-2 font-display text-4xl leading-none text-brand-ink">
+                  Reserve a styling slot
+                </h2>
+                <p class="mt-3 max-w-2xl text-sm leading-7 text-brand-ink/60">
+                  Request a studio fitting directly with this designer before placing the rental.
+                </p>
+              </div>
+              <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-brand-rose">
+                {authUser.value?.role === "USER"
+                  ? "Client booking enabled"
+                  : authUser.value
+                    ? `${authUser.value.role.toLowerCase()} account`
+                    : "Sign in required"}
+              </span>
+            </div>
+
+            <div class="mt-6 grid gap-4 md:grid-cols-3">
+              <label class="grid gap-2 text-sm font-bold text-brand-ink/70">
+                Date
+                <input
+                  class="min-h-12 border border-brand-ink/20 bg-white px-4 outline-none focus:border-brand-rose"
+                  type="date"
+                  min={new Date().toISOString().slice(0, 10)}
+                  value={bookingDate.value}
+                  onInput$={(_, target) => {
+                    bookingDate.value = target.value;
+                  }}
+                />
+              </label>
+              <label class="grid gap-2 text-sm font-bold text-brand-ink/70">
+                Time
+                <input
+                  class="min-h-12 border border-brand-ink/20 bg-white px-4 outline-none focus:border-brand-rose"
+                  type="time"
+                  value={bookingTime.value}
+                  onInput$={(_, target) => {
+                    bookingTime.value = target.value;
+                  }}
+                />
+              </label>
+              <label class="grid gap-2 text-sm font-bold text-brand-ink/70">
+                Duration
+                <select
+                  class="min-h-12 border border-brand-ink/20 bg-white px-4 outline-none focus:border-brand-rose"
+                  value={bookingDuration.value}
+                  onChange$={(_, target) => {
+                    bookingDuration.value = target.value;
+                  }}
+                >
+                  <option value="60">60 minutes</option>
+                  <option value="90">90 minutes</option>
+                  <option value="120">120 minutes</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="mt-6 flex flex-wrap items-center gap-3">
+              <button class="btn-primary" type="button" disabled={isBooking.value} onClick$={requestFitting}>
+                {isBooking.value ? "Submitting..." : "Request Fitting Session"}
+              </button>
+              {!authUser.value && (
+                <a href="/auth" class="btn-secondary">
+                  Sign In
+                </a>
+              )}
+              {authUser.value?.role === "USER" && (
+                <a href="/profile" class="btn-secondary">
+                  View My Bookings
+                </a>
+              )}
+            </div>
+
+            {bookingError.value && (
+              <p class="mt-4 border border-brand-rose/30 bg-brand-rose/10 px-4 py-3 text-sm font-semibold text-brand-rose">
+                {bookingError.value}
+              </p>
+            )}
+            {bookingNotice.value && (
+              <p class="mt-4 border border-brand-olive/30 bg-brand-olive/10 px-4 py-3 text-sm font-semibold text-brand-olive">
+                {bookingNotice.value}
+              </p>
+            )}
+          </article>
         </article>
       </div>
     </section>
