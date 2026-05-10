@@ -4,6 +4,8 @@ import { DesignerShell, DesignerSkeleton, EmptyState } from "../../../components
 import {
   createStripeOnboardingLink,
   fetchDesignerDashboard,
+  readAuthSession,
+  subscribeToAuthSession,
   type DesignerDashboard
 } from "../../../lib/api";
 
@@ -17,12 +19,34 @@ export default component$(() => {
   const paymentNotice = useSignal("");
   const isStartingOnboarding = useSignal(false);
 
+  const loadDashboard = $(async () => {
+    const session = readAuthSession();
+
+    if (!session || session.user.role !== "DESIGNER") {
+      dashboard.value = null;
+      error.value = "Sign in as a designer to load live dashboard metrics.";
+      return;
+    }
+
+    dashboard.value = await fetchDesignerDashboard();
+    error.value = "";
+  });
+
   useVisibleTask$(async () => {
     try {
-      dashboard.value = await fetchDesignerDashboard();
-    } catch {
-      error.value = "Sign in as a designer to load live dashboard metrics.";
+      await loadDashboard();
+    } catch (caught) {
+      error.value =
+        caught instanceof Error ? caught.message : "Sign in as a designer to load live dashboard metrics.";
     }
+
+    return subscribeToAuthSession(async () => {
+      try {
+        await loadDashboard();
+      } catch {
+        dashboard.value = null;
+      }
+    });
   });
 
   const startStripeOnboarding = $(async () => {

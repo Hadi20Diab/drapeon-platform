@@ -7,6 +7,7 @@ export interface CatalogProduct {
   images?: string[];
   category: "SUIT" | "DRESS" | string;
   designer: {
+    id?: string;
     storeName: string;
     slug: string;
     location?: string | null;
@@ -476,6 +477,7 @@ interface RawProduct {
   images?: RawImage[] | string[];
   category: "SUIT" | "DRESS" | string;
   designer?: {
+    id?: string;
     storeName?: string;
     slug?: string;
     location?: string | null;
@@ -508,6 +510,8 @@ const dressImages = [
 ];
 const authStorageKey = "drapeon.auth";
 const authEventKey = "drapeon.auth:event";
+const authCustomEvent = "drapeon:auth";
+const authBroadcastChannelKey = "drapeon.auth.channel";
 
 function uniqueValues(values: Array<string | null | undefined>): string[] {
   return [...new Set(values.filter((value): value is string => Boolean(value)))];
@@ -559,6 +563,7 @@ function normalizeProduct(product: RawProduct): CatalogProduct {
     images: [isSeedPlaceholder(rawImageUrl) ? curatedImage(product) : rawImageUrl ?? curatedImage(product)],
     category: product.category,
     designer: {
+      id: product.designer?.id,
       storeName: product.designer?.storeName ?? "Drapeon Studio",
       slug: product.designer?.slug ?? "drapeon-studio",
       location: product.designer?.location
@@ -642,6 +647,53 @@ function extractErrorMessage(payload: unknown): string | null {
 
 function apiBaseUrl(): string {
   return import.meta.env.PUBLIC_API_URL ?? "http://localhost:4000";
+}
+
+function readBrowserStorage(key: string): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.localStorage.getItem(key);
+}
+
+function writeBrowserStorage(key: string, value: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(key, value);
+}
+
+function removeBrowserStorage(key: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.removeItem(key);
+}
+
+function getAuthBroadcastChannel(): BroadcastChannel | null {
+  if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") {
+    return null;
+  }
+
+  return new BroadcastChannel(authBroadcastChannelKey);
+}
+
+function emitAuthSessionChange(type: "updated" | "cleared"): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const detail = {
+    type,
+    at: Date.now()
+  };
+
+  writeBrowserStorage(authEventKey, JSON.stringify(detail));
+  window.dispatchEvent(new CustomEvent(authCustomEvent, { detail }));
+  getAuthBroadcastChannel()?.postMessage(detail);
 }
 
 async function requestApi<T>(path: string, init?: RequestInit): Promise<T> {
@@ -815,30 +867,31 @@ export async function verifyEmailToken(payload: {
 export function persistAuthSession(session: AuthSession): void {
   const serialized = JSON.stringify(session);
 
-  localStorage.setItem(authStorageKey, serialized);
-  sessionStorage.setItem(authStorageKey, serialized);
-  localStorage.setItem(
-    authEventKey,
-    JSON.stringify({
-      type: "updated",
-      at: Date.now()
-    })
-  );
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(authStorageKey, serialized);
+  window.sessionStorage.setItem(authStorageKey, serialized);
+  emitAuthSessionChange("updated");
 }
 
 export function readAuthSession(): AuthSession | null {
   try {
-    const primaryValue = localStorage.getItem(authStorageKey);
+    const primaryValue = readBrowserStorage(authStorageKey);
 
     if (primaryValue) {
-      sessionStorage.setItem(authStorageKey, primaryValue);
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem(authStorageKey, primaryValue);
+      }
       return JSON.parse(primaryValue) as AuthSession;
     }
 
-    const sessionValue = sessionStorage.getItem(authStorageKey);
+    const sessionValue =
+      typeof window === "undefined" ? null : window.sessionStorage.getItem(authStorageKey);
 
     if (sessionValue) {
-      localStorage.setItem(authStorageKey, sessionValue);
+      writeBrowserStorage(authStorageKey, sessionValue);
       return JSON.parse(sessionValue) as AuthSession;
     }
   } catch {
@@ -849,28 +902,57 @@ export function readAuthSession(): AuthSession | null {
 }
 
 export function clearAuthSession(): void {
-  sessionStorage.removeItem(authStorageKey);
-  localStorage.removeItem(authStorageKey);
-  localStorage.setItem(
-    authEventKey,
-    JSON.stringify({
-      type: "cleared",
-      at: Date.now()
-    })
-  );
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.sessionStorage.removeItem(authStorageKey);
+  removeBrowserStorage(authStorageKey);
+  emitAuthSessionChange("cleared");
 }
 
 export function subscribeToAuthSession(listener: (session: AuthSession | null) => void): () => void {
+  if (typeof window === "undefined") {
+    return () => undefined;
+  }
+
+  const channel = getAuthBroadcastChannel();
+  const notify = () => {
+    listener(readAuthSession());
+  };
   const handleStorage = (event: StorageEvent) => {
     if (event.key === authStorageKey || event.key === authEventKey) {
-      listener(readAuthSession());
+      notify();
     }
+  };
+  const handleCustomEvent = () => {
+    notify();
+  };
+  const handleVisibility = () => {
+    if (document.visibilityState === "visible") {
+      notify();
+    }
+  };
+  const handleFocus = () => {
+    notify();
+  };
+  const handleChannelMessage = () => {
+    notify();
   };
 
   window.addEventListener("storage", handleStorage);
+  window.addEventListener(authCustomEvent, handleCustomEvent as EventListener);
+  window.addEventListener("focus", handleFocus);
+  document.addEventListener("visibilitychange", handleVisibility);
+  channel?.addEventListener("message", handleChannelMessage);
 
   return () => {
     window.removeEventListener("storage", handleStorage);
+    window.removeEventListener(authCustomEvent, handleCustomEvent as EventListener);
+    window.removeEventListener("focus", handleFocus);
+    document.removeEventListener("visibilitychange", handleVisibility);
+    channel?.removeEventListener("message", handleChannelMessage);
+    channel?.close();
   };
 }
 
