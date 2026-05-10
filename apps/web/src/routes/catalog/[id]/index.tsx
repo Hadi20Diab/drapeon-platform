@@ -1,8 +1,8 @@
-import { $, component$, useSignal } from "@builder.io/qwik";
+import { $, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
 import { routeLoader$ } from "@builder.io/qwik-city";
 
 import { fetchProductDetails } from "../../../lib/api";
-import { addToCart, addToWishlist } from "../../../lib/commerce";
+import { addToCart, isInWishlist, toggleWishlist } from "../../../lib/commerce";
 
 export const useProductDetails = routeLoader$(async ({ params, status }) => {
   const product = await fetchProductDetails(params.id);
@@ -17,6 +17,7 @@ export const useProductDetails = routeLoader$(async ({ params, status }) => {
 export default component$(() => {
   const product = useProductDetails();
   const notice = useSignal("");
+  const wishlisted = useSignal(false);
 
   if (!product.value) {
     return (
@@ -32,13 +33,19 @@ export default component$(() => {
 
   const item = product.value;
   const image = item.imageUrl ?? item.images?.[0] ?? null;
+
+  useVisibleTask$(() => {
+    wishlisted.value = isInWishlist(item.id);
+  });
+
   const addCart = $(() => {
     addToCart(item);
     notice.value = "Added to cart.";
   });
   const addWishlist = $(() => {
-    addToWishlist(item);
-    notice.value = "Saved to wishlist.";
+    const result = toggleWishlist(item);
+    wishlisted.value = result.active;
+    notice.value = result.active ? "Saved to wishlist." : "Removed from wishlist.";
   });
 
   return (
@@ -75,6 +82,38 @@ export default component$(() => {
             <span class="absolute left-4 top-4 bg-brand-sand px-3 py-1 text-xs font-extrabold uppercase tracking-[0.14em] text-brand-ink">
               {item.category}
             </span>
+            <button
+              type="button"
+              aria-label={wishlisted.value ? "Remove from wishlist" : "Add to wishlist"}
+              class={
+                wishlisted.value
+                  ? "absolute right-4 top-4 inline-flex h-12 w-12 items-center justify-center rounded-full border border-brand-rose/40 bg-brand-rose text-brand-sand shadow-[0_18px_40px_rgba(122,36,59,0.28)] transition"
+                  : "absolute right-4 top-4 inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/40 bg-white/15 text-white backdrop-blur-md transition hover:border-brand-rose/60 hover:bg-brand-sand hover:text-brand-rose"
+              }
+              onClick$={addWishlist}
+            >
+              <svg viewBox="0 0 24 24" class="h-5 w-5" fill={wishlisted.value ? "currentColor" : "none"}>
+                <path
+                  d="M12 20.75c-.3 0-.59-.11-.82-.31l-6.15-5.63C3.28 13.22 2.25 11.84 2.25 10.2c0-2.54 1.95-4.45 4.54-4.45 1.5 0 2.92.67 3.86 1.82a5.07 5.07 0 0 1 3.86-1.82c2.59 0 4.54 1.91 4.54 4.45 0 1.64-1.03 3.02-2.78 4.62l-6.15 5.63c-.23.2-.52.31-.82.31Z"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.8"
+                />
+              </svg>
+            </button>
+            <div class="absolute bottom-4 left-4 flex items-center gap-2 bg-white/86 px-3 py-2 backdrop-blur-md">
+              <span
+                class={
+                  wishlisted.value
+                    ? "h-2.5 w-2.5 rounded-full bg-brand-rose"
+                    : "h-2.5 w-2.5 rounded-full bg-brand-ink/25"
+                }
+              />
+              <span class="text-[11px] font-extrabold uppercase tracking-[0.18em] text-brand-ink">
+                {wishlisted.value ? "Saved Look" : "Tap Heart To Save"}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -134,7 +173,7 @@ export default component$(() => {
               Rent Look
             </button>
             <button class="btn-secondary" type="button" onClick$={addWishlist}>
-              Wishlist
+              {wishlisted.value ? "Saved to Wishlist" : "Save Look"}
             </button>
             <a href="/cart" class="btn-secondary">
               View Cart

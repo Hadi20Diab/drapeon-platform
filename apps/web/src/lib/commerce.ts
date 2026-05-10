@@ -62,3 +62,23 @@ export function removeFromWishlist(productId: string): StoredCommerceItem[] {
   writeItems(wishlistKey, next);
   return next;
 }
+
+export function isInWishlist(productId: string): boolean {
+  return readWishlist().some((item) => item.id === productId);
+}
+
+export function toggleWishlist(product: CatalogProduct): { active: boolean; items: StoredCommerceItem[] } {
+  const active = isInWishlist(product.id);
+
+  if (active) {
+    return {
+      active: false,
+      items: removeFromWishlist(product.id)
+    };
+  }
+
+  return {
+    active: true,
+    items: addToWishlist(product)
+  };
+}
