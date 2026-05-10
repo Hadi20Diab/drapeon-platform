@@ -109,16 +109,29 @@ const dressTitles = [
   "Pleated Statement Dress"
 ];
 
-const garmentColorMap: Record<string, string> = {
-  Black: "#181717",
-  "Midnight Blue": "#243457",
-  Ivory: "#f2ece1",
-  Emerald: "#1f6a55",
-  Burgundy: "#6f2038",
-  Champagne: "#ccb38b",
-  Sand: "#c6b39b",
-  "Slate Grey": "#6d7582"
-};
+const suitProductImages = [
+  "https://images.unsplash.com/photo-1593032465175-481ac7f401a0?auto=format&fit=crop&w=1200&q=85",
+  "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=1200&q=85",
+  "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1200&q=85",
+  "https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&w=1200&q=85",
+  "https://images.unsplash.com/photo-1520975682031-ae78c7f4ed1d?auto=format&fit=crop&w=1200&q=85",
+  "https://images.unsplash.com/photo-1555069519-127aadedf1ee?auto=format&fit=crop&w=1200&q=85"
+];
+
+const dressProductImages = [
+  "https://images.pexels.com/photos/19895958/pexels-photo-19895958.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
+  "https://images.pexels.com/photos/19895956/pexels-photo-19895956.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
+  "https://images.pexels.com/photos/19895964/pexels-photo-19895964.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
+  "https://images.pexels.com/photos/11813835/pexels-photo-11813835.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
+  "https://images.pexels.com/photos/5386592/pexels-photo-5386592.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
+  "https://images.pexels.com/photos/18367998/pexels-photo-18367998.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
+  "https://images.pexels.com/photos/10330191/pexels-photo-10330191.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
+  "https://images.pexels.com/photos/11203484/pexels-photo-11203484.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
+  "https://images.pexels.com/photos/20428094/pexels-photo-20428094.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
+  "https://images.pexels.com/photos/6609940/pexels-photo-6609940.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
+  "https://images.pexels.com/photos/19733576/pexels-photo-19733576.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
+  "https://images.pexels.com/photos/17734329/pexels-photo-17734329.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop"
+];
 
 function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -161,152 +174,16 @@ function hashPassword(password: string): string {
   return `${salt}:${digest}`;
 }
 
-function hashString(value: string): number {
-  let hash = 0;
-
-  for (const char of value) {
-    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  }
-
-  return hash;
-}
-
-function hslToHex(hue: number, saturation: number, lightness: number): string {
-  const s = saturation / 100;
-  const l = lightness / 100;
-  const c = (1 - Math.abs(2 * l - 1)) * s;
-  const x = c * (1 - Math.abs(((hue / 60) % 2) - 1));
-  const m = l - c / 2;
-
-  let red = 0;
-  let green = 0;
-  let blue = 0;
-
-  if (hue < 60) {
-    red = c;
-    green = x;
-  } else if (hue < 120) {
-    red = x;
-    green = c;
-  } else if (hue < 180) {
-    green = c;
-    blue = x;
-  } else if (hue < 240) {
-    green = x;
-    blue = c;
-  } else if (hue < 300) {
-    red = x;
-    blue = c;
-  } else {
-    red = c;
-    blue = x;
-  }
-
-  const toHex = (channel: number) =>
-    Math.round((channel + m) * 255)
-      .toString(16)
-      .padStart(2, "0");
-
-  return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
-}
-
-function deriveColor(name: string, offset: number): string {
-  const preset = garmentColorMap[name];
-
-  if (preset) {
-    return preset;
-  }
-
-  return hslToHex((hashString(`${name}-${offset}`) + offset * 29) % 360, 34, 48);
-}
-
-function svgDataUri(svg: string): string {
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
-}
-
-function createProductImage(input: {
-  productKey: string;
-  title: string;
-  storeName: string;
+function buildProductImage(input: {
+  productCounter: number;
   category: ProductCategory;
-  primaryColor: string;
-  secondaryColor: string;
   variant: "hero" | "detail";
 }): string {
-  const seed = hashString(`${input.productKey}-${input.variant}`);
-  const bgHue = seed % 360;
-  const bgStart = hslToHex(bgHue, 24, 95);
-  const bgEnd = hslToHex((bgHue + 34) % 360, 18, 88);
-  const panel = hslToHex((bgHue + 12) % 360, 14, 98);
-  const stroke = hslToHex((bgHue + 210) % 360, 9, 70);
-  const primary = deriveColor(input.primaryColor, seed);
-  const secondary = deriveColor(input.secondaryColor, seed + 17);
-  const accent = hslToHex((bgHue + 160) % 360, 32, 82);
-  const label = input.category === ProductCategory.SUIT ? "TAILORED SUIT" : "COUTURE DRESS";
-  const titleMark = input.title.replace(/&/g, "and").toUpperCase().slice(0, 26);
-  const brandMark = input.storeName.toUpperCase().slice(0, 22);
+  const pool = input.category === ProductCategory.SUIT ? suitProductImages : dressProductImages;
+  const baseIndex = input.productCounter % pool.length;
+  const variantOffset = input.variant === "hero" ? 0 : 3;
 
-  const garmentMarkup =
-    input.category === ProductCategory.SUIT
-      ? input.variant === "hero"
-        ? `
-          <path d="M425 300 L535 240 L600 350 L665 240 L775 300 L722 966 L645 930 L612 560 L588 560 L555 930 L478 966 Z" fill="${primary}" stroke="${stroke}" stroke-width="10"/>
-          <path d="M505 325 L600 442 L695 325" fill="none" stroke="${panel}" stroke-width="18" stroke-linecap="round"/>
-          <path d="M466 408 L388 572 L446 614 L514 480" fill="${secondary}" opacity="0.92"/>
-          <path d="M734 408 L812 572 L754 614 L686 480" fill="${secondary}" opacity="0.92"/>
-          <path d="M515 980 L568 980 L545 1350 L458 1350 Z" fill="${primary}" stroke="${stroke}" stroke-width="8"/>
-          <path d="M685 980 L742 980 L804 1350 L655 1350 Z" fill="${primary}" stroke="${stroke}" stroke-width="8"/>
-          <path d="M553 372 L600 420 L648 372" fill="none" stroke="${accent}" stroke-width="8"/>
-        `
-        : `
-          <path d="M250 170 L950 170 L950 1330 L250 1330 Z" fill="${panel}" opacity="0.72" stroke="${stroke}" stroke-width="6"/>
-          <path d="M420 320 L560 250 L600 332 L640 250 L780 320 L736 890 L648 850 L618 510 L582 510 L552 850 L464 890 Z" fill="${primary}" stroke="${stroke}" stroke-width="10"/>
-          <path d="M475 372 L600 510 L725 372" fill="none" stroke="${accent}" stroke-width="20" stroke-linecap="round"/>
-          <path d="M495 560 L705 560" stroke="${secondary}" stroke-width="14" stroke-linecap="round"/>
-          <path d="M495 640 L675 640" stroke="${secondary}" stroke-width="14" stroke-linecap="round"/>
-          <circle cx="600" cy="738" r="20" fill="${accent}"/>
-        `
-      : input.variant === "hero"
-        ? `
-          <path d="M462 238 L540 316 L600 258 L660 316 L738 238 L672 432 L784 1110 L416 1110 L528 432 Z" fill="${primary}" stroke="${stroke}" stroke-width="10"/>
-          <path d="M528 432 C540 605 492 782 430 1044" fill="none" stroke="${secondary}" stroke-width="18" stroke-linecap="round"/>
-          <path d="M672 432 C660 605 708 782 770 1044" fill="none" stroke="${secondary}" stroke-width="18" stroke-linecap="round"/>
-          <path d="M520 520 C578 566 622 566 680 520" fill="none" stroke="${accent}" stroke-width="12" stroke-linecap="round"/>
-          <path d="M475 944 C556 1014 642 1014 725 944" fill="none" stroke="${panel}" stroke-width="20" stroke-linecap="round"/>
-        `
-        : `
-          <path d="M250 170 L950 170 L950 1330 L250 1330 Z" fill="${panel}" opacity="0.72" stroke="${stroke}" stroke-width="6"/>
-          <path d="M432 256 L540 352 L600 282 L660 352 L768 256 L712 436 L780 1140 L420 1140 L488 436 Z" fill="${primary}" stroke="${stroke}" stroke-width="10"/>
-          <path d="M496 430 L704 430" stroke="${accent}" stroke-width="14" stroke-linecap="round"/>
-          <path d="M460 566 C542 622 658 622 740 566" fill="none" stroke="${secondary}" stroke-width="18" stroke-linecap="round"/>
-          <path d="M452 926 C548 986 654 986 748 926" fill="none" stroke="${secondary}" stroke-width="18" stroke-linecap="round"/>
-        `;
-
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1500" role="img" aria-label="${input.title}">
-      <defs>
-        <linearGradient id="bg" x1="0%" x2="100%" y1="0%" y2="100%">
-          <stop offset="0%" stop-color="${bgStart}"/>
-          <stop offset="100%" stop-color="${bgEnd}"/>
-        </linearGradient>
-        <pattern id="grid" width="72" height="72" patternUnits="userSpaceOnUse">
-          <path d="M72 0H0V72" fill="none" stroke="${stroke}" stroke-opacity="0.18" stroke-width="2"/>
-        </pattern>
-      </defs>
-      <rect width="1200" height="1500" fill="url(#bg)"/>
-      <rect width="1200" height="1500" fill="url(#grid)"/>
-      <rect x="136" y="120" width="928" height="1260" rx="38" fill="${panel}" fill-opacity="0.72" stroke="${stroke}" stroke-opacity="0.28"/>
-      <path d="M475 220 Q600 120 725 220" fill="none" stroke="${stroke}" stroke-width="12" stroke-linecap="round"/>
-      <path d="M535 220 Q600 168 665 220" fill="none" stroke="${stroke}" stroke-width="10" stroke-linecap="round"/>
-      ${garmentMarkup}
-      <rect x="176" y="180" width="268" height="74" fill="#111111" rx="6"/>
-      <text x="214" y="228" font-family="Georgia, serif" font-size="30" fill="#f5efe4" letter-spacing="6">${label}</text>
-      <text x="176" y="1290" font-family="Georgia, serif" font-size="44" fill="#151515">${titleMark}</text>
-      <text x="176" y="1352" font-family="Arial, sans-serif" font-size="20" fill="${stroke}" letter-spacing="6">${brandMark}</text>
-    </svg>
-  `;
-
-  return svgDataUri(svg.replace(/\s{2,}/g, " ").trim());
+  return pool[(baseIndex + variantOffset) % pool.length]!;
 }
 
 async function main(): Promise<void> {
@@ -549,26 +426,18 @@ async function main(): Promise<void> {
           images: {
             create: [
               {
-                url: createProductImage({
-                  productKey: `${designer.slug}-${productCounter}`,
-                  title,
-                  storeName: designer.storeName,
+                url: buildProductImage({
+                  productCounter,
                   category,
-                  primaryColor: colors[0]!,
-                  secondaryColor: colors[1]!,
                   variant: "hero"
                 }),
                 altText: `${title} front`,
                 sortOrder: 0
               },
               {
-                url: createProductImage({
-                  productKey: `${designer.slug}-${productCounter}`,
-                  title,
-                  storeName: designer.storeName,
+                url: buildProductImage({
+                  productCounter,
                   category,
-                  primaryColor: colors[1]!,
-                  secondaryColor: colors[0]!,
                   variant: "detail"
                 }),
                 altText: `${title} detail`,
