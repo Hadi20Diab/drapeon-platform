@@ -1,6 +1,10 @@
 import { $, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
 
-import { DesignerShell, EmptyState } from "../../../components/designers/designer-shell";
+import {
+  DesignerShell,
+  DesignerSkeleton,
+  EmptyState
+} from "../../../components/designers/designer-shell";
 import {
   fetchDesignerProducts,
   updateDesignerProductStatus,
@@ -83,6 +87,8 @@ export default component$(() => {
           <button type="button" class={`px-4 py-2 text-xs font-extrabold uppercase tracking-[0.12em] ${view.value === "grid" ? "bg-brand-ink text-brand-sand" : "border border-brand-ink/20"}`} onClick$={() => (view.value = "grid")}>Grid</button>
           <button type="button" class={`px-4 py-2 text-xs font-extrabold uppercase tracking-[0.12em] ${view.value === "table" ? "bg-brand-ink text-brand-sand" : "border border-brand-ink/20"}`} onClick$={() => (view.value = "table")}>Table</button>
         </div>
+
+        {!products.value && !error.value && <DesignerSkeleton />}
 
         {products.value?.items.length === 0 && <EmptyState title="No pieces match" body="Adjust filters or create a new product to begin merchandising the studio." href="/designers/products/create" action="Create Product" />}
 
