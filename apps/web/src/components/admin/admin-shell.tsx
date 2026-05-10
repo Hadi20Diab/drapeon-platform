@@ -51,7 +51,7 @@ export function statusClass(status: string): string {
 export const AdminShell = component$<AdminShellProps>((props) => {
   return (
     <section class="section-wrap mt-8 grid gap-6 xl:grid-cols-[286px_1fr]">
-      <aside class="luxury-card h-max overflow-hidden xl:sticky xl:top-28">
+      <aside class="luxury-card h-max overflow-hidden lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
         <div class="relative overflow-hidden bg-brand-ink p-5 text-brand-sand">
           <div class="absolute inset-y-0 right-0 w-28 bg-[radial-gradient(circle_at_top,rgba(197,154,93,0.28),transparent_62%)]" />
           <p class="relative text-xs font-extrabold uppercase tracking-[0.2em] text-brand-gold">Vesture HQ</p>

@@ -17,11 +17,16 @@ export default component$(() => {
             We make occasion dressing feel considered again.
           </h1>
         </div>
-        <p class="text-base leading-8 text-brand-ink/62">
-          Drapeon is a multi-vendor rental platform for suits and dresses. We connect clients
-          with independent designers, fitting appointments, delivery workflows, and AI styling
-          that recommends actual rentable pieces from the catalog.
-        </p>
+        <div class="grid gap-5">
+          <div class="flex h-28 w-28 items-center justify-center overflow-hidden border border-brand-ink/10 bg-white shadow-[0_18px_50px_rgba(16,16,16,0.08)]">
+            <img src="/logo.png" alt="Drapeon logo" width={220} height={220} class="h-full w-full object-contain" />
+          </div>
+          <p class="text-base leading-8 text-brand-ink/62">
+            Drapeon is a multi-vendor rental platform for suits and dresses. We connect clients
+            with independent designers, fitting appointments, delivery workflows, and AI styling
+            that recommends actual rentable pieces from the catalog.
+          </p>
+        </div>
       </div>
 
       <div class="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">

@@ -22,7 +22,7 @@ export interface DesignerShellProps {
 export const DesignerShell = component$<DesignerShellProps>((props) => {
   return (
     <section class="section-wrap mt-8 grid gap-6 xl:grid-cols-[260px_1fr]">
-      <aside class="luxury-card h-max overflow-hidden xl:sticky xl:top-28">
+      <aside class="luxury-card h-max overflow-hidden lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
         <div class="border-b border-brand-ink/10 bg-brand-ink p-5 text-brand-sand">
           <p class="text-xs font-extrabold uppercase tracking-[0.18em] text-brand-gold">
             Vesture Studio
