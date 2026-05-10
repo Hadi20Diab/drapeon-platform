@@ -1,5 +1,5 @@
 import { $, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
-import { routeLoader$ } from "@builder.io/qwik-city";
+import { Link, routeLoader$ } from "@builder.io/qwik-city";
 
 import { fetchProductDetails } from "../../../lib/api";
 import { addToCart, isInWishlist, toggleWishlist } from "../../../lib/commerce";
@@ -87,8 +87,8 @@ export default component$(() => {
               aria-label={wishlisted.value ? "Remove from wishlist" : "Add to wishlist"}
               class={
                 wishlisted.value
-                  ? "absolute right-4 top-4 inline-flex h-12 w-12 items-center justify-center rounded-full border border-brand-rose/40 bg-brand-rose text-brand-sand shadow-[0_18px_40px_rgba(122,36,59,0.28)] transition"
-                  : "absolute right-4 top-4 inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/40 bg-white/15 text-white backdrop-blur-md transition hover:border-brand-rose/60 hover:bg-brand-sand hover:text-brand-rose"
+                  ? "absolute right-4 top-4 z-20 inline-flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border border-brand-rose/40 bg-brand-rose text-brand-sand shadow-[0_18px_40px_rgba(122,36,59,0.28)] transition"
+                  : "absolute right-4 top-4 z-20 inline-flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border border-white/40 bg-white/15 text-white backdrop-blur-md transition hover:border-brand-rose/60 hover:bg-brand-sand hover:text-brand-rose"
               }
               onClick$={addWishlist}
             >
@@ -118,7 +118,13 @@ export default component$(() => {
         </div>
 
         <article class="lg:pt-4">
-          <p class="eyebrow">{item.designer.storeName}</p>
+          <Link
+            href={`/stores/${item.designer.slug}`}
+            class="eyebrow inline-flex items-center gap-2 transition hover:text-brand-rose"
+          >
+            {item.designer.storeName}
+            <span class="text-brand-ink/35">/</span>
+          </Link>
           <h1 class="mt-3 font-display text-6xl leading-none text-brand-ink md:text-7xl">
             {item.title}
           </h1>
