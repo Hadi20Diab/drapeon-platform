@@ -1,10 +1,29 @@
-import { $, component$, useStore, useSignal } from "@builder.io/qwik";
+import { $, component$, useStore, useSignal, useVisibleTask$ } from "@builder.io/qwik";
 import { Link } from "@builder.io/qwik-city";
 
-import { loginUser, persistAuthSession, registerUser } from "../../lib/api";
+import {
+  loginUser,
+  persistAuthSession,
+  readAuthSession,
+  registerUser,
+  subscribeToAuthSession,
+  type AuthSession
+} from "../../lib/api";
 
 type AuthMode = "login" | "signup";
 type SignupRole = "USER" | "DESIGNER";
+
+function dashboardHref(session: AuthSession): string {
+  if (session.user.role === "DESIGNER") {
+    return "/designers/dashboard";
+  }
+
+  if (session.user.role === "ADMIN") {
+    return "/admin/dashboard";
+  }
+
+  return "/profile";
+}
 
 export default component$(() => {
   const mode = useSignal<AuthMode>("login");
@@ -30,6 +49,7 @@ export default component$(() => {
   const message = useSignal("");
   const error = useSignal("");
   const isSubmitting = useSignal(false);
+  const redirectTarget = useSignal("");
 
   const measurementFields = [
     { key: "heightCm", label: "Height (cm)" },
@@ -85,6 +105,44 @@ export default component$(() => {
       isSubmitting.value = false;
     }
   });
+
+  useVisibleTask$(() => {
+    const sync = (session: AuthSession | null) => {
+      if (!session) {
+        redirectTarget.value = "";
+        return;
+      }
+
+      const destination = dashboardHref(session);
+      redirectTarget.value = destination;
+      window.location.replace(destination);
+    };
+
+    sync(readAuthSession());
+
+    return subscribeToAuthSession((session) => {
+      sync(session);
+    });
+  });
+
+  if (redirectTarget.value) {
+    return (
+      <section class="section-wrap mt-16">
+        <div class="luxury-card grid place-items-center px-6 py-16 text-center">
+          <p class="eyebrow">Account Active</p>
+          <h1 class="mt-3 font-display text-5xl leading-none text-brand-ink md:text-6xl">
+            You are already signed in.
+          </h1>
+          <p class="mt-4 max-w-xl text-sm leading-7 text-brand-ink/60">
+            Redirecting you to the right workspace for your account.
+          </p>
+          <a href={redirectTarget.value} class="btn-primary mt-8">
+            Continue
+          </a>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section class="section-wrap mt-12 grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
