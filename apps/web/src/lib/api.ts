@@ -94,11 +94,48 @@ export interface StripeCheckoutResponse {
   message?: string;
 }
 
-export interface StripeOnboardingResponse {
-  mode: "configuration_required" | "stripe_connect_onboarding";
+export interface DesignerSubscriptionPlan {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  stripePriceId: string;
+  stripeProductId?: string | null;
+  currency: string;
+  interval: "MONTH" | "YEAR" | string;
+  amount: number;
+  productLimit: number;
+  featured: boolean;
+  isActive: boolean;
+  sortOrder: number;
+  notes?: string | null;
+  features: string[];
+}
+
+export interface DesignerSubscriptionActionResponse {
+  mode: "configuration_required" | "subscription_checkout" | "billing_portal";
+  provider: "stripe";
+  sessionId?: string | null;
   url: string | null;
-  stripeAccountId?: string;
+  plan?: DesignerSubscriptionPlan;
   message?: string;
+}
+
+export interface DesignerSubscriptionSummary {
+  status: string;
+  plan: DesignerSubscriptionPlan | null;
+  canCreateProducts: boolean;
+  needsSubscription: boolean;
+  productLimit: number;
+  productsPublishedThisPeriod: number;
+  productsRemainingThisPeriod: number;
+  usagePeriodStart?: string | null;
+  usagePeriodEnd?: string | null;
+  currentPeriodStart?: string | null;
+  currentPeriodEnd?: string | null;
+  cancelAtPeriodEnd: boolean;
+  subscribedAt?: string | null;
+  lastSyncedAt?: string | null;
 }
 
 export interface DesignerDashboard {
@@ -108,18 +145,12 @@ export interface DesignerDashboard {
   location: string | null;
   brandColor?: string | null;
   productsCount: number;
+  activeProductsCount: number;
+  draftProductsCount: number;
   pendingAppointments: number;
-  openDeliveries: number;
-  rentalOrdersCount: number;
-  activeRentalsCount: number;
-  revenue: number;
-  monthRevenue: number;
-  estimatedCommissionRate: number;
-  stripeAccountId: string | null;
-  stripeOnboardingComplete: boolean;
-  stripeChargesEnabled: boolean;
-  stripePayoutsEnabled: boolean;
-  stripeDetailsSubmitted: boolean;
+  confirmedAppointments: number;
+  unreadNotifications: number;
+  unreadConversations: number;
   products: Array<{
     id: string;
     title: string;
@@ -134,24 +165,6 @@ export interface DesignerDashboard {
       stockTotal: number;
       stockReserved: number;
     }>;
-  }>;
-  orders: Array<{
-    id: string;
-    status: string;
-    totalAmount: number | string;
-    rentalStartDate: string;
-    rentalEndDate: string;
-    user: {
-      id?: string;
-      email: string;
-      profile?: {
-        firstName?: string;
-        lastName?: string;
-        phoneNumber?: string | null;
-      } | null;
-    };
-    items?: DesignerOrderItem[];
-    deliveryRequest?: DesignerDeliveryRequest | null;
   }>;
   appointments: Array<{
     id: string;
@@ -175,25 +188,9 @@ export interface DesignerDashboard {
       } | null;
     };
   }>;
-  deliveries: Array<{
-    id: string;
-    status: string;
-    deliveryAddress: string;
-    scheduledFor: string | null;
-    user: {
-      email: string;
-    };
-  }>;
-  revenueSeries: Array<{ month: string; revenue: number }>;
-  mostRentedProducts: Array<{
-    productId: string;
-    title: string;
-    imageUrl: string | null;
-    rentals: number;
-    revenue: number;
-  }>;
   notifications: DesignerNotification[];
   conversations: DesignerConversation[];
+  subscription: DesignerSubscriptionSummary;
 }
 
 export interface DesignerOrderItem {
@@ -272,6 +269,7 @@ export interface DesignerProductList {
     limit: number;
     total: number;
   };
+  subscription: DesignerSubscriptionSummary;
 }
 
 export interface DesignerConversation {
@@ -1100,20 +1098,6 @@ export async function updateDesignerProductStatus(
   });
 }
 
-export async function fetchDesignerOrders(): Promise<DesignerDashboard["orders"]> {
-  return requestApi<DesignerDashboard["orders"]>("/designers/orders", {
-    headers: authHeaders()
-  });
-}
-
-export async function updateDesignerOrderStatus(orderId: string, status: string): Promise<void> {
-  await requestApi(`/designers/orders/${orderId}/status`, {
-    method: "PATCH",
-    headers: authHeaders(),
-    body: JSON.stringify({ status })
-  });
-}
-
 export async function fetchDesignerAppointments(): Promise<DesignerDashboard["appointments"]> {
   const payload = await requestApi<
     | DesignerDashboard["appointments"]
@@ -1199,8 +1183,24 @@ export async function updateDesignerSettings(payload: {
   });
 }
 
-export async function createStripeOnboardingLink(): Promise<StripeOnboardingResponse> {
-  return requestApi<StripeOnboardingResponse>("/designers/stripe/onboarding-link", {
+export async function fetchSubscriptionPlans(): Promise<{
+  items: DesignerSubscriptionPlan[];
+}> {
+  return requestApi<{ items: DesignerSubscriptionPlan[] }>("/payments/subscriptions/plans");
+}
+
+export async function createDesignerSubscriptionCheckout(
+  planId: string
+): Promise<DesignerSubscriptionActionResponse> {
+  return requestApi<DesignerSubscriptionActionResponse>("/payments/subscriptions/checkout", {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ planId })
+  });
+}
+
+export async function createDesignerBillingPortal(): Promise<DesignerSubscriptionActionResponse> {
+  return requestApi<DesignerSubscriptionActionResponse>("/payments/subscriptions/portal", {
     method: "POST",
     headers: authHeaders()
   });

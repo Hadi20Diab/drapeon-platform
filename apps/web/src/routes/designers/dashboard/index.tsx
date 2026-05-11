@@ -1,30 +1,53 @@
 import { $, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
 
-import { DesignerShell, DesignerSkeleton, EmptyState } from "../../../components/designers/designer-shell";
 import {
-  createStripeOnboardingLink,
+  DesignerShell,
+  DesignerSkeleton,
+  EmptyState
+} from "../../../components/designers/designer-shell";
+import {
+  createDesignerBillingPortal,
   fetchDesignerDashboard,
   readAuthSession,
   subscribeToAuthSession,
   type DesignerDashboard
 } from "../../../lib/api";
 
-function money(value: number | string | undefined): string {
-  return `$${Number(value ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+function compactDate(value?: string | null) {
+  if (!value) {
+    return "Not synced yet";
+  }
+
+  return new Date(value).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric"
+  });
+}
+
+function statusTone(status: string) {
+  if (["ACTIVE", "TRIALING", "CONFIRMED", "APPROVED", "COMPLETED"].includes(status)) {
+    return "border-emerald-900/15 bg-emerald-900/10 text-emerald-950";
+  }
+
+  if (["PAST_DUE", "UNPAID", "INCOMPLETE", "PENDING"].includes(status)) {
+    return "border-brand-gold/30 bg-brand-gold/15 text-brand-ink";
+  }
+
+  return "border-brand-rose/25 bg-brand-rose/10 text-brand-rose";
 }
 
 export default component$(() => {
   const dashboard = useSignal<DesignerDashboard | null>(null);
   const error = useSignal("");
-  const paymentNotice = useSignal("");
-  const isStartingOnboarding = useSignal(false);
+  const notice = useSignal("");
+  const isOpeningPortal = useSignal(false);
 
   const loadDashboard = $(async () => {
     const session = readAuthSession();
 
     if (!session || session.user.role !== "DESIGNER") {
       dashboard.value = null;
-      error.value = "Sign in as a designer to load live dashboard metrics.";
+      error.value = "Sign in as a designer to load your studio workspace.";
       return;
     }
 
@@ -37,7 +60,9 @@ export default component$(() => {
       await loadDashboard();
     } catch (caught) {
       error.value =
-        caught instanceof Error ? caught.message : "Sign in as a designer to load live dashboard metrics.";
+        caught instanceof Error
+          ? caught.message
+          : "Sign in as a designer to load your studio workspace.";
     }
 
     return subscribeToAuthSession(async () => {
@@ -49,53 +74,70 @@ export default component$(() => {
     });
   });
 
-  const startStripeOnboarding = $(async () => {
+  const openBillingPortal = $(async () => {
     error.value = "";
-    paymentNotice.value = "";
-    isStartingOnboarding.value = true;
+    notice.value = "";
+    isOpeningPortal.value = true;
 
     try {
-      const result = await createStripeOnboardingLink();
+      const result = await createDesignerBillingPortal();
 
       if (result.url) {
         window.location.href = result.url;
         return;
       }
 
-      paymentNotice.value =
-        result.message ?? "Stripe Connect onboarding is not ready yet. Add STRIPE_SECRET_KEY.";
+      notice.value = result.message ?? "Stripe billing portal is not ready yet.";
     } catch (caught) {
-      error.value = caught instanceof Error ? caught.message : "Could not start Stripe onboarding.";
+      error.value = caught instanceof Error ? caught.message : "Could not open billing portal.";
     } finally {
-      isStartingOnboarding.value = false;
+      isOpeningPortal.value = false;
     }
   });
 
   const metrics = [
-    { label: "Total Products", value: dashboard.value?.productsCount ?? 0, caption: "pieces in studio" },
-    { label: "Active Rentals", value: dashboard.value?.activeRentalsCount ?? 0, caption: "currently moving" },
-    { label: "Revenue", value: money(dashboard.value?.revenue), caption: "lifetime confirmed" },
-    { label: "Pending Fittings", value: dashboard.value?.pendingAppointments ?? 0, caption: "need attention" }
+    {
+      label: "Studio Pieces",
+      value: dashboard.value?.productsCount ?? 0,
+      caption: `${dashboard.value?.activeProductsCount ?? 0} active`
+    },
+    {
+      label: "Draft Queue",
+      value: dashboard.value?.draftProductsCount ?? 0,
+      caption: "pieces still being refined"
+    },
+    {
+      label: "Pending Fittings",
+      value: dashboard.value?.pendingAppointments ?? 0,
+      caption: `${dashboard.value?.confirmedAppointments ?? 0} confirmed`
+    },
+    {
+      label: "Posting Slots Left",
+      value: dashboard.value?.subscription.productsRemainingThisPeriod ?? 0,
+      caption:
+        dashboard.value?.subscription.productLimit
+          ? `${dashboard.value.subscription.productsPublishedThisPeriod}/${dashboard.value.subscription.productLimit} used`
+          : "subscription required"
+    }
   ];
-  const maxRevenue = Math.max(...(dashboard.value?.revenueSeries ?? []).map((row) => row.revenue), 1);
 
   return (
     <DesignerShell
       active="Overview"
       eyebrow="Designer Workspace"
       title="Studio Overview"
-      subtitle="A focused operating room for products, rentals, appointments, revenue, and customer attention."
-      action="New Product"
-      actionHref="/designers/products/create"
+      subtitle="Monitor your subscription, product publishing capacity, fittings, and client communication from one focused operating room."
+      action="Billing Plans"
+      actionHref="/designers/billing"
     >
       {error.value && (
         <p class="border border-brand-rose/30 bg-brand-rose/10 px-4 py-3 text-sm font-semibold text-brand-rose">
           {error.value}
         </p>
       )}
-      {paymentNotice.value && (
+      {notice.value && (
         <p class="border border-brand-gold/30 bg-brand-gold/10 px-4 py-3 text-sm font-semibold text-brand-ink">
-          {paymentNotice.value}
+          {notice.value}
         </p>
       )}
 
@@ -105,14 +147,19 @@ export default component$(() => {
         <>
           <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
             {metrics.map((metric, index) => (
-              <article key={metric.label} class="luxury-card group overflow-hidden p-6 transition hover:-translate-y-1">
+              <article
+                key={metric.label}
+                class="luxury-card group overflow-hidden p-6 transition hover:-translate-y-1"
+              >
                 <div class="flex items-center justify-between gap-4">
                   <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-brand-ink/50">
                     {metric.label}
                   </p>
                   <span class="font-display text-3xl text-brand-rose">0{index + 1}</span>
                 </div>
-                <p class="mt-6 font-display text-5xl leading-none text-brand-ink">{metric.value}</p>
+                <p class="mt-6 font-display text-5xl leading-none text-brand-ink">
+                  {metric.value}
+                </p>
                 <p class="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-brand-ink/42">
                   {metric.caption}
                 </p>
@@ -120,93 +167,185 @@ export default component$(() => {
             ))}
           </div>
 
-          <div class="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+          <div class="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
             <article class="luxury-card p-6">
-              <div class="flex items-end justify-between gap-4">
+              <div class="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <p class="eyebrow">Revenue Chart</p>
-                  <h2 class="mt-2 font-display text-5xl leading-none text-brand-ink">Six-month cadence</h2>
+                  <p class="eyebrow">Subscription</p>
+                  <h2 class="mt-2 font-display text-5xl leading-none text-brand-ink">
+                    Billing Command
+                  </h2>
                 </div>
-                <p class="text-right text-sm font-bold text-brand-ink/50">
-                  This month<br />
-                  <span class="font-display text-3xl text-brand-ink">{money(dashboard.value.monthRevenue)}</span>
-                </p>
+                <span
+                  class={`border px-3 py-2 text-[0.68rem] font-extrabold uppercase tracking-[0.14em] ${statusTone(
+                    dashboard.value.subscription.status
+                  )}`}
+                >
+                  {dashboard.value.subscription.status.replaceAll("_", " ")}
+                </span>
               </div>
-              <div class="mt-8 flex h-72 items-end gap-3 border-l border-b border-brand-ink/10 px-3 pb-3">
-                {dashboard.value.revenueSeries.map((row) => (
-                  <div key={row.month} class="flex flex-1 flex-col items-center gap-3">
-                    <div class="flex h-56 w-full items-end bg-brand-sand/60">
-                      <div
-                        class="w-full bg-brand-ink transition-all duration-700"
-                        style={{ height: `${Math.max(8, (row.revenue / maxRevenue) * 100)}%` }}
-                      />
-                    </div>
-                    <span class="text-xs font-extrabold uppercase tracking-[0.12em] text-brand-ink/45">
-                      {row.month}
+
+              <div class="mt-6 grid gap-4 border-y border-brand-ink/10 py-6 md:grid-cols-2">
+                <div>
+                  <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-brand-ink/45">
+                    Current plan
+                  </p>
+                  <p class="mt-2 font-display text-4xl leading-none text-brand-ink">
+                    {dashboard.value.subscription.plan?.name ?? "No active plan"}
+                  </p>
+                  <p class="mt-3 text-sm leading-7 text-brand-ink/60">
+                    {dashboard.value.subscription.plan
+                      ? `${dashboard.value.subscription.plan.description}`
+                      : "Choose a Stripe subscription plan before publishing products."}
+                  </p>
+                </div>
+                <div class="grid gap-3 text-sm">
+                  <div class="flex justify-between border-b border-brand-ink/10 pb-3">
+                    <span class="font-semibold text-brand-ink/55">Plan price</span>
+                    <span class="font-extrabold text-brand-ink">
+                      {dashboard.value.subscription.plan
+                        ? `$${dashboard.value.subscription.plan.amount}/${dashboard.value.subscription.plan.interval === "YEAR" ? "yr" : "mo"}`
+                        : "N/A"}
                     </span>
                   </div>
-                ))}
+                  <div class="flex justify-between border-b border-brand-ink/10 pb-3">
+                    <span class="font-semibold text-brand-ink/55">Product limit</span>
+                    <span class="font-extrabold text-brand-ink">
+                      {dashboard.value.subscription.productLimit || 0}
+                    </span>
+                  </div>
+                  <div class="flex justify-between border-b border-brand-ink/10 pb-3">
+                    <span class="font-semibold text-brand-ink/55">Used this cycle</span>
+                    <span class="font-extrabold text-brand-ink">
+                      {dashboard.value.subscription.productsPublishedThisPeriod}
+                    </span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="font-semibold text-brand-ink/55">Cycle ends</span>
+                    <span class="font-extrabold text-brand-ink">
+                      {compactDate(dashboard.value.subscription.usagePeriodEnd)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-6 flex flex-wrap gap-3">
+                <a href="/designers/billing" class="btn-primary">
+                  View Plans
+                </a>
+                {!dashboard.value.subscription.needsSubscription && (
+                  <button
+                    type="button"
+                    class="btn-secondary border-brand-ink/20 text-brand-ink"
+                    onClick$={openBillingPortal}
+                    disabled={isOpeningPortal.value}
+                  >
+                    {isOpeningPortal.value ? "Opening..." : "Manage in Stripe"}
+                  </button>
+                )}
               </div>
             </article>
 
             <aside class="glass-panel p-6">
-              <p class="eyebrow">Stripe</p>
-              <h2 class="mt-2 font-display text-5xl leading-none text-brand-ink">Payout Readiness</h2>
+              <p class="eyebrow">Visibility</p>
+              <h2 class="mt-2 font-display text-5xl leading-none text-brand-ink">
+                Studio Status
+              </h2>
               <div class="mt-6 grid gap-3">
                 {[
-                  ["Connected account", dashboard.value.stripeAccountId ? "Created" : "Missing"],
-                  ["Charges", dashboard.value.stripeChargesEnabled ? "Enabled" : "Pending"],
-                  ["Payouts", dashboard.value.stripePayoutsEnabled ? "Enabled" : "Pending"],
-                  ["Commission", `${(dashboard.value.estimatedCommissionRate * 100).toFixed(1)}%`]
+                  [
+                    "Approval",
+                    dashboard.value.approvalStatus === "APPROVED"
+                      ? "Marketplace visible"
+                      : dashboard.value.approvalStatus === "PENDING"
+                        ? "Pending admin review"
+                        : "Rejected"
+                  ],
+                  [
+                    "Publishing",
+                    dashboard.value.subscription.canCreateProducts
+                      ? "Open"
+                      : "Blocked"
+                  ],
+                  [
+                    "Messages",
+                    `${dashboard.value.unreadConversations} unread`
+                  ],
+                  [
+                    "Alerts",
+                    `${dashboard.value.unreadNotifications} unread`
+                  ]
                 ].map(([label, value]) => (
-                  <div key={label} class="flex justify-between border-b border-brand-ink/10 pb-3 text-sm last:border-0">
+                  <div
+                    key={label}
+                    class="flex justify-between border-b border-brand-ink/10 pb-3 text-sm last:border-0"
+                  >
                     <span class="font-semibold text-brand-ink/55">{label}</span>
                     <span class="font-extrabold text-brand-ink">{value}</span>
                   </div>
                 ))}
               </div>
-              <button type="button" class="btn-primary mt-7 w-full" onClick$={startStripeOnboarding}>
-                {isStartingOnboarding.value ? "Opening Stripe..." : "Stripe Setup"}
-              </button>
             </aside>
           </div>
 
           <div class="grid gap-6 xl:grid-cols-3">
             <article class="luxury-card overflow-hidden xl:col-span-2">
               <div class="border-b border-brand-ink/10 px-5 py-4">
-                <p class="text-sm font-extrabold uppercase tracking-[0.14em] text-brand-ink">Recent Orders</p>
+                <p class="text-sm font-extrabold uppercase tracking-[0.14em] text-brand-ink">
+                  Upcoming Fittings
+                </p>
               </div>
-              {dashboard.value.orders.length === 0 && (
-                <EmptyState title="No orders yet" body="When customers rent your pieces, requests and payment context will land here." />
+              {dashboard.value.appointments.length === 0 && (
+                <EmptyState
+                  title="No fittings yet"
+                  body="Client fitting requests will land here once shoppers begin booking sessions from your product pages."
+                />
               )}
-              {dashboard.value.orders.map((order) => (
-                <div key={order.id} class="grid gap-4 border-b border-brand-ink/10 px-5 py-4 last:border-0 md:grid-cols-[1fr_auto] md:items-center">
+              {dashboard.value.appointments.map((appointment) => (
+                <div
+                  key={appointment.id}
+                  class="grid gap-4 border-b border-brand-ink/10 px-5 py-4 last:border-0 md:grid-cols-[1fr_auto] md:items-center"
+                >
                   <div>
-                    <p class="font-semibold text-brand-ink">{order.user.email}</p>
+                    <p class="font-semibold text-brand-ink">
+                      {appointment.user.profile?.firstName ?? appointment.user.email}
+                    </p>
                     <p class="mt-1 text-sm text-brand-ink/50">
-                      {new Date(order.rentalStartDate).toLocaleDateString()} - {new Date(order.rentalEndDate).toLocaleDateString()}
+                      {appointment.product.title} ·{" "}
+                      {new Date(appointment.startsAt).toLocaleString()}
                     </p>
                   </div>
-                  <div class="text-left md:text-right">
-                    <p class="font-display text-3xl text-brand-ink">{money(order.totalAmount)}</p>
-                    <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-brand-rose">{order.status}</p>
-                  </div>
+                  <span
+                    class={`border px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] ${statusTone(
+                      appointment.status
+                    )}`}
+                  >
+                    {appointment.status}
+                  </span>
                 </div>
               ))}
             </article>
 
             <aside class="luxury-card overflow-hidden">
               <div class="border-b border-brand-ink/10 px-5 py-4">
-                <p class="text-sm font-extrabold uppercase tracking-[0.14em] text-brand-ink">Most Rented</p>
+                <p class="text-sm font-extrabold uppercase tracking-[0.14em] text-brand-ink">
+                  Recent Pieces
+                </p>
               </div>
-              {dashboard.value.mostRentedProducts.length === 0 && (
-                <p class="px-5 py-8 text-sm leading-7 text-brand-ink/55">Rental rankings appear after orders are placed.</p>
+              {dashboard.value.products.length === 0 && (
+                <p class="px-5 py-8 text-sm leading-7 text-brand-ink/55">
+                  As soon as you publish your first piece, it will appear here with quick status
+                  visibility.
+                </p>
               )}
-              {dashboard.value.mostRentedProducts.map((product) => (
-                <div key={product.productId} class="border-b border-brand-ink/10 px-5 py-4 last:border-0">
+              {dashboard.value.products.map((product) => (
+                <div
+                  key={product.id}
+                  class="border-b border-brand-ink/10 px-5 py-4 last:border-0"
+                >
                   <p class="font-semibold text-brand-ink">{product.title}</p>
                   <p class="mt-1 text-sm text-brand-ink/50">
-                    {product.rentals} rentals - {money(product.revenue)}
+                    {product.status} · ${Number(product.rentalPrice).toFixed(0)}
                   </p>
                 </div>
               ))}

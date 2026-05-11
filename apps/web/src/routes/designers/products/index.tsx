@@ -76,6 +76,27 @@ export default component$(() => {
       {error.value && <p class="border border-brand-rose/30 bg-brand-rose/10 px-4 py-3 text-sm font-semibold text-brand-rose">{error.value}</p>}
       {notice.value && <p class="border border-brand-olive/30 bg-brand-olive/10 px-4 py-3 text-sm font-semibold text-brand-olive">{notice.value}</p>}
 
+      {products.value?.subscription && (
+        <article class="glass-panel grid gap-4 p-5 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div>
+            <p class="eyebrow">Publishing Capacity</p>
+            <p class="mt-2 font-display text-4xl leading-none text-brand-ink">
+              {products.value.subscription.plan?.name ?? "No active plan"}
+            </p>
+            <p class="mt-3 text-sm leading-7 text-brand-ink/60">
+              {products.value.subscription.productsPublishedThisPeriod}/
+              {products.value.subscription.productLimit || 0} slots used this cycle.{" "}
+              {products.value.subscription.canCreateProducts
+                ? `${products.value.subscription.productsRemainingThisPeriod} posting slots remain.`
+                : "Publishing is currently blocked until billing is active or capacity resets."}
+            </p>
+          </div>
+          <a href="/designers/billing" class="btn-secondary border-brand-ink/20 text-brand-ink">
+            Manage Billing
+          </a>
+        </article>
+      )}
+
       <section class="space-y-5">
         <div class="luxury-card grid gap-3 p-4 lg:grid-cols-[1fr_auto_auto_auto]">
           <input class="min-h-11 border border-brand-ink/20 bg-white px-4 outline-none" placeholder="Search pieces" value={search.value} onInput$={(_, target) => (search.value = target.value)} />

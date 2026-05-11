@@ -3,7 +3,7 @@ import { component$, Slot } from "@builder.io/qwik";
 const navigation = [
   ["Overview", "/designers/dashboard"],
   ["Products", "/designers/products"],
-  ["Orders", "/designers/orders"],
+  ["Billing", "/designers/billing"],
   ["Appointments", "/designers/appointments"],
   ["Messages", "/designers/messages"],
   ["Notifications", "/designers/notifications"],

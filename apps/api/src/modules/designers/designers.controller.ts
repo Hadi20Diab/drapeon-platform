@@ -139,14 +139,4 @@ export class DesignersController {
   updateSettings(@CurrentUser("sub") userId: string, @Body() payload: UpdateDesignerSettingsDto) {
     return this.designersService.updateSettings(userId, payload);
   }
-
-  @Post("stripe/onboarding-link")
-  createStripeOnboardingLink(@CurrentUser("sub") userId: string) {
-    return this.designersService.createStripeOnboardingLink(userId);
-  }
-
-  @Post("stripe/refresh-status")
-  refreshStripeStatus(@CurrentUser("sub") userId: string) {
-    return this.designersService.refreshStripeStatus(userId);
-  }
 }

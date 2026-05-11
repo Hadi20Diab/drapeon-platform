@@ -108,7 +108,7 @@ export default component$(() => {
           </h1>
           <p class="mt-5 max-w-xl text-base leading-8 text-brand-ink/62">
             Seller applications are tied to a live member account so we can keep approvals,
-            payouts, measurements, and messaging connected from day one.
+            subscriptions, measurements, and messaging connected from day one.
           </p>
           <div class="mt-8 flex flex-wrap gap-3">
             <a href="/auth" class="btn-primary">
@@ -127,7 +127,7 @@ export default component$(() => {
               ["1", "Create or sign in to your account"],
               ["2", "Submit your store identity and public studio story"],
               ["3", "Access the designer dashboard while admin review stays pending"],
-              ["4", "Complete Stripe Connect before listing inventory"]
+              ["4", "Activate a subscription plan before listing inventory"]
             ].map(([index, copy]) => (
               <div key={index} class="flex gap-4 border-b border-brand-ink/10 pb-5 last:border-0 last:pb-0">
                 <span class="font-display text-4xl leading-none text-brand-rose">{index}</span>
@@ -195,7 +195,7 @@ export default component$(() => {
               "Choose a polished public store name.",
               "Write a studio story that explains your design point of view.",
               "Add location and links clients can trust.",
-              "Finish Stripe Connect from the dashboard before publishing products."
+              "Activate a publishing plan from billing before creating products."
             ].map((copy, index) => (
               <div key={copy} class="flex gap-4">
                 <span class="font-display text-4xl leading-none text-brand-rose/80">0{index + 1}</span>
