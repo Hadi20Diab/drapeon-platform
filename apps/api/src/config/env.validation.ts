@@ -18,6 +18,7 @@ const envSchema = z.object({
   PINECONE_API_KEY: z.string().optional(),
   PINECONE_INDEX_NAME: z.string().optional(),
   PINECONE_NAMESPACE: z.string().min(1).default("company-knowledge"),
+  PINECONE_TEXT_FIELD: z.string().min(1).default("text"),
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_CURRENCY: z.string().length(3).default("usd"),

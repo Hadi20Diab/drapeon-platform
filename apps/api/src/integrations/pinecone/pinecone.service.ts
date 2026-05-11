@@ -26,12 +26,14 @@ export class PineconeService {
   private readonly client: Pinecone | null;
   private readonly indexName: string | null;
   private readonly namespace: string;
+  private readonly textField: string;
 
   constructor(private readonly configService: ConfigService) {
     const apiKey = this.configService.get<string>("PINECONE_API_KEY")?.trim();
 
     this.indexName = this.configService.get<string>("PINECONE_INDEX_NAME")?.trim() ?? null;
     this.namespace = this.configService.get<string>("PINECONE_NAMESPACE", "company-knowledge");
+    this.textField = this.configService.get<string>("PINECONE_TEXT_FIELD", "text");
     this.client = apiKey ? new Pinecone({ apiKey }) : null;
   }
 
@@ -48,7 +50,7 @@ export class PineconeService {
       records: [
         {
           id: record.id,
-          chunk_text: this.composeText(record),
+          [this.textField]: this.composeText(record),
           slug: record.slug,
           question: record.question,
           answer: record.answer,
