@@ -706,7 +706,7 @@ export const SiteChatWidget = component$(() => {
                             </p>
                           )}
 
-                          {message.products && message.products.length > 0 && (
+                          {!isTyping && message.products && message.products.length > 0 && (
                             <div class="mt-4 grid gap-3">
                               {message.products.slice(0, 3).map((product) => (
                                 <a
@@ -741,7 +741,9 @@ export const SiteChatWidget = component$(() => {
                             </div>
                           )}
 
-                          {message.knowledgeEntries && message.knowledgeEntries.length > 0 && (
+                          {!isTyping &&
+                            message.knowledgeEntries &&
+                            message.knowledgeEntries.length > 0 && (
                             <div class="mt-4 grid gap-3">
                               {message.knowledgeEntries.slice(0, 2).map((entry) => (
                                 <div key={entry.id} class="rounded-[18px] border border-brand-ink/8 bg-brand-sand/60 p-3">
