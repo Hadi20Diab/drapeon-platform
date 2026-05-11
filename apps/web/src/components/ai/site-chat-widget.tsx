@@ -699,7 +699,7 @@ export const SiteChatWidget = component$(() => {
                   )}
                 </div>
               )}
-              <div class="overflow-y-auto px-4 py-5">
+              <div class="overflow-y-auto px-4 py-5 min-h-[27rem]">
                 <div class="space-y-4">
                   {(activeConversation.value?.messages ?? []).map((message) => {
                     const displayedText =
@@ -806,7 +806,7 @@ export const SiteChatWidget = component$(() => {
               >
                 <div class="chatbot-composer flex items-end gap-3 rounded-[26px] border border-brand-ink/10 bg-white px-3 py-3 shadow-[0_16px_40px_rgba(17,17,17,0.08)]">
                   <textarea
-                    class="min-h-[44px] max-h-32 flex-1 resize-none bg-transparent px-2 py-1 text-sm leading-6 outline-none placeholder:text-brand-ink/32"
+                    class="min-h-[44px] max-h-32 flex-1 resize-none bg-transparent px-2 text-sm leading-6 outline-none placeholder:text-brand-ink/32"
                     placeholder={
                       session.value
                         ? "Ask about products, fit, delivery, or Drapeon policies..."
