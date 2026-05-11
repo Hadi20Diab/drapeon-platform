@@ -12,7 +12,6 @@ import { SendDesignerMessageDto } from "./dto/send-designer-message.dto";
 import { UpdateDesignerAppointmentStatusDto } from "./dto/update-designer-appointment-status.dto";
 import { UpdateDesignerProductStatusDto } from "./dto/update-designer-product-status.dto";
 import { UpdateDesignerSettingsDto } from "./dto/update-designer-settings.dto";
-import { UpdateRentalOrderStatusDto } from "./dto/update-rental-order-status.dto";
 import { DesignersService } from "./designers.service";
 
 @Controller("designers")
@@ -65,20 +64,6 @@ export class DesignersController {
     @Param("id", new ParseUUIDPipe()) productId: string
   ) {
     return this.designersService.deleteDesignerProduct(userId, productId);
-  }
-
-  @Get("orders")
-  listOrders(@CurrentUser("sub") userId: string) {
-    return this.designersService.listRentalOrders(userId);
-  }
-
-  @Patch("orders/:id/status")
-  updateOrderStatus(
-    @CurrentUser("sub") userId: string,
-    @Param("id", new ParseUUIDPipe()) orderId: string,
-    @Body() payload: UpdateRentalOrderStatusDto
-  ) {
-    return this.designersService.updateRentalOrderStatus(userId, orderId, payload);
   }
 
   @Get("appointments")

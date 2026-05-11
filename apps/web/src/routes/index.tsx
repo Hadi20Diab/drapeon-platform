@@ -102,8 +102,8 @@ export default component$(() => {
               Formalwear, fitted to the moment.
             </h1>
             <p class="mt-7 max-w-2xl text-base leading-8 text-brand-sand/76 md:text-lg">
-              Rent suits and dresses from independent designers, reserve fittings, request delivery,
-              and let the AI stylist search real inventory against your measurements.
+              Browse suits and dresses from independent designers, reserve fittings, save favorite
+              looks, and let the AI stylist search real inventory against your measurements.
             </p>
             <div class="mt-9 flex flex-wrap gap-3">
               <a href={cta.primaryHref} class="btn-primary border border-brand-sand bg-brand-sand text-brand-ink">
@@ -121,8 +121,8 @@ export default component$(() => {
             </p>
             <div class="mt-5 grid gap-4">
               {[
-                ["Commission", "7.5%"],
-                ["Designer payout", "Stripe Connect"],
+                ["Designer billing", "Subscriptions"],
+                ["Studio access", "Plan-based"],
                 ["AI source", "Database inventory"]
               ].map(([label, value]) => (
                 <div key={label} class="flex items-center justify-between border-b border-brand-ink/10 pb-4 last:border-0 last:pb-0">

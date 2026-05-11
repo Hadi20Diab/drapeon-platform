@@ -103,7 +103,7 @@ export default component$(() => {
                 <span class="border border-brand-ink/10 bg-brand-sand px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-brand-ink">{user.role}</span>
                 <span class={`border px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] ${statusClass(user.status)}`}>{user.status}</span>
               </div>
-              <p class="text-sm text-brand-ink/55">{user._count?.rentalOrders ?? 0} rentals - {user._count?.aiSessions ?? 0} AI sessions</p>
+              <p class="text-sm text-brand-ink/55">{user._count?.bookings ?? 0} fittings - {user._count?.aiSessions ?? 0} AI sessions</p>
               <div class="flex flex-wrap justify-start gap-2 lg:justify-end">
                 <button type="button" class="border border-brand-ink/15 px-3 py-2 text-xs font-extrabold uppercase tracking-[0.11em]" onClick$={() => changeStatus(user.id, "ACTIVE")}>Activate</button>
                 <button type="button" class="border border-brand-rose/25 px-3 py-2 text-xs font-extrabold uppercase tracking-[0.11em] text-brand-rose" onClick$={() => changeStatus(user.id, "SUSPENDED")}>Suspend</button>

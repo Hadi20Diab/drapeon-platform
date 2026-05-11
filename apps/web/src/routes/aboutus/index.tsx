@@ -23,7 +23,7 @@ export default component$(() => {
           </div>
           <p class="text-base leading-8 text-brand-ink/62">
             Drapeon is a multi-vendor rental platform for suits and dresses. We connect clients
-            with independent designers, fitting appointments, delivery workflows, and AI styling
+            with independent designers, fitting appointments, and AI styling
             that recommends actual rentable pieces from the catalog.
           </p>
         </div>
@@ -37,8 +37,8 @@ export default component$(() => {
           </h2>
           <p class="mt-6 text-sm leading-7 text-brand-sand/70">
             Clients should not have to guess fit from flat listings, and designers should not
-            have to run rentals from spreadsheets. Drapeon gives each side a structured workflow:
-            inventory, measurements, approvals, delivery, and payments in one place.
+            have to run their studios from spreadsheets. Drapeon gives each side a structured
+            workflow: inventory, measurements, approvals, subscriptions, and fittings in one place.
           </p>
         </article>
 
@@ -54,8 +54,8 @@ export default component$(() => {
 
       <div class="grid gap-6 md:grid-cols-3">
         {[
-          ["For clients", "Browse, save, book fittings, request delivery, and checkout securely."],
-          ["For designers", "Upload products, manage variants, approve appointments, and onboard Stripe payouts."],
+          ["For clients", "Browse, save, and request fittings directly with independent designers."],
+          ["For designers", "Subscribe to a plan, publish products, and manage appointments from one workspace."],
           ["For admins", "Approve designers, monitor operations, and keep marketplace health visible."]
         ].map(([title, body]) => (
           <article key={title} class="luxury-card min-h-56 p-6">

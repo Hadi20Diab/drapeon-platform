@@ -21,7 +21,7 @@ export default component$(() => {
   });
 
   return (
-    <AdminShell active="Alerts" eyebrow="Notification Center" title="Admin Alerts" subtitle="Payment failures, flagged listings, suspicious activity, approval pressure, and recent audited actions in one place.">
+    <AdminShell active="Alerts" eyebrow="Notification Center" title="Admin Alerts" subtitle="Subscription issues, flagged listings, suspicious activity, fitting pressure, and recent audited actions in one place.">
       {error.value && <p class="border border-brand-rose/30 bg-brand-rose/10 px-4 py-3 text-sm font-semibold text-brand-rose">{error.value}</p>}
       {!data.value && !error.value && <AdminSkeleton />}
       {data.value && (
@@ -37,7 +37,7 @@ export default component$(() => {
                 <span class={`h-max border px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] ${statusClass(alert.type)}`}>{alert.type.replaceAll("_", " ")}</span>
               </a>
             ))}
-            {data.value.alerts.length === 0 && <AdminEmptyState title="No alerts" body="The marketplace does not have active admin alerts right now." />}
+            {data.value.alerts.length === 0 && <AdminEmptyState title="No alerts" body="The platform does not have active admin alerts right now." />}
           </article>
 
           <aside class="glass-panel p-6">

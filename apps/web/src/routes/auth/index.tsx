@@ -163,9 +163,9 @@ export default component$(() => {
           {mode.value === "login" ? "Sign in" : "Create account"}
         </h1>
         <p class="mt-5 max-w-md text-base leading-8 text-brand-ink/60">
-          Clients can rent and request delivery. Designers get a store profile and dashboard access
-          for managing products, orders, and appointments. Every new account captures body
-          measurements so styling recommendations start with a real fit profile.
+          Clients can browse, save looks, and request fittings. Designers get a store profile and
+          dashboard access for managing products, subscriptions, and appointments. Every new account
+          captures body measurements so styling recommendations start with a real fit profile.
         </p>
       </aside>
 

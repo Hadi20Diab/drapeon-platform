@@ -4,8 +4,15 @@ import { AdminShell, AdminSkeleton, statusClass } from "../../../components/admi
 import { fetchAdminSettings } from "../../../lib/api";
 
 interface AdminSettings {
-  platform: { name: string; commissionRate: number; defaultCurrency: string; maintenanceMode: boolean };
-  stripe: { configured: boolean; publishableConfigured: boolean; connectReturnUrl: string | null; webhookConfigured: boolean };
+  platform: { name: string; subscriptionModel: string; defaultCurrency: string; maintenanceMode: boolean };
+  stripe: {
+    configured: boolean;
+    publishableConfigured: boolean;
+    webhookConfigured: boolean;
+    subscriptionSuccessUrl: string | null;
+    subscriptionCancelUrl: string | null;
+    billingPortalReturnUrl: string | null;
+  };
   ai: { configured: boolean; model: string };
   pinecone: { configured: boolean; indexName: string | null; namespace: string };
   featureToggles: Record<string, boolean>;
@@ -24,7 +31,7 @@ export default component$(() => {
   });
 
   return (
-    <AdminShell active="Settings" eyebrow="System Settings" title="Platform Configuration" subtitle="A safe read-only control surface for Stripe, AI, feature readiness, platform commission, and critical environment configuration.">
+    <AdminShell active="Settings" eyebrow="System Settings" title="Platform Configuration" subtitle="A safe read-only control surface for Stripe Billing, AI readiness, feature flags, and critical environment configuration.">
       {error.value && <p class="border border-brand-rose/30 bg-brand-rose/10 px-4 py-3 text-sm font-semibold text-brand-rose">{error.value}</p>}
       {!settings.value && !error.value && <AdminSkeleton />}
       {settings.value && (
@@ -33,7 +40,7 @@ export default component$(() => {
             <p class="eyebrow">Platform</p>
             <h2 class="mt-2 font-display text-5xl leading-none text-brand-ink">{settings.value.platform.name}</h2>
             <div class="mt-7 grid gap-3 text-sm">
-              <p class="flex justify-between border-b border-brand-ink/10 pb-3"><span class="font-semibold text-brand-ink/55">Commission</span><span class="font-extrabold text-brand-ink">{(settings.value.platform.commissionRate * 100).toFixed(1)}%</span></p>
+              <p class="flex justify-between border-b border-brand-ink/10 pb-3"><span class="font-semibold text-brand-ink/55">Business model</span><span class="font-extrabold text-brand-ink">{settings.value.platform.subscriptionModel.replaceAll("_", " ")}</span></p>
               <p class="flex justify-between border-b border-brand-ink/10 pb-3"><span class="font-semibold text-brand-ink/55">Currency</span><span class="font-extrabold text-brand-ink">{settings.value.platform.defaultCurrency}</span></p>
               <p class="flex justify-between border-b border-brand-ink/10 pb-3"><span class="font-semibold text-brand-ink/55">Maintenance</span><span class={`border px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] ${statusClass(settings.value.platform.maintenanceMode ? "pending" : "active")}`}>{settings.value.platform.maintenanceMode ? "On" : "Off"}</span></p>
             </div>
@@ -41,14 +48,16 @@ export default component$(() => {
 
           <article class="luxury-card p-6">
             <p class="eyebrow">Stripe</p>
-            <h2 class="mt-2 font-display text-5xl leading-none text-brand-ink">Connect Health</h2>
+            <h2 class="mt-2 font-display text-5xl leading-none text-brand-ink">Billing Health</h2>
             <div class="mt-7 grid gap-3 text-sm">
               {[
                 ["Secret key", settings.value.stripe.configured],
                 ["Publishable key", settings.value.stripe.publishableConfigured],
                 ["Webhook secret", settings.value.stripe.webhookConfigured]
               ].map(([label, enabled]) => <p key={String(label)} class="flex justify-between border-b border-brand-ink/10 pb-3"><span class="font-semibold text-brand-ink/55">{label}</span><span class={`border px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] ${statusClass(enabled ? "active" : "pending")}`}>{enabled ? "Configured" : "Missing"}</span></p>)}
-              <p class="break-all text-xs leading-6 text-brand-ink/45">Return URL: {settings.value.stripe.connectReturnUrl ?? "Not set"}</p>
+              <p class="break-all text-xs leading-6 text-brand-ink/45">Success URL: {settings.value.stripe.subscriptionSuccessUrl ?? "Not set"}</p>
+              <p class="break-all text-xs leading-6 text-brand-ink/45">Cancel URL: {settings.value.stripe.subscriptionCancelUrl ?? "Not set"}</p>
+              <p class="break-all text-xs leading-6 text-brand-ink/45">Portal return: {settings.value.stripe.billingPortalReturnUrl ?? "Not set"}</p>
             </div>
           </article>
 

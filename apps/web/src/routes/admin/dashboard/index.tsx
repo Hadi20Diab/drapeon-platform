@@ -19,11 +19,11 @@ export default component$(() => {
   const maxUsers = Math.max(...(dashboard.value?.userGrowthSeries ?? []).map((row) => row.value), 1);
   const metrics = [
     { label: "Total Users", value: compactNumber(dashboard.value?.metrics.totalUsers), caption: `${dashboard.value?.growth.userGrowthRate ?? 0}% this month` },
-    { label: "Active Designers", value: compactNumber(dashboard.value?.metrics.activeDesigners), caption: "approved vendor stores" },
-    { label: "Gross Revenue", value: money(dashboard.value?.metrics.revenue), caption: `${dashboard.value?.growth.revenueGrowthRate ?? 0}% revenue growth` },
+    { label: "Active Designers", value: compactNumber(dashboard.value?.metrics.activeDesigners), caption: "approved subscribed studios" },
+    { label: "Monthly Recurring Revenue", value: money(dashboard.value?.metrics.revenue), caption: `${dashboard.value?.growth.revenueGrowthRate ?? 0}% subscriber growth` },
     { label: "Pending Approvals", value: compactNumber(dashboard.value?.metrics.pendingApprovals), caption: "designer decisions" },
-    { label: "Rentals Today", value: compactNumber(dashboard.value?.metrics.rentalsToday), caption: "new rental flow" },
-    { label: "Platform Fees", value: money(dashboard.value?.metrics.platformRevenue), caption: "7.5% marketplace take" }
+    { label: "Fittings Today", value: compactNumber(dashboard.value?.metrics.fittingsToday), caption: "atelier requests" },
+    { label: "Annualized Revenue", value: money(dashboard.value?.metrics.platformRevenue), caption: "subscription run rate" }
   ];
 
   return (
@@ -31,7 +31,7 @@ export default component$(() => {
       active="Overview"
       eyebrow="Admin Command"
       title="Marketplace Control Room"
-      subtitle="A live executive surface for trust, payouts, moderation, customer activity, and operational pressure across Vesture."
+      subtitle="A live executive surface for subscriptions, approvals, moderation, customer activity, and operational pressure across Drapeon."
       action="Review Designers"
       actionHref="/admin/designers"
     >
@@ -61,10 +61,10 @@ export default component$(() => {
               <div class="flex flex-wrap items-end justify-between gap-4">
                 <div>
                   <p class="eyebrow">Revenue Chart</p>
-                  <h2 class="mt-2 font-display text-5xl leading-none text-brand-ink">Money Movement</h2>
+                  <h2 class="mt-2 font-display text-5xl leading-none text-brand-ink">Subscription Momentum</h2>
                 </div>
                 <p class="text-right text-sm font-bold text-brand-ink/50">
-                  Platform month<br />
+                  New MRR this month<br />
                   <span class="font-display text-3xl text-brand-ink">{money(dashboard.value.growth.revenueThisMonth)}</span>
                 </p>
               </div>
@@ -106,18 +106,20 @@ export default component$(() => {
               <div class="border-b border-brand-ink/10 px-5 py-4">
                 <p class="text-sm font-extrabold uppercase tracking-[0.14em] text-brand-ink">Top Performing Designers</p>
               </div>
-              {dashboard.value.topDesigners.length === 0 && <AdminEmptyState title="No revenue yet" body="Top designers appear once completed rentals are recorded." />}
+              {dashboard.value.topDesigners.length === 0 && <AdminEmptyState title="No subscribers yet" body="Top designers appear once subscription plans are active." />}
               {dashboard.value.topDesigners.map((designer, index) => (
                 <div key={designer.designerId} class="grid gap-4 border-b border-brand-ink/10 px-5 py-4 last:border-0 md:grid-cols-[44px_1fr_auto] md:items-center">
                   <span class="font-display text-4xl text-brand-rose">{index + 1}</span>
                   <div>
                     <p class="font-semibold text-brand-ink">{designer.storeName}</p>
-                    <p class="mt-1 text-sm text-brand-ink/50">{designer.rentals} rentals - {designer.location ?? "Location pending"}</p>
+                    <p class="mt-1 text-sm text-brand-ink/50">
+                      {designer.planName ?? "No plan"} - {designer.publishedLooks} published looks - {designer.location ?? "Location pending"}
+                    </p>
                   </div>
                   <div class="text-left md:text-right">
-                    <p class="font-display text-3xl text-brand-ink">{money(designer.revenue)}</p>
-                    <span class={`mt-1 inline-flex border px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] ${statusClass(designer.stripePayoutsEnabled ? "paid" : "pending")}`}>
-                      {designer.stripePayoutsEnabled ? "Payout Ready" : "Stripe Pending"}
+                    <p class="font-display text-3xl text-brand-ink">{money(designer.monthlyRevenue)}</p>
+                    <span class={`mt-1 inline-flex border px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] ${statusClass(designer.subscriptionStatus)}`}>
+                      {designer.subscriptionStatus}
                     </span>
                   </div>
                 </div>
@@ -128,7 +130,7 @@ export default component$(() => {
               <div class="border-b border-brand-ink/10 px-5 py-4">
                 <p class="text-sm font-extrabold uppercase tracking-[0.14em] text-brand-ink">Risk Alerts</p>
               </div>
-              {dashboard.value.alerts.length === 0 && <AdminEmptyState title="Quiet board" body="No approval, delivery, or moderation alerts need attention right now." />}
+              {dashboard.value.alerts.length === 0 && <AdminEmptyState title="Quiet board" body="No approval, billing, or moderation alerts need attention right now." />}
               {dashboard.value.alerts.map((alert) => (
                 <a key={alert.id} href={alert.href} class="block border-b border-brand-ink/10 px-5 py-4 transition last:border-0 hover:bg-white">
                   <p class="font-semibold text-brand-ink">{alert.title}</p>

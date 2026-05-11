@@ -101,7 +101,7 @@ export default component$(() => {
         <div class="luxury-card grid gap-3 p-4 lg:grid-cols-[1fr_auto_auto_auto]">
           <input class="min-h-11 border border-brand-ink/20 bg-white px-4 outline-none" placeholder="Search pieces" value={search.value} onInput$={(_, target) => (search.value = target.value)} />
           <select class="min-h-11 border border-brand-ink/20 bg-white px-3" value={status.value} onChange$={(_, target) => (status.value = target.value)}><option value="">All status</option><option value="ACTIVE">Active</option><option value="DRAFT">Draft</option><option value="ARCHIVED">Archived</option></select>
-          <select class="min-h-11 border border-brand-ink/20 bg-white px-3" value={sort.value} onChange$={(_, target) => (sort.value = target.value)}><option value="newest">Newest</option><option value="most_rented">Most rented</option><option value="price">Price</option></select>
+          <select class="min-h-11 border border-brand-ink/20 bg-white px-3" value={sort.value} onChange$={(_, target) => (sort.value = target.value)}><option value="newest">Newest</option><option value="most_rented">Most fitted</option><option value="price">Price</option></select>
           <button type="button" class="btn-primary" onClick$={loadProducts}>Apply</button>
         </div>
         <div class="flex justify-end gap-2">
@@ -136,9 +136,9 @@ export default component$(() => {
         {view.value === "table" && (
           <div class="luxury-card overflow-x-auto">
             <table class="w-full min-w-[720px] text-left text-sm">
-              <thead class="bg-brand-ink text-brand-sand"><tr>{["Piece", "Status", "Stock", "Rental", "Rentals", "Actions"].map((head) => <th key={head} class="px-4 py-3 text-xs uppercase tracking-[0.14em]">{head}</th>)}</tr></thead>
+              <thead class="bg-brand-ink text-brand-sand"><tr>{["Piece", "Status", "Stock", "Rental", "Fittings", "Actions"].map((head) => <th key={head} class="px-4 py-3 text-xs uppercase tracking-[0.14em]">{head}</th>)}</tr></thead>
               <tbody>
-                {(products.value?.items ?? []).map((product) => <tr key={product.id} class="border-b border-brand-ink/10"><td class="px-4 py-3 font-semibold">{product.title}</td><td class="px-4 py-3">{product.status}</td><td class="px-4 py-3">{productStock(product)}</td><td class="px-4 py-3">${Number(product.rentalPrice).toFixed(0)}</td><td class="px-4 py-3">{product.rentalCount ?? 0}</td><td class="px-4 py-3"><button type="button" class="font-bold text-brand-rose" onClick$={() => setStatus(product.id, "ARCHIVED")}>Archive</button></td></tr>)}
+                {(products.value?.items ?? []).map((product) => <tr key={product.id} class="border-b border-brand-ink/10"><td class="px-4 py-3 font-semibold">{product.title}</td><td class="px-4 py-3">{product.status}</td><td class="px-4 py-3">{productStock(product)}</td><td class="px-4 py-3">${Number(product.rentalPrice).toFixed(0)}</td><td class="px-4 py-3">{product.fittingCount ?? 0}</td><td class="px-4 py-3"><button type="button" class="font-bold text-brand-rose" onClick$={() => setStatus(product.id, "ARCHIVED")}>Archive</button></td></tr>)}
               </tbody>
             </table>
           </div>

@@ -7,12 +7,12 @@ import {
   BodyShape,
   BookingStatus,
   BookingType,
-  DeliveryStatus,
   DesignerApprovalStatus,
+  DesignerSubscriptionStatus,
   PrismaClient,
   ProductCategory,
   ProductStatus,
-  RentalOrderStatus,
+  SubscriptionInterval,
   UserRole
 } from "@prisma/client";
 
@@ -214,6 +214,8 @@ async function main(): Promise<void> {
   await prisma.aiMessage.deleteMany();
   await prisma.aiSession.deleteMany();
   await prisma.companyKnowledgeEntry.deleteMany();
+  await prisma.designerSubscription.deleteMany();
+  await prisma.subscriptionPlan.deleteMany();
   await prisma.adminAuditLog.deleteMany();
   await prisma.designerMessage.deleteMany();
   await prisma.designerConversation.deleteMany();
@@ -267,36 +269,36 @@ async function main(): Promise<void> {
         slug: "what-is-drapeon",
         question: "What is Drapeon?",
         answer:
-          "Drapeon is a multi-vendor fashion rental platform for premium suits and dresses, combining designer storefronts, fitting appointments, delivery coordination, and AI-guided styling.",
+          "Drapeon is a multi-vendor formalwear platform for premium suits and dresses, combining designer storefronts, fitting appointments, plan-based designer subscriptions, and AI-guided styling.",
         category: "company",
         tags: ["about", "platform", "overview"],
         isPublished: true
       },
       {
-        slug: "how-rentals-work",
-        question: "How do rentals work on Drapeon?",
+        slug: "how-fittings-work",
+        question: "How does the client journey work on Drapeon?",
         answer:
-          "Customers browse verified designer inventory, choose a piece, request a fitting or checkout directly, and then complete payment before pickup or delivery. Designers manage availability, approvals, and fulfillment from their dashboard.",
+          "Customers browse verified designer inventory, save favorite looks, and request fittings directly from product pages. Designers review those requests, confirm appointments, and manage their publishing workflow from the dashboard.",
         category: "rentals",
-        tags: ["checkout", "rental", "process"],
+        tags: ["fittings", "catalog", "process"],
         isPublished: true
       },
       {
         slug: "designer-approval",
         question: "How does designer approval work?",
         answer:
-          "Designers can apply through the platform, connect Stripe, and then wait for admin review. Admins verify store quality, payout readiness, and platform compliance before approving public marketplace access.",
+          "Designers can apply through the platform, choose a subscription plan, and then wait for admin review. Admins verify store quality, product standards, and platform compliance before approving public marketplace access.",
         category: "designers",
         tags: ["designer", "approval", "onboarding"],
         isPublished: true
       },
       {
-        slug: "stripe-payouts",
-        question: "How are designer payouts handled?",
+        slug: "designer-subscriptions",
+        question: "How do designer subscriptions work?",
         answer:
-          "Payments are processed with Stripe Connect. The platform keeps its commission and routes the remaining payout amount to the connected designer account once Stripe marks the account ready for transfers.",
+          "Designers subscribe through Stripe Billing. Each plan unlocks a monthly product publishing allowance, and designers can manage billing or upgrade plans from their dashboard billing center.",
         category: "payments",
-        tags: ["stripe", "payouts", "commission"],
+        tags: ["stripe", "subscriptions", "plans"],
         isPublished: true
       },
       {
@@ -309,12 +311,12 @@ async function main(): Promise<void> {
         isPublished: true
       },
       {
-        slug: "delivery-coverage",
-        question: "Does Drapeon support delivery requests?",
+        slug: "designer-plan-limits",
+        question: "Do designer plans limit how many products can be published?",
         answer:
-          "Yes. Products can be marked as delivery-ready, and customers can request delivery with address details, scheduling preferences, and status tracking through the order lifecycle.",
-        category: "delivery",
-        tags: ["delivery", "tracking", "logistics"],
+          "Yes. Every designer subscription plan includes a product posting allowance for each billing cycle. When the limit is reached, the designer can upgrade or wait for the next cycle to publish more pieces.",
+        category: "subscriptions",
+        tags: ["subscriptions", "plans", "limits"],
         isPublished: true
       },
       {
@@ -336,6 +338,75 @@ async function main(): Promise<void> {
         isPublished: true
       }
     ]
+  });
+
+  console.log("Creating subscription plans...");
+
+  await prisma.subscriptionPlan.createMany({
+    data: [
+      {
+        slug: "atelier-starter",
+        name: "Atelier Starter",
+        description: "Launch a focused studio presence with a curated monthly product cap.",
+        stripePriceId: "price_seed_atelier_starter_monthly",
+        stripeProductId: "prod_seed_atelier_starter",
+        currency: "USD",
+        interval: SubscriptionInterval.MONTH,
+        amount: 79,
+        productLimit: 10,
+        featured: false,
+        isActive: true,
+        sortOrder: 1,
+        features: [
+          "10 product posts each month",
+          "Fitting appointment management",
+          "Designer messaging inbox"
+        ]
+      },
+      {
+        slug: "atelier-growth",
+        name: "Atelier Growth",
+        description: "Expand catalog reach and manage a larger fitting calendar.",
+        stripePriceId: "price_seed_atelier_growth_monthly",
+        stripeProductId: "prod_seed_atelier_growth",
+        currency: "USD",
+        interval: SubscriptionInterval.MONTH,
+        amount: 149,
+        productLimit: 30,
+        featured: true,
+        isActive: true,
+        sortOrder: 2,
+        features: [
+          "30 product posts each month",
+          "Priority AI catalog visibility",
+          "Advanced storefront analytics"
+        ]
+      },
+      {
+        slug: "atelier-house",
+        name: "Atelier House",
+        description: "High-capacity publishing for established designer houses.",
+        stripePriceId: "price_seed_atelier_house_monthly",
+        stripeProductId: "prod_seed_atelier_house",
+        currency: "USD",
+        interval: SubscriptionInterval.MONTH,
+        amount: 299,
+        productLimit: 80,
+        featured: false,
+        isActive: true,
+        sortOrder: 3,
+        features: [
+          "80 product posts each month",
+          "High-volume fitting operations",
+          "Priority support"
+        ]
+      }
+    ]
+  });
+
+  const subscriptionPlans = await prisma.subscriptionPlan.findMany({
+    where: { isActive: true },
+    orderBy: { sortOrder: "asc" }
   });
 
   console.log("Creating designers...");
@@ -402,6 +473,53 @@ async function main(): Promise<void> {
       designerId: designerUser.designerProfile!.id,
       storeName,
       slug: baseSlug
+    });
+
+    const seededPlan = approved ? pickOne(subscriptionPlans) : null;
+    const subscriptionStatus = !approved
+      ? DesignerSubscriptionStatus.INACTIVE
+      : i % 7 === 0
+        ? DesignerSubscriptionStatus.PAST_DUE
+        : i % 5 === 0
+          ? DesignerSubscriptionStatus.TRIALING
+          : DesignerSubscriptionStatus.ACTIVE;
+    const usagePeriodStart = new Date();
+    usagePeriodStart.setUTCDate(Math.max(1, randomInt(1, 8)));
+    usagePeriodStart.setUTCHours(0, 0, 0, 0);
+    const usagePeriodEnd = new Date(usagePeriodStart);
+    usagePeriodEnd.setUTCMonth(usagePeriodEnd.getUTCMonth() + 1);
+    const subscribedAt = approved
+      ? new Date(Date.now() - randomInt(5, 150) * 24 * 60 * 60 * 1000)
+      : null;
+    const productLimit = seededPlan?.productLimit ?? 0;
+    const productsPublishedThisPeriod =
+      seededPlan && subscriptionStatus !== DesignerSubscriptionStatus.INACTIVE
+        ? Math.min(productLimit, randomInt(1, Math.max(1, Math.min(productLimit, 7))))
+        : 0;
+
+    await prisma.designerSubscription.create({
+      data: {
+        designerId: designerUser.designerProfile!.id,
+        planId: seededPlan?.id,
+        status: subscriptionStatus,
+        stripeCustomerId: approved ? `cus_seed_designer_${i}` : null,
+        stripeSubscriptionId:
+          subscriptionStatus === DesignerSubscriptionStatus.ACTIVE ||
+          subscriptionStatus === DesignerSubscriptionStatus.TRIALING ||
+          subscriptionStatus === DesignerSubscriptionStatus.PAST_DUE
+            ? `sub_seed_designer_${i}`
+            : null,
+        productLimitSnapshot: productLimit || null,
+        productsPublishedThisPeriod,
+        usagePeriodStart: seededPlan ? usagePeriodStart : null,
+        usagePeriodEnd: seededPlan ? usagePeriodEnd : null,
+        currentPeriodStart: seededPlan ? usagePeriodStart : null,
+        currentPeriodEnd: seededPlan ? usagePeriodEnd : null,
+        cancelAtPeriodEnd: approved ? chance(0.12) : false,
+        subscribedAt,
+        lastCheckoutAt: approved ? new Date(subscribedAt ?? new Date()) : null,
+        lastSyncedAt: approved ? new Date() : null
+      }
     });
   }
 
@@ -646,171 +764,6 @@ async function main(): Promise<void> {
       userId: booking.userId,
       designerId: booking.designerId,
       productId: booking.productId
-    });
-  }
-
-  console.log("Creating rental orders...");
-
-  const orders: {
-    id: string;
-    userId: string;
-    designerId: string;
-  }[] = [];
-
-  for (let i = 0; i < 95; i += 1) {
-    const customer = pickOne(customers);
-    const product = pickOne(seededProducts);
-    const sameDesignerProducts = seededProducts.filter(
-      (candidate) => candidate.designerId === product.designerId
-    );
-    const secondaryProduct = chance(0.4) ? pickOne(sameDesignerProducts) : null;
-
-    const rentalDays = randomInt(2, 6);
-    const unitPrice1 = randomInt(95, 380);
-    const unitPrice2 = secondaryProduct ? randomInt(90, 340) : 0;
-    const subtotal = secondaryProduct ? unitPrice1 + unitPrice2 : unitPrice1;
-    const serviceFee = Math.round(subtotal * 0.12);
-    const total = subtotal + serviceFee;
-    const status = pickOne([
-      RentalOrderStatus.PENDING,
-      RentalOrderStatus.CONFIRMED,
-      RentalOrderStatus.IN_PROGRESS,
-      RentalOrderStatus.COMPLETED
-    ]);
-
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() + randomInt(2, 25));
-    const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + rentalDays);
-
-    const order = await prisma.rentalOrder.create({
-      data: {
-        userId: customer.userId,
-        designerId: product.designerId,
-        status,
-        rentalStartDate: startDate,
-        rentalEndDate: endDate,
-        subtotalAmount: subtotal,
-        serviceFee,
-        totalAmount: total,
-        deliveryAddress: `${randomInt(12, 350)} ${pickOne([
-          "Cedars Street",
-          "Marina Road",
-          "Downtown Ave",
-          "Palm Boulevard",
-          "Harbor Lane"
-        ])}, ${pickOne(cities)}`,
-        notes: chance(0.2) ? "Deliver after 5 PM." : null,
-        items: {
-          create: [
-            {
-              productId: product.id,
-              variantId: pickOne(product.variantIds),
-              quantity: 1,
-              rentalDays,
-              unitPrice: unitPrice1,
-              lineTotal: unitPrice1
-            },
-            ...(secondaryProduct
-              ? [
-                  {
-                    productId: secondaryProduct.id,
-                    variantId: pickOne(secondaryProduct.variantIds),
-                    quantity: 1,
-                    rentalDays,
-                    unitPrice: unitPrice2,
-                    lineTotal: unitPrice2
-                  }
-                ]
-              : [])
-          ]
-        }
-      }
-    });
-
-    orders.push({
-      id: order.id,
-      userId: order.userId,
-      designerId: order.designerId
-    });
-  }
-
-  console.log("Creating delivery requests and tracking events...");
-
-  const usedBookingIds = new Set<string>();
-  const usedOrderIds = new Set<string>();
-
-  for (let i = 0; i < 140; i += 1) {
-    const fromOrder = chance(0.6);
-    let orderRef: (typeof orders)[number] | null = null;
-    let bookingRef: (typeof bookings)[number] | null = null;
-
-    if (fromOrder) {
-      const availableOrders = orders.filter((order) => !usedOrderIds.has(order.id));
-      if (availableOrders.length > 0) {
-        orderRef = pickOne(availableOrders);
-        usedOrderIds.add(orderRef.id);
-      }
-    } else {
-      const availableBookings = bookings.filter((booking) => !usedBookingIds.has(booking.id));
-      if (availableBookings.length > 0) {
-        bookingRef = pickOne(availableBookings);
-        usedBookingIds.add(bookingRef.id);
-      }
-    }
-
-    if (!orderRef && !bookingRef) {
-      continue;
-    }
-
-    const userId = orderRef?.userId ?? bookingRef!.userId;
-    const designerId = orderRef?.designerId ?? bookingRef!.designerId;
-    const productId = bookingRef?.productId ?? null;
-    const status = pickOne([
-      DeliveryStatus.PENDING,
-      DeliveryStatus.APPROVED,
-      DeliveryStatus.PACKING,
-      DeliveryStatus.IN_TRANSIT,
-      DeliveryStatus.DELIVERED
-    ]);
-
-    const delivery = await prisma.deliveryRequest.create({
-      data: {
-        userId,
-        designerId,
-        orderId: orderRef?.id ?? null,
-        bookingId: bookingRef?.id ?? null,
-        productId,
-        deliveryAddress: `${randomInt(10, 450)} ${pickOne([
-          "Oak Residence",
-          "Central District",
-          "Bay Area",
-          "Olive Quarter",
-          "City Gate"
-        ])}, ${pickOne(cities)}`,
-        contactPhone: randomPhone(),
-        instructions: chance(0.25) ? "Call on arrival." : null,
-        status
-      }
-    });
-
-    await prisma.deliveryTrackingEvent.createMany({
-      data: [
-        {
-          deliveryRequestId: delivery.id,
-          status: DeliveryStatus.PENDING,
-          note: "Request submitted"
-        },
-        ...(status !== DeliveryStatus.PENDING
-          ? [
-              {
-                deliveryRequestId: delivery.id,
-                status,
-                note: `Moved to ${status.toLowerCase().replace(/_/g, " ")}`
-              }
-            ]
-          : [])
-      ]
     });
   }
 

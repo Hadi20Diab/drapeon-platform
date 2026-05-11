@@ -112,7 +112,7 @@ export class AiService {
     {
       name: "searchCompanyKnowledge",
       description:
-        "Search approved company knowledge for questions about Drapeon policies, designer onboarding, payments, delivery, fittings, returns, and how the platform works.",
+        "Search approved company knowledge for questions about Drapeon policies, designer onboarding, subscriptions, fittings, returns, and how the platform works.",
       parameters: {
         type: Type.OBJECT,
         properties: {
@@ -592,7 +592,7 @@ export class AiService {
       "If user profile measurements are available, use them and do not ask for those values again.",
       "If the user is browsing as a guest, still help fully and only ask for missing fit details when they are necessary for a better recommendation.",
       "Match body shape whenever it is present in the stored fit profile or user request.",
-      "Use searchCompanyKnowledge for questions about Drapeon, rentals, delivery, designer onboarding, returns, and payments.",
+      "Use searchCompanyKnowledge for questions about Drapeon, fittings, designer subscriptions, onboarding, returns, and payments.",
       "Prefer calling searchProducts first, then getProductDetails only for top candidates.",
       "Respond with concise styling rationale and prioritize fit confidence.",
       `User prompt: ${payload.prompt}`,

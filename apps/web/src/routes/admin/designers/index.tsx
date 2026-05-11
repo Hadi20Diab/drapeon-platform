@@ -43,7 +43,7 @@ export default component$(() => {
   });
 
   return (
-    <AdminShell active="Designers" eyebrow="Vendor Governance" title="Designer Approvals" subtitle="Verify vendors, monitor Stripe readiness, track sales pressure, and keep storefront quality high.">
+    <AdminShell active="Designers" eyebrow="Vendor Governance" title="Designer Approvals" subtitle="Verify vendors, monitor subscription readiness, track publishing capacity, and keep storefront quality high.">
       {error.value && <p class="border border-brand-rose/30 bg-brand-rose/10 px-4 py-3 text-sm font-semibold text-brand-rose">{error.value}</p>}
       {notice.value && <p class="border border-brand-gold/30 bg-brand-gold/10 px-4 py-3 text-sm font-semibold text-brand-ink">{notice.value}</p>}
 
@@ -75,25 +75,25 @@ export default component$(() => {
 
               <div class="mt-6 grid gap-3 md:grid-cols-3">
                 <div class="border border-brand-ink/10 bg-brand-sand/50 p-4">
-                  <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-brand-ink/45">Revenue</p>
-                  <p class="mt-2 font-display text-3xl text-brand-ink">{money(designer.revenue)}</p>
+                  <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-brand-ink/45">MRR</p>
+                  <p class="mt-2 font-display text-3xl text-brand-ink">{money(designer.monthlyRevenue)}</p>
                 </div>
                 <div class="border border-brand-ink/10 bg-brand-sand/50 p-4">
                   <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-brand-ink/45">Products</p>
                   <p class="mt-2 font-display text-3xl text-brand-ink">{compactNumber(designer._count?.products)}</p>
                 </div>
                 <div class="border border-brand-ink/10 bg-brand-sand/50 p-4">
-                  <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-brand-ink/45">Orders</p>
-                  <p class="mt-2 font-display text-3xl text-brand-ink">{compactNumber(designer._count?.rentalOrders)}</p>
+                  <p class="text-xs font-extrabold uppercase tracking-[0.12em] text-brand-ink/45">Fittings</p>
+                  <p class="mt-2 font-display text-3xl text-brand-ink">{compactNumber(designer._count?.bookings)}</p>
                 </div>
               </div>
 
               <div class="mt-6 grid gap-2 text-sm">
                 {[
-                  ["Stripe account", designer.stripeAccountId ? "Connected" : "Missing"],
-                  ["Charges", designer.stripeChargesEnabled ? "Enabled" : "Pending"],
-                  ["Payouts", designer.stripePayoutsEnabled ? "Enabled" : "Pending"],
-                  ["Verification", designer.stripeDetailsSubmitted ? "Submitted" : "Incomplete"]
+                  ["Plan", designer.subscription.plan?.name ?? "No plan"],
+                  ["Billing status", designer.subscription.status],
+                  ["Cycle value", designer.subscription.plan ? `${money(designer.subscription.plan.amount)} / ${designer.subscription.plan.interval.toLowerCase()}` : "Not subscribed"],
+                  ["Publishing", `${designer.subscription.productsPublishedThisPeriod} used / ${designer.subscription.productLimit} allowed`]
                 ].map(([label, value]) => (
                   <div key={label} class="flex justify-between border-b border-brand-ink/10 pb-2 last:border-0">
                     <span class="font-semibold text-brand-ink/50">{label}</span>

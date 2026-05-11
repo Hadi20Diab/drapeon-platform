@@ -1,10 +1,11 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import {
-  DeliveryStatus,
+  BookingStatus,
   DesignerApprovalStatus,
+  DesignerSubscriptionStatus,
   Prisma,
   ProductStatus,
-  RentalOrderStatus,
+  SubscriptionInterval,
   UserStatus
 } from "@prisma/client";
 
@@ -14,8 +15,6 @@ import { AdminDesignerQueryDto } from "./dto/admin-designer-query.dto";
 import { AdminProductQueryDto } from "./dto/admin-product-query.dto";
 import { AdminUserQueryDto } from "./dto/admin-user-query.dto";
 
-const PLATFORM_FEE_RATE = 0.075;
-
 @Injectable()
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
@@ -24,45 +23,61 @@ export class AdminService {
     const today = this.startOfDay(new Date());
     const monthStart = this.monthsAgo(0);
     const previousMonthStart = this.monthsAgo(1);
+    const activeSubscriptionStatuses = this.activeSubscriptionStatuses();
+    const atRiskSubscriptionStatuses = this.atRiskSubscriptionStatuses();
 
     const [
       totalUsers,
       activeDesigners,
+      activeSubscriptions,
       pendingApprovals,
-      rentalsToday,
+      fittingsToday,
       platformActivity,
-      revenueAggregate,
-      monthRevenueAggregate,
-      previousMonthRevenueAggregate,
       usersThisMonth,
       usersLastMonth,
       recentActivities,
       pendingDesigners,
       recentUsers,
-      revenueRows,
+      subscriptionRevenueRows,
       userRows,
-      rentalRows,
+      bookingRows,
       topDesignerRows,
       flaggedProducts,
-      deliveryIssues
+      atRiskSubscribers
     ] = await this.prisma.$transaction([
       this.prisma.user.count({ where: { status: { not: UserStatus.DELETED } } }),
-      this.prisma.designer.count({ where: { approvalStatus: DesignerApprovalStatus.APPROVED } }),
+      this.prisma.designer.count({
+        where: {
+          approvalStatus: DesignerApprovalStatus.APPROVED,
+          subscription: {
+            is: {
+              status: { in: activeSubscriptionStatuses }
+            }
+          }
+        }
+      }),
+      this.prisma.designerSubscription.findMany({
+        where: {
+          status: { in: activeSubscriptionStatuses },
+          planId: { not: null }
+        },
+        select: {
+          id: true,
+          createdAt: true,
+          subscribedAt: true,
+          status: true,
+          plan: {
+            select: {
+              name: true,
+              amount: true,
+              interval: true
+            }
+          }
+        }
+      }),
       this.prisma.designer.count({ where: { approvalStatus: DesignerApprovalStatus.PENDING } }),
-      this.prisma.rentalOrder.count({ where: { createdAt: { gte: today } } }),
-      this.prisma.adminAuditLog.count(),
-      this.prisma.rentalOrder.aggregate({
-        where: this.completedOrderWhere(),
-        _sum: { serviceFee: true, totalAmount: true }
-      }),
-      this.prisma.rentalOrder.aggregate({
-        where: { ...this.completedOrderWhere(), createdAt: { gte: monthStart } },
-        _sum: { serviceFee: true, totalAmount: true }
-      }),
-      this.prisma.rentalOrder.aggregate({
-        where: { ...this.completedOrderWhere(), createdAt: { gte: previousMonthStart, lt: monthStart } },
-        _sum: { serviceFee: true, totalAmount: true }
-      }),
+      this.prisma.booking.count({ where: { startsAt: { gte: today } } }),
+      this.prisma.booking.count({ where: { createdAt: { gte: this.daysAgo(30) } } }),
       this.prisma.user.count({ where: { createdAt: { gte: monthStart } } }),
       this.prisma.user.count({ where: { createdAt: { gte: previousMonthStart, lt: monthStart } } }),
       this.prisma.adminAuditLog.findMany({
@@ -81,42 +96,104 @@ export class AdminService {
         orderBy: { createdAt: "desc" },
         select: this.userListSelect()
       }),
-      this.prisma.rentalOrder.findMany({
-        where: { ...this.completedOrderWhere(), createdAt: { gte: this.monthsAgo(5) } },
+      this.prisma.designerSubscription.findMany({
+        where: {
+          status: { in: activeSubscriptionStatuses },
+          planId: { not: null },
+          createdAt: { gte: this.monthsAgo(5) }
+        },
         orderBy: { createdAt: "asc" },
-        select: { createdAt: true, serviceFee: true, totalAmount: true }
+        select: {
+          createdAt: true,
+          plan: {
+            select: {
+              amount: true,
+              interval: true
+            }
+          }
+        }
       }),
       this.prisma.user.findMany({
         where: { createdAt: { gte: this.monthsAgo(5) } },
         orderBy: { createdAt: "asc" },
         select: { createdAt: true }
       }),
-      this.prisma.rentalOrder.findMany({
+      this.prisma.booking.findMany({
         where: { createdAt: { gte: this.daysAgo(30) } },
         orderBy: { createdAt: "asc" },
         select: { createdAt: true, status: true }
       }),
-      this.prisma.rentalOrder.groupBy({
-        by: ["designerId"],
-        where: this.completedOrderWhere(),
-        _sum: { totalAmount: true, serviceFee: true },
-        _count: { _all: true },
-        orderBy: { _sum: { totalAmount: "desc" } },
-        take: 6
+      this.prisma.designer.findMany({
+        where: {
+          approvalStatus: DesignerApprovalStatus.APPROVED,
+          subscription: {
+            is: {
+              status: { in: activeSubscriptionStatuses },
+              planId: { not: null }
+            }
+          }
+        },
+        select: {
+          id: true,
+          storeName: true,
+          location: true,
+          _count: {
+            select: {
+              products: true,
+              bookings: true
+            }
+          },
+          subscription: {
+            select: {
+              status: true,
+              plan: {
+                select: {
+                  name: true,
+                  amount: true,
+                  interval: true
+                }
+              }
+            }
+          }
+        }
       }),
       this.prisma.product.count({ where: { status: ProductStatus.ARCHIVED } }),
-      this.prisma.deliveryRequest.count({
-        where: { status: { in: [DeliveryStatus.CANCELLED, DeliveryStatus.PENDING] } }
+      this.prisma.designerSubscription.count({
+        where: {
+          status: { in: atRiskSubscriptionStatuses }
+        }
       })
     ]);
+
+    const totalMrr = activeSubscriptions.reduce(
+      (sum, subscription) => sum + this.normalizedSubscriptionAmount(subscription.plan?.amount, subscription.plan?.interval),
+      0
+    );
+    const monthRevenueThisMonth = activeSubscriptions
+      .filter((subscription) => subscription.createdAt >= monthStart)
+      .reduce(
+        (sum, subscription) =>
+          sum + this.normalizedSubscriptionAmount(subscription.plan?.amount, subscription.plan?.interval),
+        0
+      );
+    const monthRevenueLastMonth = activeSubscriptions
+      .filter(
+        (subscription) =>
+          subscription.createdAt >= previousMonthStart && subscription.createdAt < monthStart
+      )
+      .reduce(
+        (sum, subscription) =>
+          sum + this.normalizedSubscriptionAmount(subscription.plan?.amount, subscription.plan?.interval),
+        0
+      );
 
     return {
       metrics: {
         totalUsers,
         activeDesigners,
-        revenue: Number(revenueAggregate._sum.totalAmount ?? 0),
-        platformRevenue: Number(revenueAggregate._sum.serviceFee ?? 0),
-        rentalsToday,
+        revenue: Number(totalMrr.toFixed(2)),
+        platformRevenue: Number((totalMrr * 12).toFixed(2)),
+        fittingsToday,
         pendingApprovals,
         platformActivity
       },
@@ -124,16 +201,22 @@ export class AdminService {
         usersThisMonth,
         usersLastMonth,
         userGrowthRate: this.growthRate(usersThisMonth, usersLastMonth),
-        revenueThisMonth: Number(monthRevenueAggregate._sum.totalAmount ?? 0),
-        revenueLastMonth: Number(previousMonthRevenueAggregate._sum.totalAmount ?? 0),
-        revenueGrowthRate: this.growthRate(
-          Number(monthRevenueAggregate._sum.totalAmount ?? 0),
-          Number(previousMonthRevenueAggregate._sum.totalAmount ?? 0)
-        )
+        revenueThisMonth: Number(monthRevenueThisMonth.toFixed(2)),
+        revenueLastMonth: Number(monthRevenueLastMonth.toFixed(2)),
+        revenueGrowthRate: this.growthRate(monthRevenueThisMonth, monthRevenueLastMonth)
       },
-      revenueSeries: this.buildMoneySeries(revenueRows, "totalAmount"),
+      revenueSeries: this.buildMoneySeries(
+        subscriptionRevenueRows.map((subscription) => ({
+          createdAt: subscription.createdAt,
+          totalAmount: this.normalizedSubscriptionAmount(
+            subscription.plan?.amount,
+            subscription.plan?.interval
+          )
+        })),
+        "totalAmount"
+      ),
       userGrowthSeries: this.buildCountSeries(userRows),
-      rentalPerformance: this.buildStatusSeries(rentalRows),
+      fittingPerformance: this.buildStatusSeries(bookingRows),
       pendingDesigners,
       recentUsers,
       recentActivities: recentActivities.map((activity) => ({
@@ -144,8 +227,8 @@ export class AdminService {
         createdAt: activity.createdAt,
         actorEmail: activity.actorAdmin.email
       })),
-      topDesigners: await this.decorateTopDesigners(topDesignerRows),
-      alerts: this.buildAlerts({ pendingApprovals, flaggedProducts, deliveryIssues })
+      topDesigners: this.decorateTopDesigners(topDesignerRows),
+      alerts: this.buildAlerts({ pendingApprovals, flaggedProducts, atRiskSubscribers })
     };
   }
 
@@ -175,9 +258,9 @@ export class AdminService {
         orderBy: { createdAt: "desc" },
         select: {
           ...this.userListSelect(),
-          _count: { select: { bookings: true, rentalOrders: true, aiSessions: true } },
+          _count: { select: { bookings: true, aiSessions: true } },
           designerProfile: {
-            select: { id: true, storeName: true, approvalStatus: true, stripeChargesEnabled: true }
+            select: { id: true, storeName: true, approvalStatus: true }
           }
         }
       })
@@ -203,11 +286,6 @@ export class AdminService {
           take: 8,
           orderBy: { createdAt: "desc" },
           include: { product: { select: { title: true } }, designer: { select: { storeName: true } } }
-        },
-        rentalOrders: {
-          take: 8,
-          orderBy: { createdAt: "desc" },
-          include: { designer: { select: { storeName: true } } }
         },
         aiSessions: {
           take: 8,
@@ -289,11 +367,7 @@ export class AdminService {
         orderBy: { createdAt: "desc" },
         select: {
           ...this.designerListSelect(),
-          _count: { select: { products: true, rentalOrders: true, bookings: true } },
-          rentalOrders: {
-            where: this.completedOrderWhere(),
-            select: { totalAmount: true, serviceFee: true }
-          }
+          _count: { select: { products: true, bookings: true } }
         }
       })
     ]);
@@ -301,9 +375,19 @@ export class AdminService {
     return {
       items: designers.map((designer) => ({
         ...designer,
-        revenue: designer.rentalOrders.reduce((sum, order) => sum + Number(order.totalAmount), 0),
-        platformFees: designer.rentalOrders.reduce((sum, order) => sum + Number(order.serviceFee), 0),
-        rentalOrders: undefined
+        subscription: this.serializeDesignerSubscription(designer.subscription),
+        monthlyRevenue: this.normalizedSubscriptionAmount(
+          designer.subscription?.plan?.amount,
+          designer.subscription?.plan?.interval
+        ),
+        annualizedRevenue: Number(
+          (
+            this.normalizedSubscriptionAmount(
+              designer.subscription?.plan?.amount,
+              designer.subscription?.plan?.interval
+            ) * 12
+          ).toFixed(2)
+        )
       })),
       pagination: { page, limit, total }
     };
@@ -388,20 +472,7 @@ export class AdminService {
   }
 
   async getOperations() {
-    const [orders, bookings, deliveries, auditLogs] = await this.prisma.$transaction([
-      this.prisma.rentalOrder.findMany({
-        take: 30,
-        orderBy: { createdAt: "desc" },
-        include: {
-          user: { select: { email: true, profile: { select: { firstName: true, lastName: true } } } },
-          designer: { select: { storeName: true } },
-          deliveryRequest: { select: { status: true, scheduledFor: true } },
-          items: {
-            take: 3,
-            include: { product: { select: { title: true } }, variant: { select: { sizeLabel: true, color: true } } }
-          }
-        }
-      }),
+    const [bookings, subscriptions, recentProducts, auditLogs] = await this.prisma.$transaction([
       this.prisma.booking.findMany({
         take: 30,
         orderBy: { startsAt: "asc" },
@@ -412,14 +483,45 @@ export class AdminService {
           variant: { select: { sizeLabel: true, color: true } }
         }
       }),
-      this.prisma.deliveryRequest.findMany({
-        take: 30,
-        orderBy: { requestedAt: "desc" },
+      this.prisma.designerSubscription.findMany({
+        take: 24,
+        where: {
+          OR: [
+            { status: { in: this.atRiskSubscriptionStatuses() } },
+            { createdAt: { gte: this.daysAgo(45) } }
+          ]
+        },
+        orderBy: [{ currentPeriodEnd: "asc" }, { createdAt: "desc" }],
         include: {
-          user: { select: { email: true } },
+          designer: {
+            select: {
+              id: true,
+              storeName: true,
+              approvalStatus: true,
+              user: { select: { email: true } }
+            }
+          },
+          plan: {
+            select: {
+              name: true,
+              amount: true,
+              interval: true,
+              productLimit: true
+            }
+          }
+        }
+      }),
+      this.prisma.product.findMany({
+        take: 24,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          title: true,
+          category: true,
+          status: true,
+          createdAt: true,
           designer: { select: { storeName: true } },
-          product: { select: { title: true } },
-          trackingEvents: { take: 4, orderBy: { createdAt: "desc" } }
+          _count: { select: { bookings: true } }
         }
       }),
       this.prisma.adminAuditLog.findMany({
@@ -430,9 +532,25 @@ export class AdminService {
     ]);
 
     return {
-      orders: orders.map((order) => ({ ...order, totalAmount: Number(order.totalAmount) })),
       bookings,
-      deliveries,
+      subscriptions: subscriptions.map((subscription) => ({
+        id: subscription.id,
+        status: subscription.status,
+        designer: subscription.designer,
+        planName: subscription.plan?.name ?? "No plan",
+        cycleAmount: subscription.plan ? Number(subscription.plan.amount) : 0,
+        interval: subscription.plan?.interval ?? SubscriptionInterval.MONTH,
+        monthlyRecurringRevenue: this.normalizedSubscriptionAmount(
+          subscription.plan?.amount,
+          subscription.plan?.interval
+        ),
+        productLimit: subscription.productLimitSnapshot ?? subscription.plan?.productLimit ?? 0,
+        productsPublishedThisPeriod: subscription.productsPublishedThisPeriod,
+        cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+        currentPeriodEnd: subscription.currentPeriodEnd,
+        createdAt: subscription.createdAt
+      })),
+      products: recentProducts,
       timeline: auditLogs.map((log) => ({
         id: log.id,
         action: log.action,
@@ -445,111 +563,174 @@ export class AdminService {
   }
 
   async getPayments(query: AdminDateRangeQueryDto) {
-    const orders = await this.prisma.rentalOrder.findMany({
-      where: this.dateRangeWhere(query),
+    const subscriptions = await this.prisma.designerSubscription.findMany({
+      where: this.subscriptionDateWhere(query),
       orderBy: { createdAt: "desc" },
       include: {
-        user: { select: { email: true } },
         designer: {
           select: {
             id: true,
             storeName: true,
-            stripeAccountId: true,
-            stripePayoutsEnabled: true
+            user: {
+              select: {
+                email: true
+              }
+            }
+          }
+        },
+        plan: {
+          select: {
+            name: true,
+            amount: true,
+            interval: true,
+            productLimit: true
           }
         }
       }
     });
 
-    const transactions = orders.map((order) => {
-      const totalAmount = Number(order.totalAmount);
-      const platformFee = Number(order.serviceFee);
+    const subscriptionRows = subscriptions.map((subscription) => {
+      const monthlyRecurringRevenue = this.normalizedSubscriptionAmount(
+        subscription.plan?.amount,
+        subscription.plan?.interval
+      );
 
       return {
-        id: order.id,
-        customerEmail: order.user.email,
-        designerId: order.designerId,
-        designerName: order.designer.storeName,
-        status: this.paymentStatus(order.status),
-        orderStatus: order.status,
-        amount: totalAmount,
-        platformFee,
-        designerAmount: Math.max(totalAmount - platformFee, 0),
-        currency: "USD",
-        stripeConnected: Boolean(order.designer.stripeAccountId),
-        stripePayoutsEnabled: order.designer.stripePayoutsEnabled,
-        createdAt: order.createdAt
+        id: subscription.id,
+        designerId: subscription.designerId,
+        designerName: subscription.designer.storeName,
+        designerEmail: subscription.designer.user.email,
+        status: subscription.status,
+        planName: subscription.plan?.name ?? "No plan",
+        interval: subscription.plan?.interval ?? SubscriptionInterval.MONTH,
+        amount: subscription.plan ? Number(subscription.plan.amount) : 0,
+        monthlyRecurringRevenue,
+        productLimit: subscription.productLimitSnapshot ?? subscription.plan?.productLimit ?? 0,
+        cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+        currentPeriodEnd: subscription.currentPeriodEnd,
+        subscribedAt: subscription.subscribedAt,
+        stripeSubscriptionId: subscription.stripeSubscriptionId,
+        createdAt: subscription.createdAt
       };
     });
 
-    const payouts = new Map<string, { designerId: string; designerName: string; available: number; pending: number; stripeReady: boolean }>();
-    for (const transaction of transactions) {
-      const current = payouts.get(transaction.designerId) ?? {
-        designerId: transaction.designerId,
-        designerName: transaction.designerName,
-        available: 0,
-        pending: 0,
-        stripeReady: transaction.stripePayoutsEnabled
+    const activeSubscriptions = subscriptionRows.filter((subscription) =>
+      this.activeSubscriptionStatuses().includes(
+        subscription.status as DesignerSubscriptionStatus
+      )
+    );
+    const trialingSubscriptions = subscriptionRows.filter(
+      (subscription) => subscription.status === DesignerSubscriptionStatus.TRIALING
+    );
+    const failedSubscriptions = subscriptionRows.filter((subscription) =>
+      this.atRiskSubscriptionStatuses().includes(
+        subscription.status as DesignerSubscriptionStatus
+      )
+    );
+    const planMix = new Map<
+      string,
+      { planName: string; interval: SubscriptionInterval; subscribers: number; monthlyRecurringRevenue: number }
+    >();
+
+    for (const subscription of activeSubscriptions) {
+      const key = `${subscription.planName}:${subscription.interval}`;
+      const current = planMix.get(key) ?? {
+        planName: subscription.planName,
+        interval: subscription.interval,
+        subscribers: 0,
+        monthlyRecurringRevenue: 0
       };
-      if (transaction.status === "paid") current.available += transaction.designerAmount;
-      if (transaction.status === "pending") current.pending += transaction.designerAmount;
-      payouts.set(transaction.designerId, current);
+      current.subscribers += 1;
+      current.monthlyRecurringRevenue += subscription.monthlyRecurringRevenue;
+      planMix.set(key, current);
     }
 
     return {
       summary: {
-        grossRevenue: transactions.reduce((sum, item) => sum + item.amount, 0),
-        platformRevenue: transactions.reduce((sum, item) => sum + item.platformFee, 0),
-        designerPayouts: transactions.reduce((sum, item) => sum + item.designerAmount, 0),
-        failedPayments: transactions.filter((item) => item.status === "failed").length,
-        commissionRate: PLATFORM_FEE_RATE
+        activeSubscriptions: activeSubscriptions.length,
+        trialingSubscriptions: trialingSubscriptions.length,
+        pastDueSubscriptions: failedSubscriptions.length,
+        monthlyRecurringRevenue: Number(
+          activeSubscriptions
+            .reduce((sum, item) => sum + item.monthlyRecurringRevenue, 0)
+            .toFixed(2)
+        ),
+        annualRecurringRevenue: Number(
+          (
+            activeSubscriptions.reduce(
+              (sum, item) => sum + item.monthlyRecurringRevenue,
+              0
+            ) * 12
+          ).toFixed(2)
+        )
       },
-      transactions,
-      payouts: [...payouts.values()],
-      refunds: transactions.filter((item) => item.orderStatus === RentalOrderStatus.CANCELLED),
-      failedPayments: transactions.filter((item) => item.status === "failed")
+      subscriptions: subscriptionRows,
+      planMix: [...planMix.values()].sort(
+        (left, right) => right.monthlyRecurringRevenue - left.monthlyRecurringRevenue
+      ),
+      failedPayments: failedSubscriptions
     };
   }
 
   async getAnalytics(query: AdminDateRangeQueryDto) {
-    const orderWhere = this.dateRangeWhere(query);
     const userWhere = this.userDateRangeWhere(query);
-    const [orders, users, products, categoryGroups, approvedDesigners, totalDesigners] = await this.prisma.$transaction([
-      this.prisma.rentalOrder.findMany({
-        where: orderWhere,
-        orderBy: { createdAt: "asc" },
-        select: { createdAt: true, status: true, totalAmount: true, serviceFee: true }
-      }),
-      this.prisma.user.findMany({
-        where: userWhere,
-        orderBy: { createdAt: "asc" },
-        select: { createdAt: true, role: true }
-      }),
-      this.prisma.product.findMany({
-        select: { category: true, status: true, _count: { select: { orderItems: true, bookings: true } } }
-      }),
-      this.prisma.product.groupBy({
-        by: ["category"],
-        _count: { _all: true },
-        orderBy: { category: "asc" }
-      }),
-      this.prisma.designer.count({ where: { approvalStatus: DesignerApprovalStatus.APPROVED } }),
-      this.prisma.designer.count()
-    ]);
-    const confirmedOrders = orders.filter((order) => order.status !== RentalOrderStatus.CANCELLED);
+    const bookingWhere = this.bookingDateWhere(query);
+    const [subscriptions, users, products, categoryGroups, approvedDesigners, totalDesigners, bookings] =
+      await this.prisma.$transaction([
+        this.prisma.designerSubscription.findMany({
+          where: this.subscriptionDateWhere(query),
+          orderBy: { createdAt: "asc" },
+          select: {
+            createdAt: true,
+            status: true,
+            plan: { select: { amount: true, interval: true } }
+          }
+        }),
+        this.prisma.user.findMany({
+          where: userWhere,
+          orderBy: { createdAt: "asc" },
+          select: { createdAt: true, role: true }
+        }),
+        this.prisma.product.findMany({
+          select: { category: true, status: true, _count: { select: { bookings: true } } }
+        }),
+        this.prisma.product.groupBy({
+          by: ["category"],
+          _count: { _all: true },
+          orderBy: { category: "asc" }
+        }),
+        this.prisma.designer.count({ where: { approvalStatus: DesignerApprovalStatus.APPROVED } }),
+        this.prisma.designer.count(),
+        this.prisma.booking.findMany({
+          where: bookingWhere,
+          orderBy: { createdAt: "asc" },
+          select: { createdAt: true, status: true }
+        })
+      ]);
     const conversionBase = Math.max(users.length, 1);
+    const activeSubscriptions = subscriptions.filter((subscription) =>
+      this.activeSubscriptionStatuses().includes(subscription.status)
+    );
 
     return {
-      revenueTrends: this.buildMoneySeries(confirmedOrders, "totalAmount"),
-      platformFeeTrends: this.buildMoneySeries(confirmedOrders, "serviceFee"),
+      revenueTrends: this.buildMoneySeries(
+        activeSubscriptions.map((subscription) => ({
+          createdAt: subscription.createdAt,
+          totalAmount: this.normalizedSubscriptionAmount(
+            subscription.plan?.amount,
+            subscription.plan?.interval
+          )
+        })),
+        "totalAmount"
+      ),
       userGrowth: this.buildCountSeries(users),
-      rentalPerformance: this.buildStatusSeries(orders),
+      fittingPerformance: this.buildStatusSeries(bookings),
       topCategories: categoryGroups.map((group) => ({
         category: group.category,
         products: this.groupCount(group)
       })),
       conversionMetrics: {
-        signupToRental: Number(((confirmedOrders.length / conversionBase) * 100).toFixed(1)),
+        signupToFitting: Number(((bookings.length / conversionBase) * 100).toFixed(1)),
         designerApprovalRate:
           totalDesigners === 0 ? 0 : Number(((approvedDesigners / totalDesigners) * 100).toFixed(1))
       },
@@ -557,7 +738,7 @@ export class AdminService {
         active: products.filter((product) => product.status === ProductStatus.ACTIVE).length,
         draft: products.filter((product) => product.status === ProductStatus.DRAFT).length,
         archived: products.filter((product) => product.status === ProductStatus.ARCHIVED).length,
-        rentalLinked: products.filter((product) => product._count.orderItems > 0).length
+        fittingLinked: products.filter((product) => product._count.bookings > 0).length
       }
     };
   }
@@ -628,23 +809,28 @@ export class AdminService {
   }
 
   async getNotifications() {
-    const [pendingDesigners, failedOrders, archivedProducts, suspiciousAiUsers, recentAuditLogs] = await this.prisma.$transaction([
-      this.prisma.designer.count({ where: { approvalStatus: DesignerApprovalStatus.PENDING } }),
-      this.prisma.rentalOrder.count({ where: { status: RentalOrderStatus.CANCELLED } }),
-      this.prisma.product.count({ where: { status: ProductStatus.ARCHIVED } }),
-      this.prisma.aiSession.groupBy({
-        by: ["userId"],
-        _count: { _all: true },
-        having: { userId: { _count: { gt: 4 } } },
-        orderBy: { _count: { userId: "desc" } }
-      }),
-      this.prisma.adminAuditLog.findMany({ take: 8, orderBy: { createdAt: "desc" } })
-    ]);
+    const [pendingDesigners, atRiskSubscriptions, archivedProducts, suspiciousAiUsers, pendingBookings, recentAuditLogs] =
+      await this.prisma.$transaction([
+        this.prisma.designer.count({ where: { approvalStatus: DesignerApprovalStatus.PENDING } }),
+        this.prisma.designerSubscription.count({
+          where: { status: { in: this.atRiskSubscriptionStatuses() } }
+        }),
+        this.prisma.product.count({ where: { status: ProductStatus.ARCHIVED } }),
+        this.prisma.aiSession.groupBy({
+          by: ["userId"],
+          _count: { _all: true },
+          having: { userId: { _count: { gt: 4 } } },
+          orderBy: { _count: { userId: "desc" } }
+        }),
+        this.prisma.booking.count({ where: { status: BookingStatus.PENDING } }),
+        this.prisma.adminAuditLog.findMany({ take: 8, orderBy: { createdAt: "desc" } })
+      ]);
 
     return {
       alerts: [
         ...this.notificationIf(pendingDesigners > 0, "designer_approval", "Designer approvals waiting", `${pendingDesigners} designer stores need review.`, "/admin/designers"),
-        ...this.notificationIf(failedOrders > 0, "payment_failure", "Payment exceptions detected", `${failedOrders} cancelled orders should be checked.`, "/admin/payments"),
+        ...this.notificationIf(atRiskSubscriptions > 0, "billing_attention", "Subscription issues detected", `${atRiskSubscriptions} designer subscriptions need billing review.`, "/admin/payments"),
+        ...this.notificationIf(pendingBookings > 0, "fitting_requests", "Fitting requests waiting", `${pendingBookings} fitting sessions still need attention.`, "/admin/operations"),
         ...this.notificationIf(archivedProducts > 0, "flagged_products", "Product moderation queue", `${archivedProducts} archived listings are available for review.`, "/admin/products"),
         ...this.notificationIf(suspiciousAiUsers.length > 0, "suspicious_activity", "AI usage spike", `${suspiciousAiUsers.length} accounts have elevated AI session volume.`, "/admin/ai")
       ],
@@ -655,16 +841,18 @@ export class AdminService {
   getSettings() {
     return {
       platform: {
-        name: "Vesture",
-        commissionRate: PLATFORM_FEE_RATE,
+        name: "Drapeon",
+        subscriptionModel: "designer_subscriptions",
         defaultCurrency: "USD",
         maintenanceMode: false
       },
       stripe: {
         configured: Boolean(process.env.STRIPE_SECRET_KEY),
         publishableConfigured: Boolean(process.env.STRIPE_PUBLISHABLE_KEY),
-        connectReturnUrl: process.env.STRIPE_CONNECT_RETURN_URL ?? null,
-        webhookConfigured: Boolean(process.env.STRIPE_WEBHOOK_SECRET)
+        webhookConfigured: Boolean(process.env.STRIPE_WEBHOOK_SECRET),
+        subscriptionSuccessUrl: process.env.STRIPE_SUBSCRIPTION_SUCCESS_URL ?? null,
+        subscriptionCancelUrl: process.env.STRIPE_SUBSCRIPTION_CANCEL_URL ?? null,
+        billingPortalReturnUrl: process.env.STRIPE_BILLING_PORTAL_RETURN_URL ?? null
       },
       ai: {
         configured: Boolean(process.env.GEMINI_API_KEY),
@@ -679,7 +867,7 @@ export class AdminService {
         aiStylist: true,
         designerMessaging: true,
         companyKnowledge: true,
-        stripeConnect: true,
+        designerSubscriptions: true,
         productModeration: true
       }
     };
@@ -697,12 +885,15 @@ export class AdminService {
     });
   }
 
-  private completedOrderWhere(): Prisma.RentalOrderWhereInput {
-    return { status: { notIn: [RentalOrderStatus.CANCELLED, RentalOrderStatus.PENDING] } };
+  private subscriptionDateWhere(query: AdminDateRangeQueryDto): Prisma.DesignerSubscriptionWhereInput {
+    const createdAt: Prisma.DateTimeFilter<"DesignerSubscription"> = {};
+    if (query.from) createdAt.gte = new Date(query.from);
+    if (query.to) createdAt.lte = new Date(query.to);
+    return Object.keys(createdAt).length > 0 ? { createdAt } : {};
   }
 
-  private dateRangeWhere(query: AdminDateRangeQueryDto): Prisma.RentalOrderWhereInput {
-    const createdAt: Prisma.DateTimeFilter = {};
+  private bookingDateWhere(query: AdminDateRangeQueryDto): Prisma.BookingWhereInput {
+    const createdAt: Prisma.DateTimeFilter<"Booking"> = {};
     if (query.from) createdAt.gte = new Date(query.from);
     if (query.to) createdAt.lte = new Date(query.to);
     return Object.keys(createdAt).length > 0 ? { createdAt } : {};
@@ -724,13 +915,26 @@ export class AdminService {
       location: true,
       brandColor: true,
       approvalStatus: true,
-      stripeAccountId: true,
-      stripeOnboardingComplete: true,
-      stripeChargesEnabled: true,
-      stripePayoutsEnabled: true,
-      stripeDetailsSubmitted: true,
       createdAt: true,
-      user: { select: { id: true, email: true, status: true } }
+      user: { select: { id: true, email: true, status: true } },
+      subscription: {
+        select: {
+          status: true,
+          productLimitSnapshot: true,
+          productsPublishedThisPeriod: true,
+          currentPeriodEnd: true,
+          cancelAtPeriodEnd: true,
+          plan: {
+            select: {
+              id: true,
+              name: true,
+              amount: true,
+              interval: true,
+              productLimit: true
+            }
+          }
+        }
+      }
     } satisfies Prisma.DesignerSelect;
   }
 
@@ -758,7 +962,7 @@ export class AdminService {
       tags: true,
       images: { take: 1, orderBy: { sortOrder: "asc" }, select: { url: true, altText: true } },
       designer: { select: { id: true, storeName: true, approvalStatus: true } },
-      _count: { select: { orderItems: true, bookings: true } }
+      _count: { select: { bookings: true } }
     } satisfies Prisma.ProductSelect;
   }
 
@@ -770,31 +974,44 @@ export class AdminService {
     };
   }
 
-  private async decorateTopDesigners(
+  private decorateTopDesigners(
     rows: Array<{
-      designerId: string;
-      _sum?: { totalAmount?: Prisma.Decimal | null; serviceFee?: Prisma.Decimal | null } | null;
-      _count?: true | { _all?: number } | null;
+      id: string;
+      storeName: string;
+      location: string | null;
+      _count: { products: number; bookings: number };
+      subscription: {
+        status: DesignerSubscriptionStatus;
+        plan: {
+          name: string;
+          amount: Prisma.Decimal;
+          interval: SubscriptionInterval;
+        } | null;
+      } | null;
     }>
   ) {
-    const designers = await this.prisma.designer.findMany({
-      where: { id: { in: rows.map((row) => row.designerId) } },
-      select: { id: true, storeName: true, location: true, stripePayoutsEnabled: true }
-    });
-    const designerById = new Map(designers.map((designer) => [designer.id, designer]));
+    return [...rows]
+      .map((designer) => {
+        const monthlyRevenue = this.normalizedSubscriptionAmount(
+          designer.subscription?.plan?.amount,
+          designer.subscription?.plan?.interval
+        );
 
-    return rows.map((row) => {
-      const designer = designerById.get(row.designerId);
-      return {
-        designerId: row.designerId,
-        storeName: designer?.storeName ?? "Unknown designer",
-        location: designer?.location ?? null,
-        revenue: Number(row._sum?.totalAmount ?? 0),
-        platformFees: Number(row._sum?.serviceFee ?? 0),
-        rentals: this.groupCount(row),
-        stripePayoutsEnabled: designer?.stripePayoutsEnabled ?? false
-      };
-    });
+        return {
+          designerId: designer.id,
+          storeName: designer.storeName,
+          location: designer.location,
+          monthlyRevenue: Number(monthlyRevenue.toFixed(2)),
+          annualizedRevenue: Number((monthlyRevenue * 12).toFixed(2)),
+          publishedLooks: designer._count.products,
+          fittings: designer._count.bookings,
+          planName: designer.subscription?.plan?.name ?? null,
+          subscriptionStatus:
+            designer.subscription?.status ?? DesignerSubscriptionStatus.INACTIVE
+        };
+      })
+      .sort((left, right) => right.monthlyRevenue - left.monthlyRevenue)
+      .slice(0, 6);
   }
 
   private buildMoneySeries(rows: Array<{ createdAt: Date } & Record<string, unknown>>, field: string) {
@@ -835,11 +1052,11 @@ export class AdminService {
     return buckets;
   }
 
-  private buildAlerts(input: { pendingApprovals: number; flaggedProducts: number; deliveryIssues: number }) {
+  private buildAlerts(input: { pendingApprovals: number; flaggedProducts: number; atRiskSubscribers: number }) {
     return [
       ...this.notificationIf(input.pendingApprovals > 0, "approval", "Pending approvals", `${input.pendingApprovals} designers need a decision.`, "/admin/designers"),
       ...this.notificationIf(input.flaggedProducts > 0, "moderation", "Moderation review", `${input.flaggedProducts} archived listings are waiting in the queue.`, "/admin/products"),
-      ...this.notificationIf(input.deliveryIssues > 0, "operations", "Delivery attention", `${input.deliveryIssues} deliveries need operations review.`, "/admin/operations")
+      ...this.notificationIf(input.atRiskSubscribers > 0, "billing", "Subscription attention", `${input.atRiskSubscribers} designer subscriptions need billing review.`, "/admin/payments")
     ];
   }
 
@@ -847,14 +1064,93 @@ export class AdminService {
     return condition ? [{ id: `${type}-${title}`, type, title, body, href, createdAt: new Date() }] : [];
   }
 
-  private paymentStatus(status: RentalOrderStatus) {
-    if (status === RentalOrderStatus.CANCELLED) return "failed";
-    if (status === RentalOrderStatus.PENDING) return "pending";
-    return "paid";
-  }
-
   private groupCount(row: { _count?: true | { _all?: number } | null }) {
     return typeof row._count === "object" && row._count ? row._count._all ?? 0 : 0;
+  }
+
+  private serializeDesignerSubscription(
+    subscription:
+      | {
+          status: DesignerSubscriptionStatus;
+          productLimitSnapshot: number | null;
+          productsPublishedThisPeriod: number;
+          currentPeriodEnd: Date | null;
+          cancelAtPeriodEnd: boolean;
+          plan: {
+            id: string;
+            name: string;
+            amount: Prisma.Decimal;
+            interval: SubscriptionInterval;
+            productLimit: number;
+          } | null;
+        }
+      | null
+      | undefined
+  ) {
+    if (!subscription) {
+      return {
+        status: DesignerSubscriptionStatus.INACTIVE,
+        plan: null,
+        productLimit: 0,
+        productsPublishedThisPeriod: 0,
+        productsRemainingThisPeriod: 0,
+        currentPeriodEnd: null,
+        cancelAtPeriodEnd: false
+      };
+    }
+
+    const productLimit =
+      subscription.productLimitSnapshot ?? subscription.plan?.productLimit ?? 0;
+
+    return {
+      status: subscription.status,
+      plan: subscription.plan
+        ? {
+            id: subscription.plan.id,
+            name: subscription.plan.name,
+            amount: Number(subscription.plan.amount),
+            interval: subscription.plan.interval,
+            productLimit: subscription.plan.productLimit
+          }
+        : null,
+      productLimit,
+      productsPublishedThisPeriod: subscription.productsPublishedThisPeriod,
+      productsRemainingThisPeriod: Math.max(
+        productLimit - subscription.productsPublishedThisPeriod,
+        0
+      ),
+      currentPeriodEnd: subscription.currentPeriodEnd,
+      cancelAtPeriodEnd: subscription.cancelAtPeriodEnd
+    };
+  }
+
+  private normalizedSubscriptionAmount(
+    amount: Prisma.Decimal | number | null | undefined,
+    interval: SubscriptionInterval | string | null | undefined
+  ) {
+    const numericAmount = Number(amount ?? 0);
+
+    if (interval === SubscriptionInterval.YEAR) {
+      return numericAmount / 12;
+    }
+
+    return numericAmount;
+  }
+
+  private activeSubscriptionStatuses(): DesignerSubscriptionStatus[] {
+    return [
+      DesignerSubscriptionStatus.ACTIVE,
+      DesignerSubscriptionStatus.TRIALING
+    ];
+  }
+
+  private atRiskSubscriptionStatuses(): DesignerSubscriptionStatus[] {
+    return [
+      DesignerSubscriptionStatus.PAST_DUE,
+      DesignerSubscriptionStatus.UNPAID,
+      DesignerSubscriptionStatus.INCOMPLETE,
+      DesignerSubscriptionStatus.INCOMPLETE_EXPIRED
+    ];
   }
 
   private growthRate(current: number, previous: number) {

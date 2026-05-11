@@ -5,12 +5,11 @@ import { fetchAdminAnalytics } from "../../../lib/api";
 
 interface AdminAnalytics {
   revenueTrends: Array<{ month: string; value: number }>;
-  platformFeeTrends: Array<{ month: string; value: number }>;
   userGrowth: Array<{ month: string; value: number }>;
-  rentalPerformance: Array<{ status: string; count: number }>;
+  fittingPerformance: Array<{ status: string; count: number }>;
   topCategories: Array<{ category: string; products: number }>;
-  conversionMetrics: { signupToRental: number; designerApprovalRate: number };
-  productHealth: { active: number; draft: number; archived: number; rentalLinked: number };
+  conversionMetrics: { signupToFitting: number; designerApprovalRate: number };
+  productHealth: { active: number; draft: number; archived: number; fittingLinked: number };
 }
 
 export default component$(() => {
@@ -38,7 +37,7 @@ export default component$(() => {
   const maxUsers = Math.max(...(analytics.value?.userGrowth ?? []).map((row) => row.value), 1);
 
   return (
-    <AdminShell active="Reports" eyebrow="Analytics" title="Marketplace Intelligence" subtitle="Revenue trends, acquisition, rental performance, category health, and conversion metrics for leadership review.">
+    <AdminShell active="Reports" eyebrow="Analytics" title="Marketplace Intelligence" subtitle="Subscription momentum, acquisition, fitting performance, category health, and conversion metrics for leadership review.">
       {error.value && <p class="border border-brand-rose/30 bg-brand-rose/10 px-4 py-3 text-sm font-semibold text-brand-rose">{error.value}</p>}
       <form preventdefault:submit onSubmit$={loadAnalytics} class="luxury-card grid gap-3 p-4 md:grid-cols-[180px_180px_auto]">
         <input type="date" class="border border-brand-ink/10 bg-white px-4 py-3 text-sm font-semibold" bind:value={from} />
@@ -49,9 +48,9 @@ export default component$(() => {
       {analytics.value && (
         <>
           <div class="grid gap-5 md:grid-cols-3">
-            <article class="luxury-card p-6"><p class="eyebrow">Signup to Rental</p><p class="mt-4 font-display text-6xl text-brand-ink">{analytics.value.conversionMetrics.signupToRental}%</p></article>
+            <article class="luxury-card p-6"><p class="eyebrow">Signup to Fitting</p><p class="mt-4 font-display text-6xl text-brand-ink">{analytics.value.conversionMetrics.signupToFitting}%</p></article>
             <article class="luxury-card p-6"><p class="eyebrow">Designer Approval</p><p class="mt-4 font-display text-6xl text-brand-ink">{analytics.value.conversionMetrics.designerApprovalRate}%</p></article>
-            <article class="luxury-card p-6"><p class="eyebrow">Rental Linked Products</p><p class="mt-4 font-display text-6xl text-brand-ink">{compactNumber(analytics.value.productHealth.rentalLinked)}</p></article>
+            <article class="luxury-card p-6"><p class="eyebrow">Fit-Linked Products</p><p class="mt-4 font-display text-6xl text-brand-ink">{compactNumber(analytics.value.productHealth.fittingLinked)}</p></article>
           </div>
 
           <div class="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
@@ -84,7 +83,7 @@ export default component$(() => {
 
           <div class="grid gap-6 xl:grid-cols-3">
             <article class="luxury-card p-6"><p class="eyebrow">Top Categories</p>{analytics.value.topCategories.map((row) => <p key={row.category} class="mt-4 flex justify-between border-b border-brand-ink/10 pb-3 font-semibold text-brand-ink"><span>{row.category}</span><span>{row.products}</span></p>)}</article>
-            <article class="luxury-card p-6"><p class="eyebrow">Rental Status</p>{analytics.value.rentalPerformance.map((row) => <p key={row.status} class="mt-4 flex justify-between border-b border-brand-ink/10 pb-3 font-semibold text-brand-ink"><span>{row.status}</span><span>{row.count}</span></p>)}</article>
+            <article class="luxury-card p-6"><p class="eyebrow">Fitting Status</p>{analytics.value.fittingPerformance.map((row) => <p key={row.status} class="mt-4 flex justify-between border-b border-brand-ink/10 pb-3 font-semibold text-brand-ink"><span>{row.status}</span><span>{row.count}</span></p>)}</article>
             <article class="luxury-card p-6"><p class="eyebrow">Product Health</p>{Object.entries(analytics.value.productHealth).map(([key, value]) => <p key={key} class="mt-4 flex justify-between border-b border-brand-ink/10 pb-3 font-semibold text-brand-ink"><span>{key}</span><span>{compactNumber(value)}</span></p>)}</article>
           </div>
         </>

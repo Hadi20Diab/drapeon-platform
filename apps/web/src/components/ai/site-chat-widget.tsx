@@ -797,8 +797,8 @@ export const SiteChatWidget = component$(() => {
                     class="min-h-[44px] max-h-32 flex-1 resize-none bg-transparent px-2 text-sm leading-6 outline-none placeholder:text-brand-ink/32"
                     placeholder={
                       session.value
-                        ? "Ask about products, fit, delivery, or Drapeon policies..."
-                        : "Ask about products, delivery, sizing, or Drapeon policies..."
+                        ? "Ask about products, fit, subscriptions, or Drapeon policies..."
+                        : "Ask about products, fittings, sizing, or Drapeon policies..."
                     }
                     value={input.value}
                     disabled={isSending.value}

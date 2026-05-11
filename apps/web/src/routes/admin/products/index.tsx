@@ -45,7 +45,7 @@ export default component$(() => {
   });
 
   return (
-    <AdminShell active="Products" eyebrow="Product Moderation" title="Listing Review" subtitle="Moderate inventory quality, archive problematic products, and keep the rental catalog aligned with brand standards.">
+    <AdminShell active="Products" eyebrow="Product Moderation" title="Listing Review" subtitle="Moderate inventory quality, archive problematic products, and keep the fitting-led catalog aligned with brand standards.">
       {error.value && <p class="border border-brand-rose/30 bg-brand-rose/10 px-4 py-3 text-sm font-semibold text-brand-rose">{error.value}</p>}
       {notice.value && <p class="border border-brand-gold/30 bg-brand-gold/10 px-4 py-3 text-sm font-semibold text-brand-ink">{notice.value}</p>}
 
@@ -90,7 +90,7 @@ export default component$(() => {
                 <p class="font-semibold text-brand-ink">{product.designer.storeName}</p>
                 <span class={`mt-2 inline-flex border px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] ${statusClass(product.designer.approvalStatus)}`}>{product.designer.approvalStatus}</span>
               </div>
-              <p class="text-sm text-brand-ink/55">{product._count.orderItems} rentals - {product._count.bookings} fittings</p>
+              <p class="text-sm text-brand-ink/55">{product._count.bookings} fittings linked</p>
               <div class="flex flex-wrap justify-start gap-2 lg:justify-end">
                 <span class={`border px-2 py-2 text-[10px] font-extrabold uppercase tracking-[0.12em] ${statusClass(product.status)}`}>{product.status}</span>
                 <button type="button" class="border border-brand-ink/15 px-3 py-2 text-xs font-extrabold uppercase tracking-[0.11em]" onClick$={() => setStatus(product.id, "ACTIVE")}>Approve</button>

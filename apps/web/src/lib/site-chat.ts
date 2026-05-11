@@ -76,7 +76,7 @@ export function createWelcomeChatMessage(): PersistedChatMessage {
   return createChatMessage({
     role: "agent",
     text:
-      "Ask about fit guidance, rentals, delivery, designer onboarding, or let me search the live catalog for you."
+      "Ask about fit guidance, fittings, designer subscriptions, or let me search the live catalog for you."
   });
 }
 

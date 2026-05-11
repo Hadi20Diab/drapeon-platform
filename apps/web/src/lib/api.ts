@@ -227,8 +227,7 @@ export interface DesignerProduct {
     stockTotal: number;
     stockReserved: number;
   }>;
-  rentalCount?: number;
-  rentalRevenue?: number;
+  fittingCount?: number;
 }
 
 export interface DesignerProductPayload {
@@ -344,14 +343,12 @@ export interface AdminUserRow {
   } | null;
   _count?: {
     bookings: number;
-    rentalOrders: number;
     aiSessions: number;
   };
   designerProfile?: {
     id: string;
     storeName: string;
     approvalStatus: string;
-    stripeChargesEnabled: boolean;
   } | null;
 }
 
@@ -362,24 +359,33 @@ export interface AdminDesignerRow {
   bio: string;
   location: string | null;
   approvalStatus: string;
-  stripeAccountId: string | null;
-  stripeOnboardingComplete: boolean;
-  stripeChargesEnabled: boolean;
-  stripePayoutsEnabled: boolean;
-  stripeDetailsSubmitted: boolean;
   createdAt: string;
   user: {
     id: string;
     email: string;
     status: string;
   };
+  subscription: {
+    status: string;
+    plan: {
+      id: string;
+      name: string;
+      amount: number;
+      interval: string;
+      productLimit: number;
+    } | null;
+    productLimit: number;
+    productsPublishedThisPeriod: number;
+    productsRemainingThisPeriod: number;
+    currentPeriodEnd: string | null;
+    cancelAtPeriodEnd: boolean;
+  };
   _count?: {
     products: number;
-    rentalOrders: number;
     bookings: number;
   };
-  revenue?: number;
-  platformFees?: number;
+  monthlyRevenue?: number;
+  annualizedRevenue?: number;
 }
 
 export interface AdminProductRow {
@@ -398,7 +404,6 @@ export interface AdminProductRow {
     approvalStatus: string;
   };
   _count: {
-    orderItems: number;
     bookings: number;
   };
 }
@@ -432,7 +437,7 @@ export interface AdminDashboard {
     activeDesigners: number;
     revenue: number;
     platformRevenue: number;
-    rentalsToday: number;
+    fittingsToday: number;
     pendingApprovals: number;
     platformActivity: number;
   };
@@ -446,7 +451,7 @@ export interface AdminDashboard {
   };
   revenueSeries: AdminSeriesPoint[];
   userGrowthSeries: AdminSeriesPoint[];
-  rentalPerformance: Array<{ status: string; count: number }>;
+  fittingPerformance: Array<{ status: string; count: number }>;
   pendingDesigners: AdminDesignerRow[];
   recentUsers: AdminUserRow[];
   recentActivities: AdminAuditActivity[];
@@ -454,10 +459,12 @@ export interface AdminDashboard {
     designerId: string;
     storeName: string;
     location: string | null;
-    revenue: number;
-    platformFees: number;
-    rentals: number;
-    stripePayoutsEnabled: boolean;
+    monthlyRevenue: number;
+    annualizedRevenue: number;
+    publishedLooks: number;
+    fittings: number;
+    planName: string | null;
+    subscriptionStatus: string;
   }>;
   alerts: AdminAlert[];
 }

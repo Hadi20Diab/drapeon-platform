@@ -25,7 +25,7 @@ export const DesignerShell = component$<DesignerShellProps>((props) => {
       <aside class="luxury-card h-max overflow-hidden lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
         <div class="border-b border-brand-ink/10 bg-brand-ink p-5 text-brand-sand">
           <p class="text-xs font-extrabold uppercase tracking-[0.18em] text-brand-gold">
-            Vesture Studio
+            Drapeon Studio
           </p>
           <p class="mt-3 font-display text-3xl leading-none">Designer Console</p>
         </div>

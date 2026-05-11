@@ -20,8 +20,7 @@ const filters = {
   color: ["Black", "Ivory", "Burgundy", "Olive"],
   rental: [
     { label: "Under $200", value: "under-200" },
-    { label: "$200-$350", value: "200-350" },
-    { label: "Delivery", value: "delivery" }
+    { label: "$200-$350", value: "200-350" }
   ]
 };
 
@@ -40,7 +39,6 @@ function matchesProduct(
   const colorMatch = !selectedColor || product.colorOptions.includes(selectedColor);
   const rentalMatch =
     !selectedRental ||
-    selectedRental === "delivery" ||
     (selectedRental === "under-200" && product.rentalPrice < 200) ||
     (selectedRental === "200-350" && product.rentalPrice >= 200 && product.rentalPrice <= 350);
 
@@ -218,7 +216,7 @@ export default component$(() => {
 
             <div>
               <p class="text-[0.72rem] font-extrabold uppercase tracking-[0.12em] text-brand-ink/50">
-                Rental
+                Price
               </p>
               <div class="mt-3 flex flex-wrap gap-2">
                 {filters.rental.map((filter) => (

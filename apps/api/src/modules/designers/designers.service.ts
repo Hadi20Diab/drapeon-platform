@@ -15,7 +15,6 @@ import {
   MessageSenderRole,
   Prisma,
   ProductStatus,
-  RentalOrderStatus,
   SubscriptionInterval
 } from "@prisma/client";
 
@@ -29,7 +28,6 @@ import {
 import { SendDesignerMessageDto } from "./dto/send-designer-message.dto";
 import { UpdateDesignerProductStatusDto } from "./dto/update-designer-product-status.dto";
 import { UpdateDesignerSettingsDto } from "./dto/update-designer-settings.dto";
-import { UpdateRentalOrderStatusDto } from "./dto/update-rental-order-status.dto";
 
 type DesignerSubscriptionRecord = {
   id: string;
@@ -215,7 +213,7 @@ export class DesignersService {
         include: {
           images: { orderBy: { sortOrder: "asc" } },
           variants: { orderBy: [{ sizeLabel: "asc" }, { color: "asc" }] },
-          orderItems: { select: { quantity: true, lineTotal: true } }
+          _count: { select: { bookings: true } }
         },
         skip: page * limit,
         take: limit,
@@ -227,14 +225,10 @@ export class DesignersService {
     const normalized = items
       .map((product) => ({
         ...product,
-        rentalCount: product.orderItems.reduce((sum, item) => sum + item.quantity, 0),
-        rentalRevenue: product.orderItems.reduce(
-          (sum, item) => sum + Number(item.lineTotal),
-          0
-        )
+        fittingCount: product._count.bookings
       }))
       .sort((a, b) =>
-        query.sort === DesignerProductSort.MOST_RENTED ? b.rentalCount - a.rentalCount : 0
+        query.sort === DesignerProductSort.MOST_RENTED ? b.fittingCount - a.fittingCount : 0
       );
 
     return {
@@ -386,53 +380,6 @@ export class DesignersService {
       where: { id: productId },
       data: { status: ProductStatus.ARCHIVED }
     });
-  }
-
-  async listRentalOrders(userId: string) {
-    const designer = await this.getDesignerForUser(userId);
-    return this.prisma.rentalOrder.findMany({
-      where: { designerId: designer.id },
-      include: this.orderInclude(),
-      orderBy: { createdAt: "desc" }
-    });
-  }
-
-  async updateRentalOrderStatus(
-    userId: string,
-    orderId: string,
-    payload: UpdateRentalOrderStatusDto
-  ) {
-    const designer = await this.getDesignerForUser(userId);
-    const order = await this.prisma.rentalOrder.findUnique({
-      where: { id: orderId },
-      select: { designerId: true }
-    });
-
-    if (!order) {
-      throw new NotFoundException("Rental order was not found");
-    }
-
-    if (order.designerId !== designer.id) {
-      throw new ForbiddenException("You cannot update this rental order");
-    }
-
-    const updated = await this.prisma.rentalOrder.update({
-      where: { id: orderId },
-      data: { status: payload.status },
-      include: this.orderInclude()
-    });
-
-    await this.createNotification(designer.id, {
-      type:
-        payload.status === RentalOrderStatus.CANCELLED
-          ? DesignerNotificationType.ORDER_CANCELLED
-          : DesignerNotificationType.ORDER_CREATED,
-      title: `Order ${payload.status.toLowerCase()}`,
-      body: payload.note ?? `Order ${orderId.slice(0, 8)} moved to ${payload.status}.`,
-      targetUrl: "/designers/orders"
-    });
-
-    return updated;
   }
 
   async listAppointments(userId: string) {
@@ -901,27 +848,6 @@ export class DesignersService {
           stockTotal: true,
           stockReserved: true
         }
-      }
-    };
-  }
-
-  private orderInclude() {
-    return {
-      user: { select: { id: true, email: true, profile: true } },
-      items: {
-        include: {
-          product: {
-            select: {
-              id: true,
-              title: true,
-              images: { take: 1, orderBy: { sortOrder: "asc" as const } }
-            }
-          },
-          variant: { select: { sizeLabel: true, color: true } }
-        }
-      },
-      deliveryRequest: {
-        include: { trackingEvents: { orderBy: { createdAt: "asc" as const } } }
       }
     };
   }

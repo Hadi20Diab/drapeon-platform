@@ -14,7 +14,7 @@ export const SiteFooter = component$(() => {
             <span class="font-display text-4xl font-semibold">Drapeon</span>
           </a>
           <p class="mt-3 max-w-md text-sm leading-6 text-brand-sand/70">
-            Curated formalwear rentals, fitting appointments, delivery, and AI styling for modern events.
+            Curated formalwear discovery, fitting appointments, and AI styling for modern events.
           </p>
         </div>
         <div class="text-sm text-brand-sand/70">
@@ -45,4 +45,3 @@ export const SiteFooter = component$(() => {
     </footer>
   );
 });
-

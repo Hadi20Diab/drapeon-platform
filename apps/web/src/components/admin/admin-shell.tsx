@@ -38,11 +38,11 @@ export function statusClass(status: string): string {
     return "border-emerald-900/15 bg-emerald-900/10 text-emerald-950";
   }
 
-  if (["pending", "draft", "in_progress"].some((item) => normalized.includes(item))) {
+  if (["pending", "draft", "in_progress", "trialing", "fitting_requests"].some((item) => normalized.includes(item))) {
     return "border-brand-gold/30 bg-brand-gold/15 text-brand-ink";
   }
 
-  if (["rejected", "cancelled", "failed", "suspended", "deleted", "archived"].some((item) => normalized.includes(item))) {
+  if (["rejected", "cancelled", "failed", "suspended", "deleted", "archived", "past_due", "unpaid", "incomplete", "billing_attention"].some((item) => normalized.includes(item))) {
     return "border-brand-rose/25 bg-brand-rose/10 text-brand-rose";
   }
 
@@ -55,9 +55,9 @@ export const AdminShell = component$<AdminShellProps>((props) => {
       <aside class="luxury-card h-max overflow-hidden lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">
         <div class="relative overflow-hidden bg-brand-ink p-5 text-brand-sand">
           <div class="absolute inset-y-0 right-0 w-28 bg-[radial-gradient(circle_at_top,rgba(197,154,93,0.28),transparent_62%)]" />
-          <p class="relative text-xs font-extrabold uppercase tracking-[0.2em] text-brand-gold">Vesture HQ</p>
+          <p class="relative text-xs font-extrabold uppercase tracking-[0.2em] text-brand-gold">Drapeon HQ</p>
           <p class="relative mt-3 font-display text-4xl leading-none">Admin Control</p>
-          <p class="relative mt-3 text-xs leading-5 text-brand-sand/55">Enterprise command center for marketplace trust, money movement, and operations.</p>
+          <p class="relative mt-3 text-xs leading-5 text-brand-sand/55">Enterprise command center for marketplace trust, subscription revenue, and fitting operations.</p>
         </div>
         <nav class="grid p-3">
           {navigation.map(([label, href]) => {
