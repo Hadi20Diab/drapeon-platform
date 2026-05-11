@@ -230,7 +230,11 @@ export class AuthService {
         secret: this.configService.getOrThrow<string>("JWT_REFRESH_SECRET")
       });
       await this.validateAndRotateRefreshToken(decoded.sub, payload.refreshToken);
-      return this.issueTokens(decoded);
+      return this.issueTokens({
+        sub: decoded.sub,
+        email: decoded.email,
+        role: decoded.role
+      });
     } catch {
       throw new UnauthorizedException("Invalid refresh token");
     }
