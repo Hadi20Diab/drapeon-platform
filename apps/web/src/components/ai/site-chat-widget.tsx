@@ -665,7 +665,7 @@ export const SiteChatWidget = component$(() => {
 
           <div class="flex-1 overflow-hidden bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,243,235,0.98))]">
             <div class="grid h-full grid-rows-[auto_1fr_auto]">
-              {(!session.value || toolEvents.value.length > 0 || Boolean(error.value)) && (
+              {(!session.value || toolEvents.value.length > 0 || Boolean(error.value)) && false && (
                 <div class="grid gap-3 border-b border-brand-ink/8 px-4 py-4">
                   {!session.value && (
                     <div class="rounded-[24px] border border-brand-ink/8 bg-white/92 px-4 py-4 text-sm leading-7 text-brand-ink/65 shadow-[0_20px_50px_rgba(17,17,17,0.06)]">
