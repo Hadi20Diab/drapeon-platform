@@ -31,11 +31,6 @@ import {
   type PersistedChatConversation
 } from "../../lib/site-chat";
 
-interface ToolEvent {
-  type: "tool_call" | "tool_result";
-  tool: string;
-}
-
 interface SocketLike {
   connected: boolean;
   on(event: string, handler: (...args: any[]) => void): void;
@@ -45,26 +40,6 @@ interface SocketLike {
 
 function apiBaseUrl(): string {
   return import.meta.env.PUBLIC_API_URL ?? "http://localhost:4000";
-}
-
-function toolLabel(tool: string): string {
-  if (tool === "getUserProfile") {
-    return "Reviewing your fit profile";
-  }
-
-  if (tool === "searchProducts") {
-    return "Searching live catalog inventory";
-  }
-
-  if (tool === "getProductDetails") {
-    return "Checking product sizing and stock";
-  }
-
-  if (tool === "searchCompanyKnowledge") {
-    return "Searching approved company knowledge";
-  }
-
-  return "Working";
 }
 
 function toHistory(conversation: PersistedChatConversation | null): AiHistoryMessage[] {
@@ -240,6 +215,21 @@ function animateAssistantReply(
   }, 18);
 }
 
+function scrollChatToLatest(
+  viewport: HTMLElement | undefined,
+  anchor: HTMLElement | undefined,
+  behavior: ScrollBehavior
+) {
+  if (!viewport || !anchor) {
+    return;
+  }
+
+  anchor.scrollIntoView({
+    block: "end",
+    behavior
+  });
+}
+
 export const SiteChatWidget = component$(() => {
   const session = useSignal<AuthSession | null>(null);
   const identity = useSignal("guest");
@@ -248,7 +238,6 @@ export const SiteChatWidget = component$(() => {
   const isSending = useSignal(false);
   const input = useSignal("");
   const error = useSignal("");
-  const toolEvents = useSignal<ToolEvent[]>([]);
   const conversations = useSignal<PersistedChatConversation[]>([]);
   const activeConversationId = useSignal("");
   const pendingConversationId = useSignal<string | null>(null);
@@ -259,6 +248,10 @@ export const SiteChatWidget = component$(() => {
   const typingMessageId = useSignal<string | null>(null);
   const revealTimer = useSignal<number | null>(null);
   const closeTimer = useSignal<number | null>(null);
+  const messageViewportRef = useSignal<HTMLElement>();
+  const messageEndRef = useSignal<HTMLElement>();
+  const scrollFrame = useSignal<number | null>(null);
+  const lastScrollState = useSignal("");
 
   const activeConversation = useComputed$(() => {
     return (
@@ -340,7 +333,54 @@ export const SiteChatWidget = component$(() => {
       if (closeTimer.value != null) {
         window.clearTimeout(closeTimer.value);
       }
+
+      if (scrollFrame.value != null) {
+        window.cancelAnimationFrame(scrollFrame.value);
+      }
     };
+  });
+
+  useVisibleTask$(({ track, cleanup }) => {
+    const open = track(() => isOpen.value);
+    const activeId = track(() => activeConversationId.value);
+    const messageCount = track(() => activeConversation.value?.messages.length ?? 0);
+    const sending = track(() => isSending.value);
+    const typingId = track(() => typingMessageId.value);
+    const streamingText = track(() =>
+      typingMessageId.value ? renderedMessages.value[typingMessageId.value] ?? "" : ""
+    );
+
+    if (!open) {
+      lastScrollState.value = "";
+      return;
+    }
+
+    const nextState = JSON.stringify({
+      activeId,
+      messageCount,
+      sending,
+      typingId,
+      streamingLength: streamingText.length
+    });
+    const behavior: ScrollBehavior =
+      typingId || sending || lastScrollState.value.length === 0 ? "auto" : "smooth";
+
+    if (scrollFrame.value != null) {
+      window.cancelAnimationFrame(scrollFrame.value);
+    }
+
+    scrollFrame.value = window.requestAnimationFrame(() => {
+      scrollChatToLatest(messageViewportRef.value, messageEndRef.value, behavior);
+      lastScrollState.value = nextState;
+      scrollFrame.value = null;
+    });
+
+    cleanup(() => {
+      if (scrollFrame.value != null) {
+        window.cancelAnimationFrame(scrollFrame.value);
+        scrollFrame.value = null;
+      }
+    });
   });
 
   const ensureSocket = $(async () => {
@@ -354,10 +394,6 @@ export const SiteChatWidget = component$(() => {
     const socket = io(`${apiBaseUrl()}/ai-live`, {
       auth: activeSession ? { token: activeSession.tokens.accessToken } : {},
       transports: ["websocket"]
-    });
-
-    socket.on("ai.recommendations.event", (event: ToolEvent) => {
-      toolEvents.value = [...toolEvents.value, event];
     });
 
     socket.on("ai.recommendations.response", (response: AiChatResponse) => {
@@ -434,7 +470,6 @@ export const SiteChatWidget = component$(() => {
       ...buildRenderedMessageMap([nextConversation])
     };
     error.value = "";
-    toolEvents.value = [];
     input.value = "";
     typingMessageId.value = null;
     isConversationMenuOpen.value = false;
@@ -444,7 +479,6 @@ export const SiteChatWidget = component$(() => {
     activeConversationId.value = conversationId;
     writePersistedActiveChatConversation(identity.value, conversationId);
     error.value = "";
-    toolEvents.value = [];
     isConversationMenuOpen.value = false;
   });
 
@@ -494,7 +528,6 @@ export const SiteChatWidget = component$(() => {
     isSending.value = true;
     waitingForSocketResponse.value = false;
     pendingConversationId.value = conversationId;
-    toolEvents.value = [];
     renderedMessages.value = {
       ...renderedMessages.value,
       [userMessage.id]: userMessage.text
@@ -646,60 +679,9 @@ export const SiteChatWidget = component$(() => {
               </div>
             </div>
           </div>
-{/* 
-          <div class="border-b border-brand-ink/8 bg-white/80 px-4 py-3 backdrop-blur-xl">
-            <div class="flex items-center justify-between gap-3">
-              <div class="min-w-0">
-                <p class="text-[0.64rem] font-extrabold uppercase tracking-[0.14em] text-brand-ink/42">
-                  Current conversation
-                </p>
-                <p class="mt-1 truncate text-sm font-semibold text-brand-ink">
-                  {activeConversation.value?.title ?? "New conversation"}
-                </p>
-              </div>
-              <button type="button" class="chatbot-thread-chip chatbot-thread-chip-active">
-                {conversations.value.length} Threads
-              </button>
-            </div>
-          </div> */}
-
           <div class="flex-1 overflow-hidden bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,243,235,0.98))]">
             <div class="grid h-full grid-rows-[auto_1fr_auto]">
-              {(!session.value || toolEvents.value.length > 0 || Boolean(error.value)) && false && (
-                <div class="grid gap-3 border-b border-brand-ink/8 px-4 py-4">
-                  {!session.value && (
-                    <div class="rounded-[24px] border border-brand-ink/8 bg-white/92 px-4 py-4 text-sm leading-7 text-brand-ink/65 shadow-[0_20px_50px_rgba(17,17,17,0.06)]">
-                      You can chat as a guest right away. Sign in only if you want the stylist to use your
-                      saved measurements, body shape, and preferences automatically.
-                      <div class="mt-4">
-                        <a href="/auth" class="btn-primary inline-flex rounded-full px-5">
-                          Sign In
-                        </a>
-                      </div>
-                    </div>
-                  )}
-
-                  {toolEvents.value.length > 0 && (
-                    <div class="flex flex-wrap gap-2">
-                      {toolEvents.value.map((event, index) => (
-                        <span
-                          key={`${event.tool}-${index}`}
-                          class="rounded-full bg-brand-sand px-3 py-2 text-[0.66rem] font-extrabold uppercase tracking-[0.12em] text-brand-ink/60"
-                        >
-                          {toolLabel(event.tool)}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {error.value && (
-                    <p class="rounded-[20px] border border-brand-rose/30 bg-brand-rose/10 px-4 py-3 text-sm font-semibold text-brand-rose">
-                      {error.value}
-                    </p>
-                  )}
-                </div>
-              )}
-              <div class="overflow-y-auto px-4 py-5 min-h-[31rem]">
+              <div ref={messageViewportRef} class="overflow-y-auto px-4 py-5 min-h-[31rem]">
                 <div class="space-y-4">
                   {(activeConversation.value?.messages ?? []).map((message) => {
                     const displayedText =
@@ -796,6 +778,7 @@ export const SiteChatWidget = component$(() => {
                       </div>
                     </div>
                   )}
+                  <div ref={messageEndRef} />
                 </div>
               </div>
 
@@ -833,4 +816,3 @@ export const SiteChatWidget = component$(() => {
     </>
   );
 });
-
