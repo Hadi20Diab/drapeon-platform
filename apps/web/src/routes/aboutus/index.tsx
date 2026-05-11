@@ -18,7 +18,7 @@ export default component$(() => {
           </h1>
         </div>
         <div class="grid gap-5">
-          <div class="flex h-28 w-28 items-center justify-center overflow-hidden border border-brand-ink/10 bg-white shadow-[0_18px_50px_rgba(16,16,16,0.08)]">
+          <div class="flex h-40 w-40 items-center justify-center overflow-hidden">
             <img src="/logo.png" alt="Drapeon logo" width={220} height={220} class="h-full w-full object-contain" />
           </div>
           <p class="text-base leading-8 text-brand-ink/62">

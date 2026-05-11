@@ -28,7 +28,7 @@ export const SiteHeader = component$(() => {
     <header class="sticky top-0 z-40 border-b border-brand-ink/10 bg-[#f8f3ebd9] backdrop-blur-xl">
       <div class="section-wrap flex min-h-20 items-center justify-between gap-5">
         <a href="/" class="flex items-center gap-3">
-          <span class="flex h-12 w-12 items-center justify-center overflow-hidden border border-brand-ink/10 bg-white shadow-[0_10px_30px_rgba(16,16,16,0.08)]">
+          <span class="flex h-16 w-16 items-center justify-center overflow-hidden">
             <img src="/logo.png" alt="Drapeon logo" width={96} height={96} class="h-full w-full object-contain" />
           </span>
           <span class="font-display text-2xl font-semibold text-brand-ink">Drapeon</span>
