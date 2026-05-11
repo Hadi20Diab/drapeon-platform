@@ -15,11 +15,11 @@ export const useFeaturedProducts = routeLoader$(async () => {
 });
 
 const heroImage =
-  "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=2200&q=88";
+  "https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop";
 const tailoringImage =
   "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=1400&q=86";
 const fittingImage =
-  "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1400&q=86";
+  "https://images.pexels.com/photos/20428094/pexels-photo-20428094.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop";
 
 const journey = [
   {
@@ -187,7 +187,7 @@ export default component$(() => {
           </aside>
         </div>
       </section>
-
+{/* 
       <section class="section-wrap mt-10 grid gap-4 lg:grid-cols-[1.1fr_0.9fr_0.9fr]">
         {brandNotes.map((note, index) => (
           <article key={note.label} class="luxury-card relative overflow-hidden p-6">
@@ -275,7 +275,7 @@ export default component$(() => {
             </p>
           </div>
         </div>
-      </section>
+      </section> */}
 
       <section class="section-wrap mt-20 space-y-8">
         <div class="flex flex-wrap items-end justify-between gap-4">
