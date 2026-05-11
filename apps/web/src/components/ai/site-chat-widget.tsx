@@ -479,8 +479,7 @@ export const SiteChatWidget = component$(() => {
 
       {isOpen.value && (
         <aside
-          class={`chatbot-panel fixed bottom-4 right-4 z-50 flex h-[min(760px,calc(100vh-2rem))] w-[calc(100vw-1.25rem)] max-w-[480px] flex-col overflow-hidden ${
-            isClosing.value ? "chatbot-panel-exit" : "chatbot-panel-enter"
+          class={`chatbot-panel fixed bottom-4 right-4 z-50 flex h-[min(760px,calc(100vh-2rem))] w-[calc(100vw-1.25rem)] max-w-[480px] flex-col overflow-hidden ${isClosing.value ? "chatbot-panel-exit" : "chatbot-panel-enter"
           }`}
         >
           <div class="chatbot-header border-b border-white/10 px-5 pb-3 pt-4 text-brand-sand">
@@ -531,8 +530,7 @@ export const SiteChatWidget = component$(() => {
                         <button
                           key={conversation.id}
                           type="button"
-                          class={`chatbot-menu-item ${
-                            conversation.id === activeConversationId.value
+                          class={`chatbot-menu-item ${conversation.id === activeConversationId.value
                               ? "chatbot-menu-item-active"
                               : ""
                           }`}
