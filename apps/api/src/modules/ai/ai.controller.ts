@@ -12,6 +12,6 @@ export class AiController {
 
   @Post("recommendations")
   getRecommendations(@CurrentUser("sub") userId: string, @Body() payload: AiRecommendationDto) {
-    return this.aiService.recommend(userId, payload);
+    return this.aiService.recommend(userId, payload, { channel: "REST" });
   }
 }

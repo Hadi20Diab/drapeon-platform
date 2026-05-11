@@ -81,6 +81,7 @@ export class AiGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     const result = await this.aiService.recommend(user.sub, payload, {
+      channel: "WS",
       onEvent: (event) => {
         client.emit("ai.recommendations.event", event);
       }
