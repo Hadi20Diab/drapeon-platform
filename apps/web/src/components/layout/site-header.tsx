@@ -63,9 +63,6 @@ export const SiteHeader = component$(() => {
           <a href="/wishlist" class="transition hover:text-brand-gold">
             Wishlist
           </a>
-          <a href="/cart" class="transition hover:text-brand-gold">
-            Cart
-          </a>
           {user.value?.role === "USER" && (
             <a href="/become-designer" class="transition hover:text-brand-gold">
               Sell

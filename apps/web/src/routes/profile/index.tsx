@@ -349,8 +349,8 @@ export default component$(() => {
               <a href="/wishlist" class="transition hover:text-brand-rose">
                 Wishlist
               </a>
-              <a href="/cart" class="transition hover:text-brand-rose">
-                Cart
+              <a href="#booking-history" class="transition hover:text-brand-rose">
+                Fittings
               </a>
               <button
                 type="button"
@@ -656,7 +656,7 @@ export default component$(() => {
             </div>
           </div>
 
-          <article class="luxury-card overflow-hidden">
+          <article id="booking-history" class="luxury-card overflow-hidden">
             <div class="border-b border-brand-ink/10 px-5 py-4">
               <p class="text-sm font-extrabold uppercase tracking-[0.14em] text-brand-ink">
                 Booking History

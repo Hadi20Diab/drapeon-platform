@@ -1,7 +1,6 @@
 import { $, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
 
 import {
-  addToCart,
   readWishlist,
   removeFromWishlist,
   type StoredCommerceItem
@@ -14,10 +13,9 @@ export default component$(() => {
   useVisibleTask$(() => {items.value = readWishlist();
   });
 
-  const moveToCart = $((item: StoredCommerceItem) => {
-    addToCart(item);
+  const removeItem = $((item: StoredCommerceItem) => {
     items.value = removeFromWishlist(item.id);
-    notice.value = "Moved to cart.";
+    notice.value = "Removed from wishlist.";
   });
 
   return (
@@ -48,9 +46,14 @@ export default component$(() => {
                 {item.designer.storeName}
               </p>
             </a>
-            <button class="btn-primary mt-4" type="button" onClick$={() => moveToCart(item)}>
-              Move to Cart
-            </button>
+            <div class="mt-4 flex flex-wrap gap-3">
+              <a href={`/catalog/${item.id}#fitting-session`} class="btn-primary">
+                Request Fitting
+              </a>
+              <button class="btn-secondary" type="button" onClick$={() => removeItem(item)}>
+                Remove
+              </button>
+            </div>
           </article>
         ))}
       </div>

@@ -1,5 +1,16 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { BookingStatus, BookingType, ProductStatus } from "@prisma/client";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException
+} from "@nestjs/common";
+import {
+  BookingStatus,
+  BookingType,
+  DesignerApprovalStatus,
+  DesignerSubscriptionStatus,
+  ProductStatus
+} from "@prisma/client";
 
 import { PrismaService } from "../../prisma/prisma.service";
 import { CreateBookingDto } from "./dto/create-booking.dto";
@@ -17,7 +28,20 @@ export class BookingsService {
     const product = await this.prisma.product.findFirst({
       where: {
         id: payload.productId,
-        status: ProductStatus.ACTIVE
+        status: ProductStatus.ACTIVE,
+        designer: {
+          approvalStatus: DesignerApprovalStatus.APPROVED,
+          subscription: {
+            is: {
+              status: {
+                in: [
+                  DesignerSubscriptionStatus.ACTIVE,
+                  DesignerSubscriptionStatus.TRIALING
+                ]
+              }
+            }
+          }
+        }
       },
       select: {
         id: true,

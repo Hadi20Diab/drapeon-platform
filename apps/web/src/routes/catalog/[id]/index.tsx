@@ -8,7 +8,7 @@ import {
   subscribeToAuthSession,
   type AuthUser
 } from "../../../lib/api";
-import { addToCart, isInWishlist, toggleWishlist } from "../../../lib/commerce";
+import { isInWishlist, toggleWishlist } from "../../../lib/commerce";
 
 export const useProductDetails = routeLoader$(async ({ params, status }) => {
   const product = await fetchProductDetails(params.id);
@@ -56,10 +56,6 @@ export default component$(() => {
     });
   });
 
-  const addCart = $(() => {
-    addToCart(item);
-    notice.value = "Added to cart.";
-  });
   const addWishlist = $(() => {
     const result = toggleWishlist(item);
     wishlisted.value = result.active;
@@ -196,7 +192,7 @@ export default component$(() => {
           </h1>
           <p class="mt-5 max-w-2xl text-base leading-8 text-brand-ink/60">
             {item.description ??
-              "A rental-ready formalwear piece prepared for fittings, delivery requests, and AI styling recommendations."}
+              "A fitting-ready formalwear piece prepared for atelier appointments and AI styling recommendations."}
           </p>
 
           <div class="mt-8 grid gap-4 border-y border-brand-ink/10 py-6 md:grid-cols-3">
@@ -241,15 +237,15 @@ export default component$(() => {
           </div>
 
           <div class="mt-8 flex flex-wrap gap-3">
-            <button class="btn-primary" type="button" onClick$={addCart}>
-              Rent Look
-            </button>
+            <a href="#fitting-session" class="btn-primary">
+              Request Fitting
+            </a>
             <button class="btn-secondary" type="button" onClick$={addWishlist}>
               {wishlisted.value ? "Saved to Wishlist" : "Save Look"}
             </button>
-            <a href="/cart" class="btn-secondary">
-              View Cart
-            </a>
+            <Link href={`/stores/${item.designer.slug}`} class="btn-secondary">
+              Visit Store
+            </Link>
           </div>
           {notice.value && (
             <p class="mt-4 border border-brand-olive/30 bg-brand-olive/10 px-4 py-3 text-sm font-semibold text-brand-olive">
@@ -257,7 +253,7 @@ export default component$(() => {
             </p>
           )}
 
-          <article class="luxury-card mt-8 p-5">
+          <article id="fitting-session" class="luxury-card mt-8 p-5">
             <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div>
                 <p class="eyebrow">Fitting Session</p>
@@ -265,7 +261,8 @@ export default component$(() => {
                   Reserve a styling slot
                 </h2>
                 <p class="mt-3 max-w-2xl text-sm leading-7 text-brand-ink/60">
-                  Request a studio fitting directly with this designer before placing the rental.
+                  Request a studio fitting directly with this designer and wait for approval from
+                  the atelier team.
                 </p>
               </div>
               <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-brand-rose">

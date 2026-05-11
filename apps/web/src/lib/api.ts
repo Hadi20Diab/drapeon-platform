@@ -79,21 +79,6 @@ export interface UserBooking {
   };
 }
 
-export interface StripeCheckoutResponse {
-  mode: "configuration_required" | "stripe_onboarding_required" | "stripe_connect_checkout";
-  provider: "stripe";
-  sessionId?: string;
-  checkoutUrl: string | null;
-  totals: {
-    subtotal: number;
-    commissionRate: number;
-    commissionAmount: number;
-    designerAmount: number;
-    currency: string;
-  };
-  message?: string;
-}
-
 export interface DesignerSubscriptionPlan {
   id: string;
   slug: string;
@@ -1011,30 +996,6 @@ export function subscribeToAuthSession(listener: (session: AuthSession | null) =
     channel?.removeEventListener("message", handleChannelMessage);
     channel?.close();
   };
-}
-
-export async function createStripeCheckout(payload: {
-  items: Array<{
-    productId: string;
-    quantity: number;
-  }>;
-  customer?: {
-    email: string;
-  };
-}): Promise<StripeCheckoutResponse> {
-  const session = readAuthSession();
-
-  if (!session) {
-    throw new Error("Please sign in before checkout.");
-  }
-
-  return requestApi<StripeCheckoutResponse>("/payments/stripe/checkout", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${session.tokens.accessToken}`
-    },
-    body: JSON.stringify(payload)
-  });
 }
 
 function authHeaders(): Record<string, string> {

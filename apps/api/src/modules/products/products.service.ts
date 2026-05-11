@@ -1,7 +1,12 @@
 import { randomUUID } from "node:crypto";
 
 import { Injectable, NotFoundException } from "@nestjs/common";
-import { Prisma, ProductStatus } from "@prisma/client";
+import {
+  DesignerApprovalStatus,
+  DesignerSubscriptionStatus,
+  Prisma,
+  ProductStatus
+} from "@prisma/client";
 
 import { PrismaService } from "../../prisma/prisma.service";
 import { DesignersService } from "../designers/designers.service";
@@ -57,6 +62,7 @@ export class ProductsService {
   async listProducts(filters: ProductFiltersDto) {
     const where: Prisma.ProductWhereInput = {
       status: ProductStatus.ACTIVE,
+      designer: this.publicDesignerVisibility(),
       ...(filters.category ? { category: filters.category } : {}),
       ...(filters.minPrice != null || filters.maxPrice != null
         ? {
@@ -123,7 +129,8 @@ export class ProductsService {
     const product = await this.prisma.product.findFirst({
       where: {
         id: productId,
-        status: ProductStatus.ACTIVE
+        status: ProductStatus.ACTIVE,
+        designer: this.publicDesignerVisibility()
       },
       include: {
         images: {
@@ -171,5 +178,18 @@ export class ProductsService {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .replace(/-{2,}/g, "-");
+  }
+
+  private publicDesignerVisibility(): Prisma.DesignerWhereInput {
+    return {
+      approvalStatus: DesignerApprovalStatus.APPROVED,
+      subscription: {
+        is: {
+          status: {
+            in: [DesignerSubscriptionStatus.ACTIVE, DesignerSubscriptionStatus.TRIALING]
+          }
+        }
+      }
+    };
   }
 }

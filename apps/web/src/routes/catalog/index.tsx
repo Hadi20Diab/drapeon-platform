@@ -112,7 +112,7 @@ export default component$(() => {
         </div>
         <p class="max-w-2xl text-base leading-8 text-brand-ink/60 lg:justify-self-end">
           Browse real seeded inventory from Neon. The filters now update instantly, with product
-          detail pages ready for rental and delivery flows.
+          detail pages ready for fitting requests, saved looks, and direct designer discovery.
         </p>
       </div>
 
