@@ -42,6 +42,11 @@ interface RecommendationResult {
   };
 }
 
+interface ConversationTurn {
+  role: "user" | "agent";
+  text: string;
+}
+
 interface AiAgentEvent {
   type: "tool_call" | "tool_result";
   tool: string;
@@ -552,6 +557,14 @@ export class AiService {
   }
 
   private buildPrompt(payload: AiRecommendationDto, profile: UserProfileContext): string {
+    const history = (payload.history ?? [])
+      .map((message) => ({
+        role: message.role,
+        text: message.text.trim()
+      }))
+      .filter((message): message is ConversationTurn => message.text.length > 0)
+      .slice(-10);
+
     return [
       "You are Drapeon stylist AI.",
       "You can answer both style-shopping questions and company/process questions.",
@@ -563,6 +576,7 @@ export class AiService {
       "Prefer calling searchProducts first, then getProductDetails only for top candidates.",
       "Respond with concise styling rationale and prioritize fit confidence.",
       `User prompt: ${payload.prompt}`,
+      `Recent conversation: ${JSON.stringify(history)}`,
       `Filters: ${JSON.stringify(payload.filters ?? {})}`,
       `User context: ${JSON.stringify(profile)}`
     ].join("\n");

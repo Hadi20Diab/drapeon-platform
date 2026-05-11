@@ -1,20 +1,26 @@
-import { $, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
+import { $, component$, useComputed$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
 
 import {
   chatWithAi,
   readAuthSession,
   subscribeToAuthSession,
   type AiChatResponse,
+  type AiHistoryMessage,
   type AuthSession
 } from "../../lib/api";
-import { consumeQueuedSiteChatOpen, openSiteChat, siteChatOpenEvent } from "../../lib/site-chat";
-
-interface ChatMessage {
-  role: "user" | "agent";
-  text: string;
-  products?: AiChatResponse["products"];
-  knowledgeEntries?: AiChatResponse["knowledgeEntries"];
-}
+import {
+  appendChatMessage,
+  consumeQueuedSiteChatOpen,
+  createChatConversation,
+  createChatMessage,
+  ensureChatConversations,
+  openSiteChat,
+  readPersistedChatConversations,
+  siteChatIdentity,
+  siteChatOpenEvent,
+  writePersistedChatConversations,
+  type PersistedChatConversation
+} from "../../lib/site-chat";
 
 interface ToolEvent {
   type: "tool_call" | "tool_result";
@@ -58,25 +64,44 @@ function toolLabel(tool: string): string {
   return "Working";
 }
 
+function toHistory(conversation: PersistedChatConversation | null): AiHistoryMessage[] {
+  return (conversation?.messages ?? [])
+    .filter((message) => message.role === "user" || message.role === "agent")
+    .map((message) => ({ role: message.role, text: message.text }))
+    .slice(-10);
+}
+
 export const SiteChatWidget = component$(() => {
   const session = useSignal<AuthSession | null>(null);
+  const identity = useSignal("guest");
   const isOpen = useSignal(false);
   const isSending = useSignal(false);
   const input = useSignal("");
   const error = useSignal("");
   const toolEvents = useSignal<ToolEvent[]>([]);
-  const messages = useSignal<ChatMessage[]>([
-    {
-      role: "agent",
-      text:
-        "Ask about fit guidance, rentals, delivery, designer onboarding, or let me search the live catalog for you."
-    }
-  ]);
+  const conversations = useSignal<PersistedChatConversation[]>([]);
+  const activeConversationId = useSignal("");
+  const pendingConversationId = useSignal<string | null>(null);
   const socketRef = useSignal<SocketLike | null>(null);
   const waitingForSocketResponse = useSignal(false);
 
+  const activeConversation = useComputed$(() => {
+    return (
+      conversations.value.find((conversation) => conversation.id === activeConversationId.value) ??
+      conversations.value[0] ??
+      null
+    );
+  });
+
   useVisibleTask$(() => {
     session.value = readAuthSession();
+    identity.value = siteChatIdentity(session.value?.user.id);
+
+    const initialConversations = ensureChatConversations(
+      readPersistedChatConversations(identity.value)
+    );
+    conversations.value = initialConversations;
+    activeConversationId.value = initialConversations[0]?.id ?? "";
     isOpen.value = consumeQueuedSiteChatOpen();
 
     const handleOpen = () => {
@@ -87,6 +112,12 @@ export const SiteChatWidget = component$(() => {
 
     const unsubscribe = subscribeToAuthSession((nextSession) => {
       session.value = nextSession;
+      identity.value = siteChatIdentity(nextSession?.user.id);
+      const nextConversations = ensureChatConversations(
+        readPersistedChatConversations(identity.value)
+      );
+      conversations.value = nextConversations;
+      activeConversationId.value = nextConversations[0]?.id ?? "";
       socketRef.value?.disconnect();
       socketRef.value = null;
     });
@@ -105,7 +136,6 @@ export const SiteChatWidget = component$(() => {
     }
 
     const activeSession = readAuthSession();
-
     const { io } = await import("socket.io-client");
 
     const socket = io(`${apiBaseUrl()}/ai-live`, {
@@ -118,21 +148,25 @@ export const SiteChatWidget = component$(() => {
     });
 
     socket.on("ai.recommendations.response", (response: AiChatResponse) => {
-      messages.value = [
-        ...messages.value,
-        {
-          role: "agent",
-          text: response.recommendationText,
-          products: response.products,
-          knowledgeEntries: response.knowledgeEntries
-        }
-      ];
+      const conversationId = pendingConversationId.value ?? activeConversationId.value;
+      const nextConversations = appendChatMessage(conversations.value, conversationId, createChatMessage({
+        role: "agent",
+        text: response.recommendationText,
+        products: response.products,
+        knowledgeEntries: response.knowledgeEntries
+      }));
+
+      conversations.value = nextConversations;
+      activeConversationId.value = conversationId;
+      writePersistedChatConversations(identity.value, nextConversations);
+      pendingConversationId.value = null;
       waitingForSocketResponse.value = false;
       isSending.value = false;
     });
 
     socket.on("ai.error", (payload: { message?: string }) => {
       error.value = payload.message ?? "The live stylist connection failed.";
+      pendingConversationId.value = null;
       waitingForSocketResponse.value = false;
       isSending.value = false;
     });
@@ -158,6 +192,18 @@ export const SiteChatWidget = component$(() => {
     return socketRef.value;
   });
 
+  const createFreshConversation = $(() => {
+    const nextConversation = createChatConversation();
+    const nextConversations = [nextConversation, ...conversations.value];
+
+    conversations.value = nextConversations;
+    activeConversationId.value = nextConversation.id;
+    writePersistedChatConversations(identity.value, nextConversations);
+    error.value = "";
+    toolEvents.value = [];
+    input.value = "";
+  });
+
   const sendPrompt = $(async (prompt?: string) => {
     const text = (prompt ?? input.value).trim();
 
@@ -165,11 +211,32 @@ export const SiteChatWidget = component$(() => {
       return;
     }
 
+    let conversation = activeConversation.value;
+
+    if (!conversation) {
+      const nextConversation = createChatConversation();
+      conversations.value = [nextConversation];
+      activeConversationId.value = nextConversation.id;
+      writePersistedChatConversations(identity.value, [nextConversation]);
+      conversation = nextConversation;
+    }
+
+    const conversationId = conversation.id;
+    const history = toHistory(conversation);
+
     error.value = "";
     isSending.value = true;
     waitingForSocketResponse.value = false;
+    pendingConversationId.value = conversationId;
     toolEvents.value = [];
-    messages.value = [...messages.value, { role: "user", text }];
+
+    const nextConversations = appendChatMessage(conversations.value, conversationId, createChatMessage({
+      role: "user",
+      text
+    }));
+    conversations.value = nextConversations;
+    activeConversationId.value = conversationId;
+    writePersistedChatConversations(identity.value, nextConversations);
     input.value = "";
 
     try {
@@ -180,22 +247,23 @@ export const SiteChatWidget = component$(() => {
       }
 
       waitingForSocketResponse.value = true;
-      socket.emit("ai.recommendations.request", { prompt: text });
+      socket.emit("ai.recommendations.request", { prompt: text, history });
     } catch {
       try {
-        const response = await chatWithAi({ prompt: text });
-        messages.value = [
-          ...messages.value,
-          {
-            role: "agent",
-            text: response.recommendationText,
-            products: response.products,
-            knowledgeEntries: response.knowledgeEntries
-          }
-        ];
+        const response = await chatWithAi({ prompt: text, history });
+        const replyConversations = appendChatMessage(conversations.value, conversationId, createChatMessage({
+          role: "agent",
+          text: response.recommendationText,
+          products: response.products,
+          knowledgeEntries: response.knowledgeEntries
+        }));
+        conversations.value = replyConversations;
+        activeConversationId.value = conversationId;
+        writePersistedChatConversations(identity.value, replyConversations);
       } catch (caught) {
         error.value = caught instanceof Error ? caught.message : "Could not reach the stylist.";
       } finally {
+        pendingConversationId.value = null;
         waitingForSocketResponse.value = false;
         isSending.value = false;
       }
@@ -228,15 +296,24 @@ export const SiteChatWidget = component$(() => {
               </p>
               <p class="mt-2 font-display text-3xl leading-none">Drapeon Stylist</p>
             </div>
-            <button
-              type="button"
-              class="text-xs font-extrabold uppercase tracking-[0.14em] text-brand-sand/70 transition hover:text-brand-gold"
-              onClick$={() => {
-                isOpen.value = false;
-              }}
-            >
-              Close
-            </button>
+            <div class="flex items-center gap-3">
+              <button
+                type="button"
+                class="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-brand-gold transition hover:text-brand-sand"
+                onClick$={createFreshConversation}
+              >
+                New Chat
+              </button>
+              <button
+                type="button"
+                class="text-xs font-extrabold uppercase tracking-[0.14em] text-brand-sand/70 transition hover:text-brand-gold"
+                onClick$={() => {
+                  isOpen.value = false;
+                }}
+              >
+                Close
+              </button>
+            </div>
           </div>
 
           <div class="grid gap-4 p-4">
@@ -251,6 +328,11 @@ export const SiteChatWidget = component$(() => {
                 </div>
               </div>
             )}
+
+            <div class="flex items-center justify-between gap-3 border border-brand-ink/10 bg-white px-4 py-3 text-xs uppercase tracking-[0.12em] text-brand-ink/55">
+              <span>{conversations.value.length} saved chats</span>
+              <span>{activeConversation.value?.title ?? "New conversation"}</span>
+            </div>
 
             <div class="flex flex-wrap gap-2">
               {suggestedPrompts.map((prompt) => (
@@ -285,13 +367,11 @@ export const SiteChatWidget = component$(() => {
             )}
 
             <div class="max-h-[420px] space-y-4 overflow-y-auto pr-1">
-              {messages.value.map((message, index) => (
-                <div key={`${message.role}-${index}`} class="space-y-3">
+              {(activeConversation.value?.messages ?? []).map((message) => (
+                <div key={message.id} class="space-y-3">
                   <div
                     class={`${
-                      message.role === "agent"
-                        ? "mr-7 bg-white"
-                        : "ml-10 bg-brand-ink text-brand-sand"
+                      message.role === "agent" ? "mr-7 bg-white" : "ml-10 bg-brand-ink text-brand-sand"
                     } border border-brand-ink/10 px-4 py-4`}
                   >
                     <p

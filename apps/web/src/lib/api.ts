@@ -487,6 +487,11 @@ export interface AiKnowledgeEntry {
   tags: string[];
 }
 
+export interface AiHistoryMessage {
+  role: "user" | "agent";
+  text: string;
+}
+
 export interface AiChatResponse {
   recommendationText: string;
   products: CatalogProduct[];
@@ -1370,6 +1375,7 @@ export async function chatWithAi(payload: {
   prompt: string;
   filters?: Record<string, unknown>;
   measurements?: Record<string, unknown>;
+  history?: AiHistoryMessage[];
 }): Promise<AiChatResponse> {
   return requestApi<AiChatResponse>("/ai/recommendations", {
     method: "POST",

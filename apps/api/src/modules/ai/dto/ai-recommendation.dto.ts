@@ -1,5 +1,14 @@
 import { BodyShape } from "@prisma/client";
-import { IsEnum, IsNumber, IsOptional, IsString, MaxLength, ValidateNested } from "class-validator";
+import {
+  ArrayMaxSize,
+  IsEnum,
+  IsIn,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateNested
+} from "class-validator";
 import { Type } from "class-transformer";
 
 class AiFiltersDto {
@@ -46,6 +55,15 @@ class AiMeasurementContextDto {
   hipCm?: number;
 }
 
+class AiConversationMessageDto {
+  @IsIn(["user", "agent"])
+  role!: "user" | "agent";
+
+  @IsString()
+  @MaxLength(1200)
+  text!: string;
+}
+
 export class AiRecommendationDto {
   @IsString()
   @MaxLength(800)
@@ -60,4 +78,10 @@ export class AiRecommendationDto {
   @ValidateNested()
   @Type(() => AiMeasurementContextDto)
   measurements?: AiMeasurementContextDto;
+
+  @IsOptional()
+  @ArrayMaxSize(12)
+  @ValidateNested({ each: true })
+  @Type(() => AiConversationMessageDto)
+  history?: AiConversationMessageDto[];
 }
