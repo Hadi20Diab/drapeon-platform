@@ -5,7 +5,7 @@ import { ProductCard } from "../../components/catalog/product-card";
 import { fetchCatalogProducts, type CatalogProduct } from "../../lib/api";
 
 export const useCatalogProducts = routeLoader$(async () => {
-  return fetchCatalogProducts(48);
+  return fetchCatalogProducts(200);
 });
 
 type SortMode = "editorial" | "price" | "available";
