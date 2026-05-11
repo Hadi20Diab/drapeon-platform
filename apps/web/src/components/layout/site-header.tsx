@@ -6,6 +6,7 @@ import {
   subscribeToAuthSession,
   type AuthUser
 } from "../../lib/api";
+import { openSiteChat } from "../../lib/site-chat";
 
 export const SiteHeader = component$(() => {
   const user = useSignal<AuthUser | null>(null);
@@ -38,9 +39,15 @@ export const SiteHeader = component$(() => {
           <a href="/catalog" class="transition hover:text-brand-gold">
             Catalog
           </a>
-          <a href="/assistant" class="transition hover:text-brand-gold">
+          <button
+            type="button"
+            class="transition hover:text-brand-gold"
+            onClick$={() => {
+              openSiteChat();
+            }}
+          >
             AI Stylist
-          </a>
+          </button>
           <a href="/aboutus" class="transition hover:text-brand-gold">
             About
           </a>

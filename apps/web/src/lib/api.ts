@@ -479,6 +479,23 @@ export interface AdminDashboard {
   alerts: AdminAlert[];
 }
 
+export interface AiKnowledgeEntry {
+  id: string;
+  question: string;
+  answer: string;
+  category?: string | null;
+  tags: string[];
+}
+
+export interface AiChatResponse {
+  recommendationText: string;
+  products: CatalogProduct[];
+  knowledgeEntries: AiKnowledgeEntry[];
+  context: {
+    usedStoredMeasurements: boolean;
+  };
+}
+
 interface ApiEnvelope<T> {
   success: boolean;
   data: T;
@@ -1346,6 +1363,18 @@ export async function fetchAdminNotifications<T = unknown>(): Promise<T> {
 export async function fetchAdminSettings<T = unknown>(): Promise<T> {
   return requestApi<T>("/admin/settings", {
     headers: authHeaders()
+  });
+}
+
+export async function chatWithAi(payload: {
+  prompt: string;
+  filters?: Record<string, unknown>;
+  measurements?: Record<string, unknown>;
+}): Promise<AiChatResponse> {
+  return requestApi<AiChatResponse>("/ai/recommendations", {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload)
   });
 }
 

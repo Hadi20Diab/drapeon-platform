@@ -11,6 +11,7 @@ import {
   type UserBooking,
   type UserProfile
 } from "../../lib/api";
+import { openSiteChat } from "../../lib/site-chat";
 
 interface PreferenceFormState {
   preferredSilhouette: string;
@@ -351,9 +352,15 @@ export default component$(() => {
               <a href="/cart" class="transition hover:text-brand-rose">
                 Cart
               </a>
-              <a href="/assistant" class="transition hover:text-brand-rose">
+              <button
+                type="button"
+                class="text-left transition hover:text-brand-rose"
+                onClick$={() => {
+                  openSiteChat();
+                }}
+              >
                 AI Stylist
-              </a>
+              </button>
             </div>
           </div>
         </div>

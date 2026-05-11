@@ -1,5 +1,7 @@
 import { component$ } from "@builder.io/qwik";
 
+import { openSiteChat } from "../../lib/site-chat";
+
 export const SiteFooter = component$(() => {
   return (
     <footer class="mt-24 border-t border-brand-ink/10 bg-brand-ink py-12 text-brand-sand">
@@ -14,7 +16,15 @@ export const SiteFooter = component$(() => {
           <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-gold">Browse</p>
           <div class="mt-4 grid gap-2">
             <a href="/catalog">Catalog</a>
-            <a href="/assistant">AI Stylist</a>
+            <button
+              type="button"
+              class="text-left transition hover:text-brand-gold"
+              onClick$={() => {
+                openSiteChat();
+              }}
+            >
+              AI Stylist
+            </button>
             <a href="/designers/dashboard">Designer Dashboard</a>
           </div>
         </div>
