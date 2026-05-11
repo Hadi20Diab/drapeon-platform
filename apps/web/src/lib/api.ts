@@ -984,15 +984,11 @@ export function subscribeToAuthSession(listener: (session: AuthSession | null) =
 
   window.addEventListener("storage", handleStorage);
   window.addEventListener(authCustomEvent, handleCustomEvent as EventListener);
-  window.addEventListener("focus", handleFocus);
-  document.addEventListener("visibilitychange", handleVisibility);
   channel?.addEventListener("message", handleChannelMessage);
 
   return () => {
     window.removeEventListener("storage", handleStorage);
     window.removeEventListener(authCustomEvent, handleCustomEvent as EventListener);
-    window.removeEventListener("focus", handleFocus);
-    document.removeEventListener("visibilitychange", handleVisibility);
     channel?.removeEventListener("message", handleChannelMessage);
     channel?.close();
   };
