@@ -136,6 +136,10 @@ function storageKey(identity: string): string {
   return `${siteChatStoragePrefix}.${identity}`;
 }
 
+function activeStorageKey(identity: string): string {
+  return `${storageKey(identity)}.active`;
+}
+
 export function siteChatIdentity(userId?: string | null): string {
   return userId ? `user:${userId}` : "guest";
 }
@@ -168,4 +172,20 @@ export function writePersistedChatConversations(
   }
 
   window.localStorage.setItem(storageKey(identity), JSON.stringify(conversations));
+}
+
+export function readPersistedActiveChatConversation(identity: string): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.localStorage.getItem(activeStorageKey(identity));
+}
+
+export function writePersistedActiveChatConversation(identity: string, conversationId: string): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(activeStorageKey(identity), conversationId);
 }

@@ -1,4 +1,11 @@
-import { $, component$, useComputed$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
+import {
+  $,
+  component$,
+  type Signal,
+  useComputed$,
+  useSignal,
+  useVisibleTask$
+} from "@builder.io/qwik";
 
 import {
   chatWithAi,
@@ -15,9 +22,11 @@ import {
   createChatMessage,
   ensureChatConversations,
   openSiteChat,
+  readPersistedActiveChatConversation,
   readPersistedChatConversations,
   siteChatIdentity,
   siteChatOpenEvent,
+  writePersistedActiveChatConversation,
   writePersistedChatConversations,
   type PersistedChatConversation
 } from "../../lib/site-chat";
@@ -33,12 +42,6 @@ interface SocketLike {
   emit(event: string, payload: unknown): void;
   disconnect(): void;
 }
-
-const suggestedPrompts = [
-  "Find me a black-tie suit with a clean shoulder line.",
-  "What is the Drapeon fitting process?",
-  "Show dresses that work for an hourglass body shape."
-];
 
 function apiBaseUrl(): string {
   return import.meta.env.PUBLIC_API_URL ?? "http://localhost:4000";
@@ -71,10 +74,88 @@ function toHistory(conversation: PersistedChatConversation | null): AiHistoryMes
     .slice(-10);
 }
 
+function buildRenderedMessageMap(conversations: PersistedChatConversation[]) {
+  return Object.fromEntries(
+    conversations.flatMap((conversation) =>
+      conversation.messages.map((message) => [message.id, message.text])
+    )
+  ) as Record<string, string>;
+}
+
+function formatConversationTime(value: string): string {
+  return new Date(value).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric"
+  });
+}
+
+function syncConversationState(
+  identity: string,
+  conversations: PersistedChatConversation[],
+  activeConversationId: string,
+  conversationSignal: Signal<PersistedChatConversation[]>,
+  activeConversationSignal: Signal<string>
+) {
+  conversationSignal.value = conversations;
+  activeConversationSignal.value = activeConversationId;
+  writePersistedChatConversations(identity, conversations);
+  writePersistedActiveChatConversation(identity, activeConversationId);
+}
+
+function animateAssistantReply(
+  messageId: string,
+  fullText: string,
+  renderedMessages: Signal<Record<string, string>>,
+  typingMessageId: Signal<string | null>,
+  revealTimer: Signal<number | null>
+) {
+  if (typeof window === "undefined") {
+    renderedMessages.value = { ...renderedMessages.value, [messageId]: fullText };
+    typingMessageId.value = null;
+    return;
+  }
+
+  if (revealTimer.value != null) {
+    window.clearInterval(revealTimer.value);
+  }
+
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  if (prefersReducedMotion) {
+    renderedMessages.value = { ...renderedMessages.value, [messageId]: fullText };
+    typingMessageId.value = null;
+    revealTimer.value = null;
+    return;
+  }
+
+  typingMessageId.value = messageId;
+  renderedMessages.value = { ...renderedMessages.value, [messageId]: "" };
+
+  let index = 0;
+  const step = Math.max(1, Math.ceil(fullText.length / 90));
+
+  revealTimer.value = window.setInterval(() => {
+    index = Math.min(fullText.length, index + step);
+    renderedMessages.value = {
+      ...renderedMessages.value,
+      [messageId]: fullText.slice(0, index)
+    };
+
+    if (index >= fullText.length) {
+      if (revealTimer.value != null) {
+        window.clearInterval(revealTimer.value);
+      }
+      revealTimer.value = null;
+      typingMessageId.value = null;
+    }
+  }, 18);
+}
+
 export const SiteChatWidget = component$(() => {
   const session = useSignal<AuthSession | null>(null);
   const identity = useSignal("guest");
   const isOpen = useSignal(false);
+  const isClosing = useSignal(false);
   const isSending = useSignal(false);
   const input = useSignal("");
   const error = useSignal("");
@@ -82,8 +163,13 @@ export const SiteChatWidget = component$(() => {
   const conversations = useSignal<PersistedChatConversation[]>([]);
   const activeConversationId = useSignal("");
   const pendingConversationId = useSignal<string | null>(null);
+  const isConversationMenuOpen = useSignal(false);
   const socketRef = useSignal<SocketLike | null>(null);
   const waitingForSocketResponse = useSignal(false);
+  const renderedMessages = useSignal<Record<string, string>>({});
+  const typingMessageId = useSignal<string | null>(null);
+  const revealTimer = useSignal<number | null>(null);
+  const closeTimer = useSignal<number | null>(null);
 
   const activeConversation = useComputed$(() => {
     return (
@@ -100,15 +186,37 @@ export const SiteChatWidget = component$(() => {
     const initialConversations = ensureChatConversations(
       readPersistedChatConversations(identity.value)
     );
+    const persistedActiveId = readPersistedActiveChatConversation(identity.value);
+    const initialActiveId =
+      initialConversations.some((conversation) => conversation.id === persistedActiveId)
+        ? persistedActiveId!
+        : initialConversations[0]?.id ?? "";
+
     conversations.value = initialConversations;
-    activeConversationId.value = initialConversations[0]?.id ?? "";
+    activeConversationId.value = initialActiveId;
+    renderedMessages.value = buildRenderedMessageMap(initialConversations);
     isOpen.value = consumeQueuedSiteChatOpen();
+    isClosing.value = false;
 
     const handleOpen = () => {
+      if (closeTimer.value != null) {
+        window.clearTimeout(closeTimer.value);
+        closeTimer.value = null;
+      }
+      isClosing.value = false;
       isOpen.value = true;
     };
 
+    const handleDocumentClick = (event: Event) => {
+      const target = event.target;
+
+      if (!(target instanceof HTMLElement) || !target.closest("[data-chatbot-menu]")) {
+        isConversationMenuOpen.value = false;
+      }
+    };
+
     window.addEventListener(siteChatOpenEvent, handleOpen);
+    document.addEventListener("click", handleDocumentClick);
 
     const unsubscribe = subscribeToAuthSession((nextSession) => {
       session.value = nextSession;
@@ -116,17 +224,33 @@ export const SiteChatWidget = component$(() => {
       const nextConversations = ensureChatConversations(
         readPersistedChatConversations(identity.value)
       );
+      const nextActiveId = readPersistedActiveChatConversation(identity.value);
+
       conversations.value = nextConversations;
-      activeConversationId.value = nextConversations[0]?.id ?? "";
+      activeConversationId.value =
+        nextConversations.some((conversation) => conversation.id === nextActiveId)
+          ? nextActiveId!
+          : nextConversations[0]?.id ?? "";
+      renderedMessages.value = buildRenderedMessageMap(nextConversations);
       socketRef.value?.disconnect();
       socketRef.value = null;
+      isConversationMenuOpen.value = false;
     });
 
     return () => {
       window.removeEventListener(siteChatOpenEvent, handleOpen);
+      document.removeEventListener("click", handleDocumentClick);
       unsubscribe();
       socketRef.value?.disconnect();
       socketRef.value = null;
+
+      if (revealTimer.value != null) {
+        window.clearInterval(revealTimer.value);
+      }
+
+      if (closeTimer.value != null) {
+        window.clearTimeout(closeTimer.value);
+      }
     };
   });
 
@@ -149,16 +273,28 @@ export const SiteChatWidget = component$(() => {
 
     socket.on("ai.recommendations.response", (response: AiChatResponse) => {
       const conversationId = pendingConversationId.value ?? activeConversationId.value;
-      const nextConversations = appendChatMessage(conversations.value, conversationId, createChatMessage({
+      const replyMessage = createChatMessage({
         role: "agent",
         text: response.recommendationText,
         products: response.products,
         knowledgeEntries: response.knowledgeEntries
-      }));
+      });
+      const nextConversations = appendChatMessage(conversations.value, conversationId, replyMessage);
 
-      conversations.value = nextConversations;
-      activeConversationId.value = conversationId;
-      writePersistedChatConversations(identity.value, nextConversations);
+      syncConversationState(
+        identity.value,
+        nextConversations,
+        conversationId,
+        conversations,
+        activeConversationId
+      );
+      animateAssistantReply(
+        replyMessage.id,
+        replyMessage.text,
+        renderedMessages,
+        typingMessageId,
+        revealTimer
+      );
       pendingConversationId.value = null;
       waitingForSocketResponse.value = false;
       isSending.value = false;
@@ -169,6 +305,7 @@ export const SiteChatWidget = component$(() => {
       pendingConversationId.value = null;
       waitingForSocketResponse.value = false;
       isSending.value = false;
+      typingMessageId.value = null;
     });
 
     socketRef.value = socket as SocketLike;
@@ -196,12 +333,51 @@ export const SiteChatWidget = component$(() => {
     const nextConversation = createChatConversation();
     const nextConversations = [nextConversation, ...conversations.value];
 
-    conversations.value = nextConversations;
-    activeConversationId.value = nextConversation.id;
-    writePersistedChatConversations(identity.value, nextConversations);
+    syncConversationState(
+      identity.value,
+      nextConversations,
+      nextConversation.id,
+      conversations,
+      activeConversationId
+    );
+    renderedMessages.value = {
+      ...renderedMessages.value,
+      ...buildRenderedMessageMap([nextConversation])
+    };
     error.value = "";
     toolEvents.value = [];
     input.value = "";
+    typingMessageId.value = null;
+    isConversationMenuOpen.value = false;
+  });
+
+  const openConversation = $((conversationId: string) => {
+    activeConversationId.value = conversationId;
+    writePersistedActiveChatConversation(identity.value, conversationId);
+    error.value = "";
+    toolEvents.value = [];
+    isConversationMenuOpen.value = false;
+  });
+
+  const closeWidget = $(() => {
+    if (typeof window === "undefined") {
+      isOpen.value = false;
+      isClosing.value = false;
+      return;
+    }
+
+    isConversationMenuOpen.value = false;
+    isClosing.value = true;
+
+    if (closeTimer.value != null) {
+      window.clearTimeout(closeTimer.value);
+    }
+
+    closeTimer.value = window.setTimeout(() => {
+      isOpen.value = false;
+      isClosing.value = false;
+      closeTimer.value = null;
+    }, 220);
   });
 
   const sendPrompt = $(async (prompt?: string) => {
@@ -215,28 +391,26 @@ export const SiteChatWidget = component$(() => {
 
     if (!conversation) {
       const nextConversation = createChatConversation();
-      conversations.value = [nextConversation];
-      activeConversationId.value = nextConversation.id;
-      writePersistedChatConversations(identity.value, [nextConversation]);
+      syncConversationState(identity.value, [nextConversation], nextConversation.id, conversations, activeConversationId);
+      renderedMessages.value = buildRenderedMessageMap([nextConversation]);
       conversation = nextConversation;
     }
 
     const conversationId = conversation.id;
     const history = toHistory(conversation);
+    const userMessage = createChatMessage({ role: "user", text });
+    const nextConversations = appendChatMessage(conversations.value, conversationId, userMessage);
 
     error.value = "";
     isSending.value = true;
     waitingForSocketResponse.value = false;
     pendingConversationId.value = conversationId;
     toolEvents.value = [];
-
-    const nextConversations = appendChatMessage(conversations.value, conversationId, createChatMessage({
-      role: "user",
-      text
-    }));
-    conversations.value = nextConversations;
-    activeConversationId.value = conversationId;
-    writePersistedChatConversations(identity.value, nextConversations);
+    renderedMessages.value = {
+      ...renderedMessages.value,
+      [userMessage.id]: userMessage.text
+    };
+    syncConversationState(identity.value, nextConversations, conversationId, conversations, activeConversationId);
     input.value = "";
 
     try {
@@ -251,15 +425,28 @@ export const SiteChatWidget = component$(() => {
     } catch {
       try {
         const response = await chatWithAi({ prompt: text, history });
-        const replyConversations = appendChatMessage(conversations.value, conversationId, createChatMessage({
+        const replyMessage = createChatMessage({
           role: "agent",
           text: response.recommendationText,
           products: response.products,
           knowledgeEntries: response.knowledgeEntries
-        }));
-        conversations.value = replyConversations;
-        activeConversationId.value = conversationId;
-        writePersistedChatConversations(identity.value, replyConversations);
+        });
+        const replyConversations = appendChatMessage(conversations.value, conversationId, replyMessage);
+
+        syncConversationState(
+          identity.value,
+          replyConversations,
+          conversationId,
+          conversations,
+          activeConversationId
+        );
+        animateAssistantReply(
+          replyMessage.id,
+          replyMessage.text,
+          renderedMessages,
+          typingMessageId,
+          revealTimer
+        );
       } catch (caught) {
         error.value = caught instanceof Error ? caught.message : "Could not reach the stylist.";
       } finally {
@@ -272,205 +459,281 @@ export const SiteChatWidget = component$(() => {
 
   return (
     <>
-      {!isOpen.value && (
+      {!isOpen.value && !isClosing.value && (
         <button
           type="button"
-          class="fixed bottom-5 right-5 z-50 border border-brand-ink bg-brand-ink px-5 py-4 text-left text-brand-sand shadow-[0_22px_45px_rgba(17,17,17,0.28)] transition hover:-translate-y-0.5 hover:bg-brand-rose md:bottom-7 md:right-7"
+          class="chatbot-launcher chatbot-launcher-enter fixed bottom-5 right-5 z-50 overflow-hidden px-5 py-4 text-left md:bottom-7 md:right-7"
           onClick$={() => {
             openSiteChat();
           }}
         >
-          <span class="block text-[0.68rem] font-extrabold uppercase tracking-[0.16em] text-brand-gold">
+          <span class="chatbot-launcher-glow" />
+          <span class="relative block text-[0.68rem] font-extrabold uppercase tracking-[0.16em] text-brand-gold">
             Live Stylist
           </span>
-          <span class="mt-2 block font-display text-2xl leading-none">Ask Drapeon</span>
+          <span class="relative mt-2 block font-display text-2xl leading-none text-brand-sand">
+            Ask Drapeon
+          </span>
         </button>
       )}
 
       {isOpen.value && (
-        <aside class="fixed bottom-4 right-4 z-50 w-[calc(100vw-2rem)] max-w-[420px] border border-brand-ink/10 bg-[#fffaf2] shadow-[0_24px_60px_rgba(17,17,17,0.2)]">
-          <div class="flex items-center justify-between border-b border-brand-ink/10 bg-brand-ink px-5 py-4 text-brand-sand">
-            <div>
-              <p class="text-[0.68rem] font-extrabold uppercase tracking-[0.16em] text-brand-gold">
-                Gemini + Pinecone
-              </p>
-              <p class="mt-2 font-display text-3xl leading-none">Drapeon Stylist</p>
+        <aside
+          class={`chatbot-panel fixed bottom-4 right-4 z-50 flex h-[min(760px,calc(100vh-2rem))] w-[calc(100vw-1.25rem)] max-w-[480px] flex-col overflow-hidden ${
+            isClosing.value ? "chatbot-panel-exit" : "chatbot-panel-enter"
+          }`}
+        >
+          <div class="chatbot-header border-b border-white/10 px-5 pb-3 pt-4 text-brand-sand">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="chatbot-status-dot" />
+                  <p class="text-[0.68rem] font-extrabold uppercase tracking-[0.18em] text-brand-gold">
+                    Live Stylist
+                  </p>
+                </div>
+                <p class="mt-2 font-display text-[2rem] leading-none">Drapeon Concierge</p>
+                <p class="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-brand-sand/55">
+                  {session.value ? "Personalized mode" : "Guest mode"}
+                </p>
+              </div>
+              <div class="relative flex items-center gap-2" data-chatbot-menu>
+                <button
+                  type="button"
+                  class="chatbot-icon-btn"
+                  onClick$={() => {
+                    isConversationMenuOpen.value = !isConversationMenuOpen.value;
+                  }}
+                >
+                  •••
+                </button>
+                {isConversationMenuOpen.value && (
+                  <div class="chatbot-menu absolute right-0 top-[calc(100%+0.75rem)] z-10 w-[290px] overflow-hidden">
+                    <div class="flex items-center justify-between border-b border-brand-ink/8 px-4 py-3">
+                      <div>
+                        <p class="text-[0.66rem] font-extrabold uppercase tracking-[0.16em] text-brand-ink/45">
+                          Conversations
+                        </p>
+                        <p class="mt-1 text-xs text-brand-ink/52">
+                          Continue a thread or start a fresh one.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        class="chatbot-menu-new"
+                        onClick$={createFreshConversation}
+                      >
+                        New
+                      </button>
+                    </div>
+                    <div class="max-h-80 overflow-y-auto py-2">
+                      {conversations.value.map((conversation) => (
+                        <button
+                          key={conversation.id}
+                          type="button"
+                          class={`chatbot-menu-item ${
+                            conversation.id === activeConversationId.value
+                              ? "chatbot-menu-item-active"
+                              : ""
+                          }`}
+                          onClick$={() => openConversation(conversation.id)}
+                        >
+                          <span class="block truncate text-sm font-semibold text-brand-ink">
+                            {conversation.title}
+                          </span>
+                          <span class="mt-1 block text-[0.66rem] font-bold uppercase tracking-[0.12em] text-brand-ink/45">
+                            {conversation.messages.length} messages · {formatConversationTime(conversation.updatedAt)}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  class="chatbot-icon-btn"
+                  onClick$={closeWidget}
+                >
+                  Close
+                </button>
+              </div>
             </div>
-            <div class="flex items-center gap-3">
-              <button
-                type="button"
-                class="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-brand-gold transition hover:text-brand-sand"
-                onClick$={createFreshConversation}
-              >
-                New Chat
-              </button>
-              <button
-                type="button"
-                class="text-xs font-extrabold uppercase tracking-[0.14em] text-brand-sand/70 transition hover:text-brand-gold"
-                onClick$={() => {
-                  isOpen.value = false;
-                }}
-              >
-                Close
+          </div>
+
+          <div class="border-b border-brand-ink/8 bg-white/80 px-4 py-3 backdrop-blur-xl">
+            <div class="flex items-center justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-[0.64rem] font-extrabold uppercase tracking-[0.14em] text-brand-ink/42">
+                  Current conversation
+                </p>
+                <p class="mt-1 truncate text-sm font-semibold text-brand-ink">
+                  {activeConversation.value?.title ?? "New conversation"}
+                </p>
+              </div>
+              <button type="button" class="chatbot-thread-chip chatbot-thread-chip-active">
+                {conversations.value.length} Threads
               </button>
             </div>
           </div>
 
-          <div class="grid gap-4 p-4">
-            {!session.value && (
-              <div class="border border-brand-ink/10 bg-white px-4 py-4 text-sm leading-7 text-brand-ink/60">
-                You can chat as a guest right away. Sign in only if you want the stylist to use
-                your saved measurements, body shape, and preferences automatically.
-                <div class="mt-4">
-                  <a href="/auth" class="btn-primary inline-flex">
-                    Sign In
-                  </a>
-                </div>
-              </div>
-            )}
-
-            <div class="flex items-center justify-between gap-3 border border-brand-ink/10 bg-white px-4 py-3 text-xs uppercase tracking-[0.12em] text-brand-ink/55">
-              <span>{conversations.value.length} saved chats</span>
-              <span>{activeConversation.value?.title ?? "New conversation"}</span>
-            </div>
-
-            <div class="flex flex-wrap gap-2">
-              {suggestedPrompts.map((prompt) => (
-                <button
-                  key={prompt}
-                  type="button"
-                  class="border border-brand-ink/10 bg-white px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.12em] text-brand-ink/65 transition hover:border-brand-rose hover:text-brand-rose"
-                  onClick$={() => sendPrompt(prompt)}
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
-
-            {error.value && (
-              <p class="border border-brand-rose/30 bg-brand-rose/10 px-4 py-3 text-sm font-semibold text-brand-rose">
-                {error.value}
-              </p>
-            )}
-
-            {toolEvents.value.length > 0 && (
-              <div class="flex flex-wrap gap-2">
-                {toolEvents.value.map((event, index) => (
-                  <span
-                    key={`${event.tool}-${index}`}
-                    class="bg-brand-sand px-3 py-2 text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-brand-ink/60"
-                  >
-                    {toolLabel(event.tool)}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            <div class="max-h-[420px] space-y-4 overflow-y-auto pr-1">
-              {(activeConversation.value?.messages ?? []).map((message) => (
-                <div key={message.id} class="space-y-3">
-                  <div
-                    class={`${
-                      message.role === "agent" ? "mr-7 bg-white" : "ml-10 bg-brand-ink text-brand-sand"
-                    } border border-brand-ink/10 px-4 py-4`}
-                  >
-                    <p
-                      class={`text-[0.68rem] font-extrabold uppercase tracking-[0.14em] ${
-                        message.role === "agent" ? "text-brand-rose" : "text-brand-gold"
-                      }`}
-                    >
-                      {message.role === "agent" ? "Stylist" : "You"}
-                    </p>
-                    <p class="mt-2 text-sm leading-7">{message.text}</p>
+          <div class="flex-1 overflow-hidden bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,243,235,0.98))]">
+            <div class="grid h-full grid-rows-[auto_1fr_auto]">
+              <div class="grid gap-3 border-b border-brand-ink/8 px-4 py-4">
+                {!session.value && (
+                  <div class="rounded-[24px] border border-brand-ink/8 bg-white/92 px-4 py-4 text-sm leading-7 text-brand-ink/65 shadow-[0_20px_50px_rgba(17,17,17,0.06)]">
+                    You can chat as a guest right away. Sign in only if you want the stylist to use your
+                    saved measurements, body shape, and preferences automatically.
+                    <div class="mt-4">
+                      <a href="/auth" class="btn-primary inline-flex rounded-full px-5">
+                        Sign In
+                      </a>
+                    </div>
                   </div>
+                )}
 
-                  {message.products && message.products.length > 0 && (
-                    <div class="grid gap-3 pl-2">
-                      {message.products.slice(0, 3).map((product) => (
-                        <a
-                          key={product.id}
-                          href={`/catalog/${product.id}`}
-                          class="grid grid-cols-[76px_1fr] gap-3 border border-brand-ink/10 bg-white p-3 transition hover:border-brand-rose"
-                        >
-                          <div class="overflow-hidden bg-brand-sand">
-                            {product.imageUrl ? (
-                              <img
-                                src={product.imageUrl}
-                                alt={product.title}
-                                width={180}
-                                height={220}
-                                class="h-24 w-full object-cover"
-                              />
-                            ) : (
-                              <div class="grid h-24 place-items-center text-[0.68rem] font-bold uppercase tracking-[0.12em] text-brand-ink/40">
-                                No image
-                              </div>
-                            )}
-                          </div>
-                          <div>
-                            <p class="font-semibold text-brand-ink">{product.title}</p>
-                            <p class="mt-1 text-xs uppercase tracking-[0.12em] text-brand-ink/45">
-                              {product.designer.storeName}
-                            </p>
-                            <p class="mt-2 text-sm text-brand-ink/65">${product.rentalPrice}</p>
-                          </div>
-                        </a>
-                      ))}
-                    </div>
-                  )}
+                {toolEvents.value.length > 0 && (
+                  <div class="flex flex-wrap gap-2">
+                    {toolEvents.value.map((event, index) => (
+                      <span
+                        key={`${event.tool}-${index}`}
+                        class="rounded-full bg-brand-sand px-3 py-2 text-[0.66rem] font-extrabold uppercase tracking-[0.12em] text-brand-ink/60"
+                      >
+                        {toolLabel(event.tool)}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
-                  {message.knowledgeEntries && message.knowledgeEntries.length > 0 && (
-                    <div class="grid gap-3 pl-2">
-                      {message.knowledgeEntries.slice(0, 2).map((entry) => (
-                        <div key={entry.id} class="border border-brand-ink/10 bg-brand-sand/55 p-3">
-                          <p class="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-brand-ink/45">
-                            {entry.category ?? "Company Knowledge"}
+                {error.value && (
+                  <p class="rounded-[20px] border border-brand-rose/30 bg-brand-rose/10 px-4 py-3 text-sm font-semibold text-brand-rose">
+                    {error.value}
+                  </p>
+                )}
+              </div>
+
+              <div class="overflow-y-auto px-4 py-5">
+                <div class="space-y-4">
+                  {(activeConversation.value?.messages ?? []).map((message) => {
+                    const displayedText =
+                      message.role === "agent"
+                        ? renderedMessages.value[message.id] ?? message.text
+                        : message.text;
+                    const isTyping = typingMessageId.value === message.id;
+
+                    return (
+                      <div key={message.id} class={`flex ${message.role === "agent" ? "justify-start" : "justify-end"}`}>
+                        <div class={`chatbot-bubble ${message.role === "agent" ? "chatbot-bubble-agent" : "chatbot-bubble-user"}`}>
+                          <p class={`text-[0.66rem] font-extrabold uppercase tracking-[0.16em] ${message.role === "agent" ? "text-brand-rose" : "text-brand-gold"}`}>
+                            {message.role === "agent" ? "Drapeon" : "You"}
                           </p>
-                          <p class="mt-2 font-semibold text-brand-ink">{entry.question}</p>
-                          <p class="mt-2 text-sm leading-6 text-brand-ink/60">{entry.answer}</p>
+                          <p class="mt-3 whitespace-pre-wrap text-sm leading-7">
+                            {displayedText}
+                            {isTyping && <span class="chatbot-stream-cursor" />}
+                          </p>
+
+                          {message.products && message.products.length > 0 && (
+                            <div class="mt-4 grid gap-3">
+                              {message.products.slice(0, 3).map((product) => (
+                                <a
+                                  key={product.id}
+                                  href={`/catalog/${product.id}`}
+                                  class="chatbot-product-card grid grid-cols-[84px_1fr] gap-3"
+                                >
+                                  <div class="overflow-hidden rounded-[18px] bg-brand-sand">
+                                    {product.imageUrl ? (
+                                      <img
+                                        src={product.imageUrl}
+                                        alt={product.title}
+                                        width={180}
+                                        height={220}
+                                        class="h-24 w-full object-cover"
+                                      />
+                                    ) : (
+                                      <div class="grid h-24 place-items-center text-[0.68rem] font-bold uppercase tracking-[0.12em] text-brand-ink/40">
+                                        No image
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <p class="font-semibold text-brand-ink">{product.title}</p>
+                                    <p class="mt-1 text-[0.68rem] uppercase tracking-[0.12em] text-brand-ink/45">
+                                      {product.designer.storeName}
+                                    </p>
+                                    <p class="mt-2 text-sm text-brand-ink/65">${product.rentalPrice}</p>
+                                  </div>
+                                </a>
+                              ))}
+                            </div>
+                          )}
+
+                          {message.knowledgeEntries && message.knowledgeEntries.length > 0 && (
+                            <div class="mt-4 grid gap-3">
+                              {message.knowledgeEntries.slice(0, 2).map((entry) => (
+                                <div key={entry.id} class="rounded-[18px] border border-brand-ink/8 bg-brand-sand/60 p-3">
+                                  <p class="text-[0.66rem] font-extrabold uppercase tracking-[0.14em] text-brand-ink/45">
+                                    {entry.category ?? "Company Knowledge"}
+                                  </p>
+                                  <p class="mt-2 font-semibold text-brand-ink">{entry.question}</p>
+                                  <p class="mt-2 text-sm leading-6 text-brand-ink/62">{entry.answer}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      ))}
+                      </div>
+                    );
+                  })}
+
+                  {isSending.value && (
+                    <div class="flex justify-start">
+                      <div class="chatbot-bubble chatbot-bubble-agent">
+                        <p class="text-[0.66rem] font-extrabold uppercase tracking-[0.16em] text-brand-rose">
+                          Drapeon
+                        </p>
+                        <div class="mt-3 flex items-center gap-2 text-sm text-brand-ink/58">
+                          <span class="chatbot-thinking-dot" />
+                          <span class="chatbot-thinking-dot" />
+                          <span class="chatbot-thinking-dot" />
+                          <span class="ml-2">
+                            {waitingForSocketResponse.value
+                              ? "Thinking through fit, knowledge, and inventory..."
+                              : "Preparing your request..."}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
-              ))}
+              </div>
 
-              {isSending.value && (
-                <div class="mr-7 border border-brand-ink/10 bg-white px-4 py-4">
-                  <p class="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-brand-rose">
-                    Stylist
-                  </p>
-                  <p class="mt-2 text-sm leading-7 text-brand-ink/60">
-                    {waitingForSocketResponse.value
-                      ? "Working through your profile, company answers, and live inventory..."
-                      : "Preparing your request..."}
-                  </p>
+              <form
+                class="border-t border-brand-ink/8 bg-white/90 px-4 py-4 backdrop-blur-xl"
+                preventdefault:submit
+                onSubmit$={() => sendPrompt()}
+              >
+                <div class="chatbot-composer flex items-end gap-3 rounded-[26px] border border-brand-ink/10 bg-white px-3 py-3 shadow-[0_16px_40px_rgba(17,17,17,0.08)]">
+                  <textarea
+                    class="min-h-[44px] max-h-32 flex-1 resize-none bg-transparent px-2 py-1 text-sm leading-6 outline-none placeholder:text-brand-ink/32"
+                    placeholder={
+                      session.value
+                        ? "Ask about products, fit, delivery, or Drapeon policies..."
+                        : "Ask about products, delivery, sizing, or Drapeon policies..."
+                    }
+                    value={input.value}
+                    disabled={isSending.value}
+                    rows={1}
+                    onInput$={(_, target) => {
+                      input.value = target.value;
+                      target.style.height = "0px";
+                      target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
+                    }}
+                  />
+                  <button class="chatbot-send-btn" type="submit" disabled={isSending.value}>
+                    {isSending.value ? "..." : "Send"}
+                  </button>
                 </div>
-              )}
+              </form>
             </div>
-
-            <form
-              class="flex gap-3 border-t border-brand-ink/10 pt-4"
-              preventdefault:submit
-              onSubmit$={() => sendPrompt()}
-            >
-              <input
-                class="min-h-12 flex-1 border border-brand-ink/20 bg-white px-4 text-sm outline-none transition placeholder:text-brand-ink/30 focus:border-brand-rose"
-                placeholder={
-                  session.value
-                    ? "Ask about products, fit, delivery, or Drapeon policies..."
-                    : "Ask about products, delivery, sizing, or Drapeon policies..."
-                }
-                value={input.value}
-                disabled={isSending.value}
-                onInput$={(_, target) => {
-                  input.value = target.value;
-                }}
-              />
-              <button class="btn-primary px-4" type="submit" disabled={isSending.value}>
-                {isSending.value ? "..." : "Send"}
-              </button>
-            </form>
           </div>
         </aside>
       )}
