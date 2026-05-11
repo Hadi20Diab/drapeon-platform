@@ -157,7 +157,7 @@ export class AiService {
   }
 
   async recommend(
-    userId: string,
+    userId: string | null | undefined,
     payload: AiRecommendationDto,
     options: RecommendOptions = {}
   ): Promise<RecommendationResult> {
@@ -171,7 +171,7 @@ export class AiService {
     const collectedKnowledge = new Map<string, KnowledgeEntryCard>();
     const session = await this.prisma.aiSession.create({
       data: {
-        userId,
+        userId: userId ?? null,
         channel: options.channel === "WS" ? AiSessionChannel.WS : AiSessionChannel.REST,
         contextSnapshot: {
           prompt: payload.prompt,
@@ -269,7 +269,7 @@ export class AiService {
   }
 
   private async executeFunctionCall(
-    userId: string,
+    userId: string | null | undefined,
     functionCall: FunctionCall,
     collectedCards: Map<string, ProductCard>,
     collectedKnowledge: Map<string, KnowledgeEntryCard>,
@@ -363,9 +363,17 @@ export class AiService {
   }
 
   private async getUserProfileContext(
-    userId: string,
+    userId: string | null | undefined,
     overrideMeasurements?: Record<string, unknown>
   ): Promise<UserProfileContext> {
+    if (!userId) {
+      return {
+        firstName: null,
+        measurements: overrideMeasurements ?? null,
+        preferences: null
+      };
+    }
+
     const profile = await this.prisma.userProfile.findUnique({
       where: { userId },
       include: {
@@ -549,6 +557,7 @@ export class AiService {
       "You can answer both style-shopping questions and company/process questions.",
       "You must recommend existing products from tools only; never invent products.",
       "If user profile measurements are available, use them and do not ask for those values again.",
+      "If the user is browsing as a guest, still help fully and only ask for missing fit details when they are necessary for a better recommendation.",
       "Match body shape whenever it is present in the stored fit profile or user request.",
       "Use searchCompanyKnowledge for questions about Drapeon, rentals, delivery, designer onboarding, returns, and payments.",
       "Prefer calling searchProducts first, then getProductDetails only for top candidates.",

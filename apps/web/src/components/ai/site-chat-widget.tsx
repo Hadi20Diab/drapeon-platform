@@ -87,11 +87,8 @@ export const SiteChatWidget = component$(() => {
 
     const unsubscribe = subscribeToAuthSession((nextSession) => {
       session.value = nextSession;
-
-      if (!nextSession) {
-        socketRef.value?.disconnect();
-        socketRef.value = null;
-      }
+      socketRef.value?.disconnect();
+      socketRef.value = null;
     });
 
     return () => {
@@ -109,16 +106,10 @@ export const SiteChatWidget = component$(() => {
 
     const activeSession = readAuthSession();
 
-    if (!activeSession) {
-      throw new Error("Sign in to use the live stylist and search with your saved fit profile.");
-    }
-
     const { io } = await import("socket.io-client");
 
     const socket = io(`${apiBaseUrl()}/ai-live`, {
-      auth: {
-        token: activeSession.tokens.accessToken
-      },
+      auth: activeSession ? { token: activeSession.tokens.accessToken } : {},
       transports: ["websocket"]
     });
 
@@ -171,12 +162,6 @@ export const SiteChatWidget = component$(() => {
     const text = (prompt ?? input.value).trim();
 
     if (!text || isSending.value) {
-      return;
-    }
-
-    if (!session.value) {
-      isOpen.value = true;
-      error.value = "Sign in to chat with the stylist and use live product search.";
       return;
     }
 
@@ -257,8 +242,8 @@ export const SiteChatWidget = component$(() => {
           <div class="grid gap-4 p-4">
             {!session.value && (
               <div class="border border-brand-ink/10 bg-white px-4 py-4 text-sm leading-7 text-brand-ink/60">
-                Sign in to unlock live product search, your saved measurements, and company answers
-                tailored to your account context.
+                You can chat as a guest right away. Sign in only if you want the stylist to use
+                your saved measurements, body shape, and preferences automatically.
                 <div class="mt-4">
                   <a href="/auth" class="btn-primary inline-flex">
                     Sign In
@@ -267,20 +252,18 @@ export const SiteChatWidget = component$(() => {
               </div>
             )}
 
-            {session.value && (
-              <div class="flex flex-wrap gap-2">
-                {suggestedPrompts.map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    class="border border-brand-ink/10 bg-white px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.12em] text-brand-ink/65 transition hover:border-brand-rose hover:text-brand-rose"
-                    onClick$={() => sendPrompt(prompt)}
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-            )}
+            <div class="flex flex-wrap gap-2">
+              {suggestedPrompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  class="border border-brand-ink/10 bg-white px-3 py-2 text-left text-xs font-bold uppercase tracking-[0.12em] text-brand-ink/65 transition hover:border-brand-rose hover:text-brand-rose"
+                  onClick$={() => sendPrompt(prompt)}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
 
             {error.value && (
               <p class="border border-brand-rose/30 bg-brand-rose/10 px-4 py-3 text-sm font-semibold text-brand-rose">
@@ -396,15 +379,15 @@ export const SiteChatWidget = component$(() => {
                 placeholder={
                   session.value
                     ? "Ask about products, fit, delivery, or Drapeon policies..."
-                    : "Sign in to start chatting"
+                    : "Ask about products, delivery, sizing, or Drapeon policies..."
                 }
                 value={input.value}
-                disabled={!session.value || isSending.value}
+                disabled={isSending.value}
                 onInput$={(_, target) => {
                   input.value = target.value;
                 }}
               />
-              <button class="btn-primary px-4" type="submit" disabled={!session.value || isSending.value}>
+              <button class="btn-primary px-4" type="submit" disabled={isSending.value}>
                 {isSending.value ? "..." : "Send"}
               </button>
             </form>

@@ -9,6 +9,7 @@ import { StripeConnectService } from "../../integrations/stripe/stripe-connect.s
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
+import { OptionalJwtAuthGuard } from "./guards/optional-jwt-auth.guard";
 import { RolesGuard } from "./guards/roles.guard";
 import { JwtAccessStrategy } from "./strategies/jwt-access.strategy";
 
@@ -28,7 +29,14 @@ import { JwtAccessStrategy } from "./strategies/jwt-access.strategy";
     })
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtAccessStrategy, JwtAuthGuard, RolesGuard, StripeConnectService],
-  exports: [AuthService, PassportModule, JwtModule, JwtAuthGuard, RolesGuard]
+  providers: [
+    AuthService,
+    JwtAccessStrategy,
+    JwtAuthGuard,
+    OptionalJwtAuthGuard,
+    RolesGuard,
+    StripeConnectService
+  ],
+  exports: [AuthService, PassportModule, JwtModule, JwtAuthGuard, OptionalJwtAuthGuard, RolesGuard]
 })
 export class AuthModule {}

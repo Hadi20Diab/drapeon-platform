@@ -34,10 +34,11 @@ export class AiGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const token = this.extractToken(client);
 
     if (!token) {
-      client.emit("ai.error", {
-        message: "Missing authentication token"
+      client.emit("ai.connected", {
+        socketId: client.id,
+        userId: null,
+        authenticated: false
       });
-      client.disconnect(true);
       return;
     }
 
@@ -49,13 +50,15 @@ export class AiGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.socketUsers.set(client.id, user);
       client.emit("ai.connected", {
         socketId: client.id,
-        userId: user.sub
+        userId: user.sub,
+        authenticated: true
       });
     } catch {
-      client.emit("ai.error", {
-        message: "Invalid authentication token"
+      client.emit("ai.connected", {
+        socketId: client.id,
+        userId: null,
+        authenticated: false
       });
-      client.disconnect(true);
     }
   }
 
@@ -73,14 +76,7 @@ export class AiGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ): Promise<void> {
     const user = this.socketUsers.get(client.id);
 
-    if (!user) {
-      client.emit("ai.error", {
-        message: "Unauthenticated socket session"
-      });
-      return;
-    }
-
-    const result = await this.aiService.recommend(user.sub, payload, {
+    const result = await this.aiService.recommend(user?.sub, payload, {
       channel: "WS",
       onEvent: (event) => {
         client.emit("ai.recommendations.event", event);
