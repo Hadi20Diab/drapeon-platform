@@ -59,17 +59,19 @@ a {
   margin: 0 auto;
 }
 
-.luxury-card {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  box-shadow: 0 24px 70px -44px rgba(16, 16, 16, 0.7);
-}
+@layer components {
+  .luxury-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: 0 24px 70px -44px rgba(16, 16, 16, 0.7);
+  }
 
-.glass-panel {
-  background: rgba(255, 250, 242, 0.78);
-  border: 1px solid rgba(216, 208, 196, 0.86);
-  backdrop-filter: blur(18px);
+  .glass-panel {
+    background: rgba(255, 250, 242, 0.78);
+    border: 1px solid rgba(216, 208, 196, 0.86);
+    backdrop-filter: blur(18px);
+  }
 }
 
 .eyebrow {
