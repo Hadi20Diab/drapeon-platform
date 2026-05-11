@@ -10,7 +10,7 @@ import {
 } from "../../../../lib/api";
 
 const defaultImage =
-  "https://images.unsplash.com/photo-1550639525-c97d455acf70?auto=format&fit=crop&w=1200&q=85";
+  "https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop";
 
 const bodyShapeOptions = [
   { value: "HOURGLASS", label: "Hourglass" },
