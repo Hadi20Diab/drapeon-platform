@@ -5,7 +5,6 @@ import { PassportModule } from "@nestjs/passport";
 
 import { MailidatorModule } from "../../integrations/email-validation/mailidator.module";
 import { MailModule } from "../../integrations/mail/mail.module";
-import { StripeConnectService } from "../../integrations/stripe/stripe-connect.service";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
@@ -34,8 +33,7 @@ import { JwtAccessStrategy } from "./strategies/jwt-access.strategy";
     JwtAccessStrategy,
     JwtAuthGuard,
     OptionalJwtAuthGuard,
-    RolesGuard,
-    StripeConnectService
+    RolesGuard
   ],
   exports: [AuthService, PassportModule, JwtModule, JwtAuthGuard, OptionalJwtAuthGuard, RolesGuard]
 })

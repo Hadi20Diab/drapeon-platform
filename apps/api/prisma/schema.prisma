@@ -26,6 +26,22 @@ enum DesignerApprovalStatus {
   REJECTED
 }
 
+enum SubscriptionInterval {
+  MONTH
+  YEAR
+}
+
+enum DesignerSubscriptionStatus {
+  INACTIVE
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+}
+
 enum ProductCategory {
   SUIT
   DRESS
@@ -203,9 +219,61 @@ model Designer {
   deliveries     DeliveryRequest[]
   conversations  DesignerConversation[]
   notifications  DesignerNotification[]
+  subscription   DesignerSubscription?
 
   @@index([approvalStatus])
   @@index([stripeAccountId])
+}
+
+model SubscriptionPlan {
+  id              String                 @id @default(uuid())
+  slug            String                 @unique
+  name            String
+  description     String
+  stripePriceId   String                 @unique
+  stripeProductId String?
+  currency        String                 @default("USD")
+  interval        SubscriptionInterval   @default(MONTH)
+  amount          Decimal                @db.Decimal(10, 2)
+  productLimit    Int
+  featured        Boolean                @default(false)
+  isActive        Boolean                @default(true)
+  sortOrder       Int                    @default(0)
+  notes           String?
+  features        String[]               @default([])
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  subscriptions   DesignerSubscription[]
+
+  @@index([isActive, sortOrder])
+}
+
+model DesignerSubscription {
+  id                    String                     @id @default(uuid())
+  designerId            String                     @unique
+  planId                String?
+  status                DesignerSubscriptionStatus @default(INACTIVE)
+  stripeCustomerId      String?                    @unique
+  stripeSubscriptionId  String?                    @unique
+  stripeCheckoutSessionId String?                  @unique
+  productLimitSnapshot  Int?
+  productsPublishedThisPeriod Int                  @default(0)
+  usagePeriodStart      DateTime?
+  usagePeriodEnd        DateTime?
+  currentPeriodStart    DateTime?
+  currentPeriodEnd      DateTime?
+  cancelAtPeriodEnd     Boolean                    @default(false)
+  subscribedAt          DateTime?
+  canceledAt            DateTime?
+  lastCheckoutAt        DateTime?
+  lastSyncedAt          DateTime?
+  createdAt             DateTime                   @default(now())
+  updatedAt             DateTime                   @updatedAt
+  designer              Designer                   @relation(fields: [designerId], references: [id], onDelete: Cascade)
+  plan                  SubscriptionPlan?          @relation(fields: [planId], references: [id], onDelete: SetNull)
+
+  @@index([status, currentPeriodEnd])
+  @@index([planId])
 }
 
 model Product {

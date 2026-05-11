@@ -1,5 +1,9 @@
-import { BadRequestException } from "@nestjs/common";
-import { ProductStatus } from "@prisma/client";
+import { BadRequestException, ForbiddenException } from "@nestjs/common";
+import {
+  DesignerApprovalStatus,
+  DesignerSubscriptionStatus,
+  SubscriptionInterval
+} from "@prisma/client";
 
 import { PaymentsService } from "./payments.service";
 
@@ -16,20 +20,24 @@ describe("PaymentsService", () => {
     configValues?: Record<string, unknown>;
   }) {
     const prisma = {
-      product: {
-        findMany: jest.fn()
+      subscriptionPlan: {
+        findMany: jest.fn(),
+        findFirst: jest.fn(),
+        findUnique: jest.fn()
       },
       designer: {
-        updateMany: jest.fn()
+        findUnique: jest.fn()
+      },
+      designerSubscription: {
+        upsert: jest.fn(),
+        findFirst: jest.fn()
       },
       ...(overrides?.prisma ?? {})
     } as any;
     const stripe = {
-      getCurrency: jest.fn(() => "usd"),
-      getCommissionRate: jest.fn(() => 0.075),
-      getCommissionBasisPoints: jest.fn(() => 750),
       isConfigured: jest.fn(() => false),
       createCheckoutSession: jest.fn(),
+      createBillingPortalSession: jest.fn(),
       constructWebhookEvent: jest.fn(),
       ...(overrides?.stripe ?? {})
     } as any;
@@ -41,127 +49,192 @@ describe("PaymentsService", () => {
     };
   }
 
-  it("returns configuration_required totals when Stripe is not configured", async () => {
-    const { service, prisma } = createService();
-    prisma.product.findMany.mockResolvedValue([
-      {
-        id: "product-1",
-        title: "Evening Dress",
-        rentalPrice: 200,
-        currency: "USD",
-        designerId: "designer-1",
-        designer: {
-          storeName: "Atelier Test",
-          stripeAccountId: "acct_test",
-          stripeChargesEnabled: true,
-          stripePayoutsEnabled: true
-        }
-      }
-    ]);
+  const plan = {
+    id: "plan-1",
+    slug: "atelier-10",
+    name: "Atelier 10",
+    description: "Up to 10 products each billing cycle.",
+    stripePriceId: "price_123",
+    stripeProductId: "prod_123",
+    currency: "USD",
+    interval: SubscriptionInterval.MONTH,
+    amount: 149,
+    productLimit: 10,
+    featured: true,
+    isActive: true,
+    sortOrder: 1,
+    notes: null,
+    features: ["10 active products", "Priority support"]
+  };
 
-    const result = await service.createStripeCheckout("user-1", {
-      items: [{ productId: "product-1", quantity: 2 }]
+  const designer = {
+    id: "designer-1",
+    userId: "user-1",
+    storeName: "Atelier Test",
+    approvalStatus: DesignerApprovalStatus.APPROVED,
+    user: {
+      email: "designer@example.com",
+      profile: { firstName: "Maya", lastName: "Haddad" }
+    },
+    subscription: null
+  };
+
+  it("lists active subscription plans in billing order", async () => {
+    const { service, prisma } = createService();
+    prisma.subscriptionPlan.findMany.mockResolvedValue([plan]);
+
+    await expect(service.listSubscriptionPlans()).resolves.toEqual({
+      items: [
+        expect.objectContaining({
+          id: "plan-1",
+          amount: 149
+        })
+      ]
     });
+  });
+
+  it("returns configuration_required when Stripe is not configured", async () => {
+    const { service, prisma } = createService();
+    prisma.designer.findUnique.mockResolvedValue(designer);
+    prisma.subscriptionPlan.findFirst.mockResolvedValue(plan);
+
+    const result = await service.createDesignerSubscriptionCheckout("user-1", { planId: "plan-1" });
 
     expect(result.mode).toBe("configuration_required");
-    expect(result.totals).toEqual({
-      subtotal: 400,
-      commissionRate: 0.075,
-      commissionAmount: 30,
-      designerAmount: 370,
-      currency: "usd"
-    });
+    expect(result.plan.amount).toBe(149);
   });
 
-  it("rejects carts that span multiple designers", async () => {
-    const { service, prisma } = createService();
-    prisma.product.findMany.mockResolvedValue([
-      { id: "product-1", title: "Dress", rentalPrice: 100, designerId: "designer-1", designer: {} },
-      { id: "product-2", title: "Suit", rentalPrice: 120, designerId: "designer-2", designer: {} }
-    ]);
-
-    await expect(
-      service.createStripeCheckout("user-1", {
-        items: [
-          { productId: "product-1", quantity: 1 },
-          { productId: "product-2", quantity: 1 }
-        ]
-      })
-    ).rejects.toThrow(BadRequestException);
-  });
-
-  it("creates a Stripe Connect checkout session when designer onboarding exists", async () => {
+  it("redirects active subscribers to the Stripe billing portal", async () => {
     const { service, prisma, stripe } = createService({
       stripe: {
         isConfigured: jest.fn(() => true),
-        createCheckoutSession: jest.fn().mockResolvedValue({ id: "cs_test", url: "https://checkout.stripe.test/session" })
+        createBillingPortalSession: jest.fn().mockResolvedValue({ url: "https://billing.stripe.test/portal" })
       }
     });
-    prisma.product.findMany.mockResolvedValue([
-      {
-        id: "product-1",
-        title: "Black Tuxedo",
-        rentalPrice: 150,
-        designerId: "designer-1",
-        designer: {
-          storeName: "Atelier Test",
-          stripeAccountId: "acct_123",
-          stripeChargesEnabled: true,
-          stripePayoutsEnabled: true
-        }
+    prisma.designer.findUnique.mockResolvedValue({
+      ...designer,
+      subscription: {
+        stripeCustomerId: "cus_123",
+        status: DesignerSubscriptionStatus.ACTIVE
       }
-    ]);
-
-    const result = await service.createStripeCheckout("user-1", {
-      items: [{ productId: "product-1", quantity: 1 }],
-      customer: { email: "customer@example.com" }
     });
+    prisma.subscriptionPlan.findFirst.mockResolvedValue(plan);
 
-    expect(result.checkoutUrl).toBe("https://checkout.stripe.test/session");
+    const result = await service.createDesignerSubscriptionCheckout("user-1", { planId: "plan-1" });
+
+    expect(result.mode).toBe("billing_portal");
+    expect(result.url).toBe("https://billing.stripe.test/portal");
+    expect(stripe.createBillingPortalSession).toHaveBeenCalledWith(
+      expect.objectContaining({ customer: "cus_123" })
+    );
+  });
+
+  it("creates a Stripe subscription checkout session for eligible designers", async () => {
+    const { service, prisma, stripe } = createService({
+      stripe: {
+        isConfigured: jest.fn(() => true),
+        createCheckoutSession: jest.fn().mockResolvedValue({
+          id: "cs_test",
+          url: "https://checkout.stripe.test/subscription",
+          customer: "cus_123"
+        })
+      }
+    });
+    prisma.designer.findUnique.mockResolvedValue(designer);
+    prisma.subscriptionPlan.findFirst.mockResolvedValue(plan);
+    prisma.designerSubscription.upsert.mockResolvedValue({ id: "sub-row-1" });
+
+    const result = await service.createDesignerSubscriptionCheckout("user-1", { planId: "plan-1" });
+
+    expect(result.mode).toBe("subscription_checkout");
+    expect(result.url).toBe("https://checkout.stripe.test/subscription");
     expect(stripe.createCheckoutSession).toHaveBeenCalledWith(
       expect.objectContaining({
-        customer_email: "customer@example.com",
-        payment_intent_data: expect.objectContaining({
-          application_fee_amount: 1125,
-          transfer_data: { destination: "acct_123" }
-        })
+        mode: "subscription",
+        customer_email: "designer@example.com",
+        line_items: [{ price: "price_123", quantity: 1 }]
+      })
+    );
+    expect(prisma.designerSubscription.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { designerId: "designer-1" }
       })
     );
   });
 
-  it("syncs connected account status from account.updated webhook events", async () => {
+  it("blocks rejected designers from starting a subscription", async () => {
     const { service, prisma } = createService();
+    prisma.designer.findUnique.mockResolvedValue({
+      ...designer,
+      approvalStatus: DesignerApprovalStatus.REJECTED
+    });
+    prisma.subscriptionPlan.findFirst.mockResolvedValue(plan);
+
+    await expect(
+      service.createDesignerSubscriptionCheckout("user-1", { planId: "plan-1" })
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it("requires a billing profile before opening the portal directly", async () => {
+    const { service, prisma } = createService();
+    prisma.designer.findUnique.mockResolvedValue({
+      ...designer,
+      subscription: null
+    });
+
+    await expect(service.createDesignerBillingPortal("user-1")).rejects.toThrow(BadRequestException);
+  });
+
+  it("syncs subscription state from Stripe webhooks", async () => {
+    const { service, prisma } = createService();
+    prisma.subscriptionPlan.findUnique.mockResolvedValue(plan);
+    prisma.designerSubscription.findFirst.mockResolvedValue({
+      designerId: "designer-1",
+      planId: "plan-1",
+      productLimitSnapshot: 10,
+      productsPublishedThisPeriod: 4,
+      subscribedAt: new Date("2026-05-01T00:00:00.000Z"),
+      usagePeriodEnd: new Date("2026-06-01T00:00:00.000Z")
+    });
 
     await service.handleStripeWebhook({
       payload: {
-        type: "account.updated",
+        type: "customer.subscription.updated",
         data: {
           object: {
-            id: "acct_1TUj5ZLhJyHSphBA",
-            charges_enabled: true,
-            payouts_enabled: true,
-            details_submitted: true
+            id: "sub_123",
+            customer: "cus_123",
+            status: "active",
+            cancel_at_period_end: false,
+            current_period_start: 1_778_291_200,
+            current_period_end: 1_780_876_800,
+            metadata: { designerId: "designer-1" },
+            items: {
+              data: [{ price: { id: "price_123" } }]
+            }
           }
         }
       }
     });
 
-    expect(prisma.designer.updateMany).toHaveBeenCalledWith({
-      where: { stripeAccountId: "acct_1TUj5ZLhJyHSphBA" },
-      data: {
-        stripeChargesEnabled: true,
-        stripePayoutsEnabled: true,
-        stripeDetailsSubmitted: true,
-        stripeOnboardingComplete: true
-      }
-    });
+    expect(prisma.designerSubscription.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { designerId: "designer-1" },
+        update: expect.objectContaining({
+          status: DesignerSubscriptionStatus.ACTIVE,
+          stripeSubscriptionId: "sub_123",
+          stripeCustomerId: "cus_123",
+          productLimitSnapshot: 10
+        })
+      })
+    );
   });
 
   it("requires a Stripe signature when webhook signing is configured", async () => {
     const { service } = createService({ configValues: { STRIPE_WEBHOOK_SECRET: "whsec_test" } });
 
-    await expect(service.handleStripeWebhook({ payload: { type: "payment_intent.succeeded" } })).rejects.toThrow(
-      BadRequestException
-    );
+    await expect(
+      service.handleStripeWebhook({ payload: { type: "customer.subscription.updated" } })
+    ).rejects.toThrow(BadRequestException);
   });
 });

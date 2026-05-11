@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 
-import { StripeConnectService } from "../../integrations/stripe/stripe-connect.service";
+import { StripeBillingService } from "../../integrations/stripe/stripe-billing.service";
 import { AuthModule } from "../auth/auth.module";
 import { PaymentsController } from "./payments.controller";
 import { PaymentsService } from "./payments.service";
@@ -8,6 +8,6 @@ import { PaymentsService } from "./payments.service";
 @Module({
   imports: [AuthModule],
   controllers: [PaymentsController],
-  providers: [PaymentsService, StripeConnectService]
+  providers: [PaymentsService, StripeBillingService]
 })
 export class PaymentsModule {}

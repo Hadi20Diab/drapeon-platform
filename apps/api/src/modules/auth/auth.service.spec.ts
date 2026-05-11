@@ -82,9 +82,6 @@ describe("AuthService", () => {
         return values[key];
       })
     } as any;
-    const stripeConnectService = {
-      createDesignerAccount: jest.fn().mockResolvedValue({ id: "acct_123" })
-    } as any;
     const mailService = {
       isConfigured: jest.fn(() => true),
       sendEmail: jest.fn().mockResolvedValue(undefined)
@@ -96,14 +93,12 @@ describe("AuthService", () => {
     return {
       prisma,
       jwtService,
-      stripeConnectService,
       mailService,
       mailidatorService,
       service: new AuthService(
         prisma,
         jwtService,
         configService,
-        stripeConnectService,
         mailService,
         mailidatorService
       )
@@ -234,7 +229,7 @@ describe("AuthService", () => {
   });
 
   it("upgrades a user into a pending designer and issues designer tokens", async () => {
-    const { service, prisma, stripeConnectService } = createService();
+    const { service, prisma } = createService();
     prisma.user.findUnique.mockResolvedValue({
       id: "user-1",
       email: "client@example.com",
@@ -259,11 +254,6 @@ describe("AuthService", () => {
       instagramUrl: "https://instagram.com/maisonmaya"
     });
 
-    expect(stripeConnectService.createDesignerAccount).toHaveBeenCalledWith({
-      email: "client@example.com",
-      firstName: "Maya",
-      lastName: "Haddad"
-    });
     expect(prisma.user.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -271,7 +261,10 @@ describe("AuthService", () => {
           designerProfile: {
             create: expect.objectContaining({
               storeName: "Maison Maya",
-              bio: expect.stringContaining("couture-led tailoring")
+              bio: expect.stringContaining("couture-led tailoring"),
+              subscription: {
+                create: {}
+              }
             })
           }
         })
