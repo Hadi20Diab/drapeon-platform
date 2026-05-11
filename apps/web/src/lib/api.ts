@@ -32,6 +32,15 @@ export interface AuthSession {
   verificationEmailSent?: boolean;
 }
 
+export interface BecomeDesignerPayload {
+  storeName: string;
+  description: string;
+  location?: string;
+  brandColor?: string;
+  websiteUrl?: string;
+  instagramUrl?: string;
+}
+
 export interface UserProfile {
   id: string;
   userId: string;
@@ -860,6 +869,16 @@ export async function verifyEmailToken(payload: {
 }): Promise<{ verified: boolean; message: string }> {
   return requestApi<{ verified: boolean; message: string }>("/auth/verify-email", {
     method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function applyToBecomeDesigner(
+  payload: BecomeDesignerPayload
+): Promise<AuthSession> {
+  return requestApi<AuthSession>("/auth/become-designer", {
+    method: "POST",
+    headers: authHeaders(),
     body: JSON.stringify(payload)
   });
 }

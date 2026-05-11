@@ -67,7 +67,7 @@ function ctaForUser(user: AuthUser | null): {
     return {
       primaryHref: "/catalog",
       primaryLabel: "Browse Looks",
-      secondaryHref: "/auth",
+      secondaryHref: "/become-designer",
       secondaryLabel: "Become a Designer"
     };
   }

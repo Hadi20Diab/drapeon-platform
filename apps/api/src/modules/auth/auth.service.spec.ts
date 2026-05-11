@@ -1,4 +1,4 @@
-import { ConflictException, UnauthorizedException } from "@nestjs/common";
+import { ConflictException, ForbiddenException, UnauthorizedException } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 
 import { AuthService } from "./auth.service";
@@ -217,5 +217,72 @@ describe("AuthService", () => {
         password: "newpassword123"
       })
     ).rejects.toThrow(UnauthorizedException);
+  });
+
+  it("upgrades a user into a pending designer and issues designer tokens", async () => {
+    const { service, prisma, stripeConnectService } = createService();
+    prisma.user.findUnique.mockResolvedValue({
+      id: "user-1",
+      email: "client@example.com",
+      role: UserRole.USER,
+      isEmailVerified: true,
+      profile: { firstName: "Maya", lastName: "Haddad" },
+      designerProfile: null
+    });
+    prisma.user.update.mockResolvedValue({
+      id: "user-1",
+      email: "client@example.com",
+      role: UserRole.DESIGNER,
+      isEmailVerified: true
+    });
+
+    const result = await service.becomeDesigner("user-1", {
+      storeName: "Maison Maya",
+      description: "A couture-led tailoring studio for private fittings and occasionwear rentals.",
+      location: "Beirut, Lebanon",
+      brandColor: "#9b1232",
+      websiteUrl: "https://maison-maya.example",
+      instagramUrl: "https://instagram.com/maisonmaya"
+    });
+
+    expect(stripeConnectService.createDesignerAccount).toHaveBeenCalledWith({
+      email: "client@example.com",
+      firstName: "Maya",
+      lastName: "Haddad"
+    });
+    expect(prisma.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          role: UserRole.DESIGNER,
+          designerProfile: {
+            create: expect.objectContaining({
+              storeName: "Maison Maya",
+              bio: expect.stringContaining("couture-led tailoring")
+            })
+          }
+        })
+      })
+    );
+    expect(result.user.role).toBe(UserRole.DESIGNER);
+  });
+
+  it("blocks admin accounts from becoming designers", async () => {
+    const { service, prisma } = createService();
+    prisma.user.findUnique.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@example.com",
+      role: UserRole.ADMIN,
+      isEmailVerified: true,
+      profile: { firstName: "Admin", lastName: "Account" },
+      designerProfile: null
+    });
+
+    await expect(
+      service.becomeDesigner("admin-1", {
+        storeName: "Admin Studio",
+        description: "This should never be accepted because admin accounts cannot become vendors.",
+        location: "Beirut"
+      })
+    ).rejects.toThrow(ForbiddenException);
   });
 });

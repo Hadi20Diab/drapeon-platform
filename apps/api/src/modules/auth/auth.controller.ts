@@ -1,5 +1,8 @@
-import { Body, Controller, Post } from "@nestjs/common";
+import { Body, Controller, Post, UseGuards } from "@nestjs/common";
 
+import { CurrentUser } from "../../common/decorators/current-user.decorator";
+import { JwtAuthGuard } from "./guards/jwt-auth.guard";
+import { BecomeDesignerDto } from "./dto/become-designer.dto";
 import { LoginDto } from "./dto/login.dto";
 import { ForgotPasswordDto } from "./dto/forgot-password.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
@@ -40,5 +43,11 @@ export class AuthController {
   @Post("reset-password")
   resetPassword(@Body() payload: ResetPasswordDto) {
     return this.authService.resetPassword(payload);
+  }
+
+  @Post("become-designer")
+  @UseGuards(JwtAuthGuard)
+  becomeDesigner(@CurrentUser("sub") userId: string, @Body() payload: BecomeDesignerDto) {
+    return this.authService.becomeDesigner(userId, payload);
   }
 }

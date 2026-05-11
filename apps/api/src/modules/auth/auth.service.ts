@@ -2,7 +2,9 @@ import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from
 
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
+  NotFoundException,
   UnauthorizedException
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -13,6 +15,7 @@ import { MailService } from "../../integrations/mail/mail.service";
 import { StripeConnectService } from "../../integrations/stripe/stripe-connect.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { ForgotPasswordDto } from "./dto/forgot-password.dto";
+import { BecomeDesignerDto } from "./dto/become-designer.dto";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
 import { RegisterDto, RegistrationRole } from "./dto/register.dto";
@@ -147,6 +150,86 @@ export class AuthService {
         role: user.role,
         isEmailVerified: user.isEmailVerified
       },
+      tokens
+    };
+  }
+
+  async becomeDesigner(userId: string, payload: BecomeDesignerDto): Promise<AuthResponse> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        isEmailVerified: true,
+        profile: {
+          select: {
+            firstName: true,
+            lastName: true
+          }
+        },
+        designerProfile: {
+          select: {
+            id: true
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      throw new NotFoundException("Account not found");
+    }
+
+    if (user.role === UserRole.ADMIN) {
+      throw new ForbiddenException("Admin accounts cannot be converted into designer accounts.");
+    }
+
+    if (user.designerProfile || user.role === UserRole.DESIGNER) {
+      throw new ConflictException("You already have a designer application. Open your designer dashboard instead.");
+    }
+
+    const stripeAccount = await this.stripeConnectService.createDesignerAccount({
+      email: user.email,
+      firstName: user.profile?.firstName ?? "Designer",
+      lastName: user.profile?.lastName ?? "Account"
+    });
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        role: UserRole.DESIGNER,
+        designerProfile: {
+          create: {
+            storeName: payload.storeName,
+            slug: `${this.toSlug(payload.storeName)}-${randomUUID().slice(0, 8)}`,
+            bio: payload.description,
+            location: payload.location,
+            brandColor: payload.brandColor,
+            websiteUrl: payload.websiteUrl,
+            instagramUrl: payload.instagramUrl,
+            stripeAccountId: stripeAccount?.id,
+            stripeAccountCreatedAt: stripeAccount ? new Date() : undefined,
+            approvalStatus: DesignerApprovalStatus.PENDING
+          }
+        }
+      },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        isEmailVerified: true
+      }
+    });
+
+    const tokens = await this.issueTokens({
+      sub: updatedUser.id,
+      email: updatedUser.email,
+      role: updatedUser.role
+    });
+    await this.persistRefreshToken(updatedUser.id, tokens.refreshToken);
+
+    return {
+      user: updatedUser,
       tokens
     };
   }

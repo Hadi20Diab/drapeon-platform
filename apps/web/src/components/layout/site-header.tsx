@@ -60,6 +60,11 @@ export const SiteHeader = component$(() => {
             Cart
           </a>
           {user.value?.role === "USER" && (
+            <a href="/become-designer" class="transition hover:text-brand-gold">
+              Sell
+            </a>
+          )}
+          {user.value?.role === "USER" && (
             <a href="/profile" class="transition hover:text-brand-gold">
               Profile
             </a>
