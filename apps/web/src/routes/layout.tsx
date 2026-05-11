@@ -7,7 +7,7 @@ export default component$(() => {
   return (
     <div class="page-shell">
       <SiteHeader />
-      <main>
+      <main class="min-h-[50vh]">
         <Slot />
       </main>
       <SiteFooter />
