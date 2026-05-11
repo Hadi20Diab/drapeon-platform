@@ -9,29 +9,18 @@ import { AiMessageRole, AiSessionChannel, BodyShape, Prisma, ProductCategory, Pr
 import { CompanyKnowledgeService } from "../knowledge/knowledge.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AiRecommendationDto } from "./dto/ai-recommendation.dto";
+import {
+  composeGroundedRecommendationText,
+  selectDiverseProductCards,
+  selectGroundedProducts,
+  type GroundedKnowledgeEntryCard,
+  type GroundedProductCard,
+  type GroundedUserProfileContext
+} from "./ai-response.utils";
 
-interface ProductCard {
-  id: string;
-  title: string;
-  rentalPrice: number;
-  imageUrl: string | null;
-  category: string;
-  designer: {
-    storeName: string;
-    slug: string;
-  };
-  sizeOptions: string[];
-  colorOptions: string[];
-  bodyShapes: BodyShape[];
-}
+type ProductCard = GroundedProductCard;
 
-interface KnowledgeEntryCard {
-  id: string;
-  question: string;
-  answer: string;
-  category: string | null;
-  tags: string[];
-}
+type KnowledgeEntryCard = GroundedKnowledgeEntryCard;
 
 interface RecommendationResult {
   recommendationText: string;
@@ -58,11 +47,7 @@ interface RecommendOptions {
   onEvent?: (event: AiAgentEvent) => void;
 }
 
-type UserProfileContext = {
-  firstName: string | null;
-  measurements: Record<string, unknown> | null;
-  preferences: Record<string, unknown> | null;
-};
+type UserProfileContext = GroundedUserProfileContext;
 
 type ParsedSearchFilters = {
   category?: ProductCategory;
@@ -213,8 +198,23 @@ export class AiService {
         const functionCalls = response.functionCalls ?? [];
 
         if (functionCalls.length === 0) {
-          const recommendationText =
-            response.text?.trim() || "I found relevant answers and catalog matches for you.";
+          const finalProducts = selectGroundedProducts(Array.from(collectedCards.values()), {
+            prompt: payload.prompt,
+            filters: (this.toRecord(payload.filters) ?? null) as Record<string, unknown> | null,
+            profile: userProfile,
+            usedStoredMeasurements: payload.measurements == null && userProfile.measurements != null
+          });
+          const finalKnowledgeEntries = Array.from(collectedKnowledge.values()).slice(0, 2);
+          const recommendationText = composeGroundedRecommendationText(
+            {
+              prompt: payload.prompt,
+              filters: (this.toRecord(payload.filters) ?? null) as Record<string, unknown> | null,
+              profile: userProfile,
+              usedStoredMeasurements: payload.measurements == null && userProfile.measurements != null
+            },
+            finalProducts,
+            finalKnowledgeEntries
+          );
 
           await this.logAiMessage(session.id, {
             role: AiMessageRole.AGENT,
@@ -223,8 +223,8 @@ export class AiService {
 
           return {
             recommendationText,
-            products: Array.from(collectedCards.values()),
-            knowledgeEntries: Array.from(collectedKnowledge.values()),
+            products: finalProducts,
+            knowledgeEntries: finalKnowledgeEntries,
             context: {
               usedStoredMeasurements:
                 payload.measurements == null && userProfile.measurements != null
@@ -249,8 +249,23 @@ export class AiService {
         contents.push(createUserContent(toolResponseParts));
       }
 
-      const fallbackText =
-        "I reached a tool-call limit while refining the answer. Here are the best verified matches and knowledge entries I found so far.";
+      const finalProducts = selectGroundedProducts(Array.from(collectedCards.values()), {
+        prompt: payload.prompt,
+        filters: (this.toRecord(payload.filters) ?? null) as Record<string, unknown> | null,
+        profile: userProfile,
+        usedStoredMeasurements: payload.measurements == null && userProfile.measurements != null
+      });
+      const finalKnowledgeEntries = Array.from(collectedKnowledge.values()).slice(0, 2);
+      const fallbackText = composeGroundedRecommendationText(
+        {
+          prompt: payload.prompt,
+          filters: (this.toRecord(payload.filters) ?? null) as Record<string, unknown> | null,
+          profile: userProfile,
+          usedStoredMeasurements: payload.measurements == null && userProfile.measurements != null
+        },
+        finalProducts,
+        finalKnowledgeEntries
+      );
 
       await this.logAiMessage(session.id, {
         role: AiMessageRole.AGENT,
@@ -259,8 +274,8 @@ export class AiService {
 
       return {
         recommendationText: fallbackText,
-        products: Array.from(collectedCards.values()),
-        knowledgeEntries: Array.from(collectedKnowledge.values()),
+        products: finalProducts,
+        knowledgeEntries: finalKnowledgeEntries,
         context: {
           usedStoredMeasurements: payload.measurements == null && userProfile.measurements != null
         }
@@ -415,6 +430,7 @@ export class AiService {
         }
       }
     };
+    const fetchTake = Math.min(Math.max(filters.limit * 4, 12), 36);
     const products: ProductWithRelations[] = await this.prisma.product.findMany({
       where,
       include: {
@@ -433,11 +449,12 @@ export class AiService {
           }
         }
       },
-      take: filters.limit
+      take: fetchTake
     });
+    const cards = products.map((product) => this.toProductCard(product));
 
     return {
-      items: products.map((product) => this.toProductCard(product))
+      items: selectDiverseProductCards(cards, filters.limit)
     };
   }
 
@@ -569,6 +586,9 @@ export class AiService {
       "You are Drapeon stylist AI.",
       "You can answer both style-shopping questions and company/process questions.",
       "You must recommend existing products from tools only; never invent products.",
+      "Never mention a product title, designer name, or product link unless it came from this turn's tool output.",
+      "When body shape is known, prefer searchProducts with the bodyShape filter before giving any style guidance.",
+      "Do not claim garment features that were not verified by tool output. Keep reasoning grounded in availability, category, stored fit profile, and designer body-shape tags.",
       "If user profile measurements are available, use them and do not ask for those values again.",
       "If the user is browsing as a guest, still help fully and only ask for missing fit details when they are necessary for a better recommendation.",
       "Match body shape whenever it is present in the stored fit profile or user request.",
