@@ -196,8 +196,10 @@ function animateAssistantReply(
   renderedMessages.value = { ...renderedMessages.value, [messageId]: "" };
 
   let index = 0;
-  const step = Math.max(1, Math.ceil(fullText.length / 180));
-  const intervalMs = fullText.length > 420 ? 24 : 30;
+  const step =
+    fullText.length > 1200 ? 4 : fullText.length > 760 ? 3 : fullText.length > 320 ? 2 : 1;
+  const intervalMs =
+    fullText.length > 1200 ? 60 : fullText.length > 760 ? 54 : fullText.length > 320 ? 46 : 34;
 
   revealTimer.value = window.setInterval(() => {
     index = Math.min(fullText.length, index + step);
@@ -361,10 +363,10 @@ export const SiteChatWidget = component$(() => {
       messageCount,
       sending,
       typingId,
-      streamingBucket: Math.floor(streamingText.length / 36)
+      streamingBucket: Math.floor(streamingText.length / 140)
     });
     const behavior: ScrollBehavior =
-      lastScrollState.value.length === 0 || sending ? "auto" : "smooth";
+      typingId || lastScrollState.value.length === 0 || sending ? "auto" : "smooth";
 
     if (scrollFrame.value != null) {
       window.cancelAnimationFrame(scrollFrame.value);
