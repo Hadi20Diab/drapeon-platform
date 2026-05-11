@@ -1,4 +1,5 @@
 import { $, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
+import { useLocation } from "@builder.io/qwik-city";
 
 import {
   clearAuthSession,
@@ -8,6 +9,8 @@ import {
 } from "../../lib/api";
 
 export const SiteHeader = component$(() => {
+  const location = useLocation();
+  const isHomePage = location.url.pathname === "/";
   const user = useSignal<AuthUser | null>(null);
   const isMobileMenuOpen = useSignal(false);
 
@@ -26,7 +29,9 @@ export const SiteHeader = component$(() => {
   });
 
   return (
-    <header class="sticky top-0 z-40 border-b border-brand-ink/10 bg-[#f8f3ebd9] backdrop-blur-xl">
+    <header class={`sticky top-0 z-40 border-b border-brand-ink/10 bg-[#f8f3ebd9] backdrop-blur-xl ${
+      !isHomePage ? "mb-12 md:mb-16 lg:mb-24" : ""
+    }`}>
       <div class="section-wrap flex min-h-20 items-center justify-between gap-5">
         <a href="/" class="flex items-center gap-3">
           <span class="flex h-16 w-16 items-center justify-center overflow-hidden">
