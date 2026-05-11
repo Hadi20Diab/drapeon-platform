@@ -527,17 +527,23 @@ const suitImages = [
   "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&w=1200&q=85",
   "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1200&q=85",
   "https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&w=1200&q=85",
-  "https://images.unsplash.com/photo-1520975682031-ae78c7f4ed1d?auto=format&fit=crop&w=1200&q=85",
+  "https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
   "https://images.unsplash.com/photo-1555069519-127aadedf1ee?auto=format&fit=crop&w=1200&q=85"
 ];
 
 const dressImages = [
-  "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?auto=format&fit=crop&w=1200&q=85",
-  "https://images.unsplash.com/photo-1502716119720-b23a93e5fe1b?auto=format&fit=crop&w=1200&q=85",
-  "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=85",
-  "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=1200&q=85",
-  "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1200&q=85",
-  "https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=1200&q=85"
+  "https://images.pexels.com/photos/19895958/pexels-photo-19895958.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
+  "https://images.pexels.com/photos/19895956/pexels-photo-19895956.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
+  "https://images.pexels.com/photos/19895964/pexels-photo-19895964.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
+  "https://images.pexels.com/photos/11813835/pexels-photo-11813835.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
+  "https://images.pexels.com/photos/5386592/pexels-photo-5386592.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
+  "https://images.pexels.com/photos/18367998/pexels-photo-18367998.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
+  "https://images.pexels.com/photos/10330191/pexels-photo-10330191.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
+  "https://images.pexels.com/photos/11203484/pexels-photo-11203484.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
+  "https://images.pexels.com/photos/20428094/pexels-photo-20428094.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
+  "https://images.pexels.com/photos/6609940/pexels-photo-6609940.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
+  "https://images.pexels.com/photos/19733576/pexels-photo-19733576.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop",
+  "https://images.pexels.com/photos/17734329/pexels-photo-17734329.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop"
 ];
 const authStorageKey = "drapeon.auth";
 const authEventKey = "drapeon.auth:event";
