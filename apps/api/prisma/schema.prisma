@@ -31,6 +31,15 @@ enum ProductCategory {
   DRESS
 }
 
+enum BodyShape {
+  HOURGLASS
+  PEAR
+  APPLE
+  RECTANGLE
+  INVERTED_TRIANGLE
+  ATHLETIC
+}
+
 enum ProductStatus {
   DRAFT
   ACTIVE
@@ -150,6 +159,7 @@ model UserProfile {
 model BodyMeasurement {
   id         String      @id @default(uuid())
   profileId  String      @unique
+  bodyShape  BodyShape?
   heightCm   Decimal?    @db.Decimal(5, 2)
   weightKg   Decimal?    @db.Decimal(5, 2)
   chestCm    Decimal?    @db.Decimal(5, 2)
@@ -210,6 +220,7 @@ model Product {
   securityDeposit     Decimal?          @db.Decimal(10, 2)
   currency            String            @default("USD")
   tags                String[]          @default([])
+  bodyShapes          BodyShape[]       @default([])
   status              ProductStatus     @default(DRAFT)
   isDeliveryAvailable Boolean           @default(true)
   createdAt           DateTime          @default(now())

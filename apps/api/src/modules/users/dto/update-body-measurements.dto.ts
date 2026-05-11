@@ -1,6 +1,11 @@
-import { IsNumber, IsOptional, IsPositive } from "class-validator";
+import { BodyShape } from "@prisma/client";
+import { IsEnum, IsNumber, IsOptional, IsPositive, IsString, MinLength } from "class-validator";
 
 export class UpdateBodyMeasurementsDto {
+  @IsOptional()
+  @IsEnum(BodyShape)
+  bodyShape?: BodyShape;
+
   @IsOptional()
   @IsNumber()
   @IsPositive()
@@ -35,4 +40,9 @@ export class UpdateBodyMeasurementsDto {
   @IsNumber()
   @IsPositive()
   inseamCm?: number;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  notes?: string;
 }

@@ -27,6 +27,7 @@ export class ProductsService {
         slug,
         description: payload.description,
         rentalPrice: new Prisma.Decimal(payload.rentalPrice),
+        bodyShapes: payload.bodyShapes ?? [],
         status: ProductStatus.ACTIVE,
         images: {
           create: payload.images.map((image, index) => ({

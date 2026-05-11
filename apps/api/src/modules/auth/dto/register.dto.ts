@@ -1,7 +1,7 @@
 import { Type } from "class-transformer";
 import {
-  IsEmail,
   IsEnum,
+  IsEmail,
   IsNumber,
   IsOptional,
   IsPositive,
@@ -9,6 +9,7 @@ import {
   MinLength,
   ValidateNested
 } from "class-validator";
+import { BodyShape } from "@prisma/client";
 
 export enum RegistrationRole {
   USER = "USER",
@@ -16,6 +17,9 @@ export enum RegistrationRole {
 }
 
 export class RegisterBodyMeasurementsDto {
+  @IsEnum(BodyShape)
+  bodyShape!: BodyShape;
+
   @IsNumber()
   @IsPositive()
   heightCm!: number;

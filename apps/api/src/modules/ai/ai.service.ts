@@ -4,7 +4,7 @@ import { GoogleGenAI, Type, createPartFromFunctionResponse, createUserContent } 
 import type { Content, FunctionCall, FunctionDeclaration, Part } from "@google/genai";
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { Prisma, ProductCategory, ProductStatus } from "@prisma/client";
+import { BodyShape, Prisma, ProductCategory, ProductStatus } from "@prisma/client";
 
 import { PrismaService } from "../../prisma/prisma.service";
 import { AiRecommendationDto } from "./dto/ai-recommendation.dto";
@@ -21,6 +21,7 @@ interface ProductCard {
   };
   sizeOptions: string[];
   colorOptions: string[];
+  bodyShapes: BodyShape[];
 }
 
 interface RecommendationResult {
@@ -51,6 +52,7 @@ type ParsedSearchFilters = {
   category?: ProductCategory;
   size?: string;
   color?: string;
+  bodyShape?: BodyShape;
   minPrice?: number;
   maxPrice?: number;
   limit: number;
@@ -95,6 +97,10 @@ export class AiService {
           category: { type: Type.STRING, enum: ["SUIT", "DRESS"] },
           size: { type: Type.STRING },
           color: { type: Type.STRING },
+          bodyShape: {
+            type: Type.STRING,
+            enum: ["HOURGLASS", "PEAR", "APPLE", "RECTANGLE", "INVERTED_TRIANGLE", "ATHLETIC"]
+          },
           minPrice: { type: Type.NUMBER },
           maxPrice: { type: Type.NUMBER },
           limit: { type: Type.INTEGER }
@@ -282,6 +288,7 @@ export class AiService {
             }
           }
         : {}),
+      ...(filters.bodyShape ? { bodyShapes: { has: filters.bodyShape } } : {}),
       variants: {
         some: {
           isActive: true,
@@ -376,7 +383,8 @@ export class AiService {
         slug: product.designer.slug
       },
       sizeOptions: [...new Set(product.variants.map((variant) => variant.sizeLabel))],
-      colorOptions: [...new Set(product.variants.map((variant) => variant.color))]
+      colorOptions: [...new Set(product.variants.map((variant) => variant.color))],
+      bodyShapes: product.bodyShapes
     };
   }
 
@@ -388,6 +396,7 @@ export class AiService {
           : undefined,
       size: typeof args.size === "string" ? args.size : undefined,
       color: typeof args.color === "string" ? args.color : undefined,
+      bodyShape: this.isBodyShape(args.bodyShape) ? args.bodyShape : undefined,
       minPrice: typeof args.minPrice === "number" ? args.minPrice : undefined,
       maxPrice: typeof args.maxPrice === "number" ? args.maxPrice : undefined,
       limit:
@@ -410,11 +419,23 @@ export class AiService {
       "You are Drapeon stylist AI.",
       "You must recommend existing products from tools only; never invent products.",
       "If user profile measurements are available, use them and do not ask for those values again.",
+      "Match body shape whenever it is present in the stored fit profile or user request.",
       "Prefer calling searchProducts first, then getProductDetails only for top candidates.",
       "Respond with concise styling rationale and prioritize fit confidence.",
       `User prompt: ${payload.prompt}`,
       `Filters: ${JSON.stringify(payload.filters ?? {})}`,
       `User context: ${JSON.stringify(profile)}`
     ].join("\n");
+  }
+
+  private isBodyShape(value: unknown): value is BodyShape {
+    return (
+      value === "HOURGLASS" ||
+      value === "PEAR" ||
+      value === "APPLE" ||
+      value === "RECTANGLE" ||
+      value === "INVERTED_TRIANGLE" ||
+      value === "ATHLETIC"
+    );
   }
 }

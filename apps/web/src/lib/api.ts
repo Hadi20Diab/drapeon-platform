@@ -50,6 +50,7 @@ export interface UserProfile {
   avatarUrl?: string | null;
   preferences?: Record<string, unknown> | null;
   measurements?: {
+    bodyShape?: string | null;
     heightCm?: number | string | null;
     weightKg?: number | string | null;
     chestCm?: number | string | null;
@@ -235,6 +236,7 @@ export interface DesignerProduct {
   rentalPrice: number | string;
   buyPrice?: number | string | null;
   tags: string[];
+  bodyShapes?: string[];
   images: Array<{ id?: string; url: string; altText?: string | null }>;
   variants: Array<{
     id?: string;
@@ -259,6 +261,7 @@ export interface DesignerProductPayload {
   availabilityDates?: string[];
   images: string[];
   tags?: string[];
+  bodyShapes: string[];
   status?: "DRAFT" | "ACTIVE" | "ARCHIVED";
 }
 
@@ -829,6 +832,7 @@ export async function registerUser(payload: {
   lastName: string;
   role: "USER" | "DESIGNER";
   measurements: {
+    bodyShape: string;
     heightCm: number;
     weightKg: number;
     chestCm: number;
@@ -1187,6 +1191,7 @@ export async function updateCurrentUserProfile(payload: {
 }
 
 export async function updateCurrentUserMeasurements(payload: {
+  bodyShape?: string;
   heightCm?: number;
   weightKg?: number;
   chestCm?: number;

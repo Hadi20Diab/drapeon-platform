@@ -1,5 +1,5 @@
 import { ConflictException, ForbiddenException, UnauthorizedException } from "@nestjs/common";
-import { UserRole } from "@prisma/client";
+import { BodyShape, UserRole } from "@prisma/client";
 
 import { AuthService } from "./auth.service";
 import { RegistrationRole } from "./dto/register.dto";
@@ -12,6 +12,7 @@ describe("AuthService", () => {
     lastName: "Haddad",
     role: RegistrationRole.USER,
     measurements: {
+      bodyShape: BodyShape.RECTANGLE,
       heightCm: 172,
       weightKg: 61,
       chestCm: 90,

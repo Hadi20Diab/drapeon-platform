@@ -13,6 +13,15 @@ import {
 type AuthMode = "login" | "signup";
 type SignupRole = "USER" | "DESIGNER";
 
+const bodyShapeOptions = [
+  { value: "HOURGLASS", label: "Hourglass" },
+  { value: "PEAR", label: "Pear" },
+  { value: "APPLE", label: "Apple" },
+  { value: "RECTANGLE", label: "Rectangle" },
+  { value: "INVERTED_TRIANGLE", label: "Inverted triangle" },
+  { value: "ATHLETIC", label: "Athletic" }
+] as const;
+
 function dashboardHref(session: AuthSession): string {
   if (session.user.role === "DESIGNER") {
     return "/designers/dashboard";
@@ -37,6 +46,7 @@ export default component$(() => {
     password: "",
     firstName: "",
     lastName: "",
+    bodyShape: "RECTANGLE",
     heightCm: "",
     weightKg: "",
     chestCm: "",
@@ -77,6 +87,7 @@ export default component$(() => {
               lastName: signupForm.lastName,
               role: role.value,
               measurements: {
+                bodyShape: signupForm.bodyShape,
                 heightCm: Number(signupForm.heightCm),
                 weightKg: Number(signupForm.weightKg),
                 chestCm: Number(signupForm.chestCm),
@@ -254,6 +265,23 @@ export default component$(() => {
                 </p>
 
                 <div class="grid gap-3 md:grid-cols-2">
+                  <label class="grid gap-2 text-sm font-bold text-brand-ink/70 md:col-span-2">
+                    Body shape
+                    <select
+                      class="min-h-12 border border-brand-ink/20 bg-white px-4 outline-none focus:border-brand-rose"
+                      value={signupForm.bodyShape}
+                      required
+                      onChange$={(_, target) => {
+                        signupForm.bodyShape = target.value;
+                      }}
+                    >
+                      {bodyShapeOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   {measurementFields.map((field) => (
                     <label key={field.key} class="grid gap-2 text-sm font-bold text-brand-ink/70">
                       {field.label}

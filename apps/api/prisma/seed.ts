@@ -4,6 +4,7 @@ import {
   AiMessageRole,
   AiSessionChannel,
   AvailabilityStatus,
+  BodyShape,
   BookingStatus,
   BookingType,
   DeliveryStatus,
@@ -92,6 +93,15 @@ const styleTags = [
   "dramatic",
   "tailored"
 ];
+
+const bodyShapes = [
+  BodyShape.HOURGLASS,
+  BodyShape.PEAR,
+  BodyShape.APPLE,
+  BodyShape.RECTANGLE,
+  BodyShape.INVERTED_TRIANGLE,
+  BodyShape.ATHLETIC
+] as const;
 
 const suitTitles = [
   "Double-Breasted Signature Suit",
@@ -350,6 +360,7 @@ async function main(): Promise<void> {
             measurements: withMeasurements
               ? {
                   create: {
+                    bodyShape: pickOne(bodyShapes),
                     heightCm: randomInt(155, 195),
                     weightKg: randomInt(52, 92),
                     chestCm: randomInt(80, 120),
@@ -421,6 +432,7 @@ async function main(): Promise<void> {
           rentalPrice: randomInt(95, 420),
           securityDeposit: randomInt(80, 300),
           currency: "USD",
+          bodyShapes: pickMany(bodyShapes, randomInt(2, 3)),
           status: ProductStatus.ACTIVE,
           isDeliveryAvailable: chance(0.84),
           images: {

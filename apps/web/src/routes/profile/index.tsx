@@ -27,6 +27,7 @@ interface ProfileFormState {
 }
 
 interface MeasurementFormState {
+  bodyShape: string;
   heightCm: string;
   weightKg: string;
   chestCm: string;
@@ -38,7 +39,7 @@ interface MeasurementFormState {
 }
 
 const measurementFields: Array<{
-  key: keyof Omit<MeasurementFormState, "notes">;
+  key: keyof Omit<MeasurementFormState, "notes" | "bodyShape">;
   label: string;
 }> = [
   { key: "heightCm", label: "Height (cm)" },
@@ -49,6 +50,15 @@ const measurementFields: Array<{
   { key: "shoulderCm", label: "Shoulder (cm)" },
   { key: "inseamCm", label: "Inseam (cm)" }
 ];
+
+const bodyShapeOptions = [
+  { value: "HOURGLASS", label: "Hourglass" },
+  { value: "PEAR", label: "Pear" },
+  { value: "APPLE", label: "Apple" },
+  { value: "RECTANGLE", label: "Rectangle" },
+  { value: "INVERTED_TRIANGLE", label: "Inverted triangle" },
+  { value: "ATHLETIC", label: "Athletic" }
+] as const;
 
 function asString(value: unknown): string {
   if (typeof value === "string") {
@@ -100,6 +110,7 @@ function hydrateProfileForm(target: ProfileFormState, profile: UserProfile) {
 }
 
 function hydrateMeasurementForm(target: MeasurementFormState, profile: UserProfile) {
+  target.bodyShape = profile.measurements?.bodyShape ?? "RECTANGLE";
   target.heightCm = asString(profile.measurements?.heightCm);
   target.weightKg = asString(profile.measurements?.weightKg);
   target.chestCm = asString(profile.measurements?.chestCm);
@@ -169,6 +180,7 @@ export default component$(() => {
     notes: ""
   });
   const measurementForm = useStore<MeasurementFormState>({
+    bodyShape: "RECTANGLE",
     heightCm: "",
     weightKg: "",
     chestCm: "",
@@ -271,6 +283,7 @@ export default component$(() => {
 
     try {
       const updatedMeasurements = await updateCurrentUserMeasurements({
+        bodyShape: measurementForm.bodyShape || undefined,
         heightCm: toOptionalNumber(measurementForm.heightCm),
         weightKg: toOptionalNumber(measurementForm.weightKg),
         chestCm: toOptionalNumber(measurementForm.chestCm),
@@ -440,6 +453,15 @@ export default component$(() => {
                   </span>
                 </div>
                 <div class="mt-6 grid gap-3 sm:grid-cols-2">
+                  <div class="border border-brand-ink/10 bg-white/70 px-4 py-3 sm:col-span-2">
+                    <p class="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-brand-ink/45">
+                      Body shape
+                    </p>
+                    <p class="mt-2 text-lg font-bold text-brand-ink">
+                      {bodyShapeOptions.find((option) => option.value === measurementForm.bodyShape)?.label ??
+                        "Not set"}
+                    </p>
+                  </div>
                   {measurementFields.map((field) => (
                     <div key={field.key} class="border border-brand-ink/10 bg-white/70 px-4 py-3">
                       <p class="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-brand-ink/45">
@@ -581,6 +603,22 @@ export default component$(() => {
                   </button>
                 </div>
                 <div class="mt-6 grid gap-4 md:grid-cols-2">
+                  <label class="grid gap-2 text-sm font-bold text-brand-ink/70 md:col-span-2">
+                    Body shape
+                    <select
+                      class="min-h-12 border border-brand-ink/20 bg-white px-4 outline-none focus:border-brand-rose"
+                      value={measurementForm.bodyShape}
+                      onChange$={(_, target) => {
+                        measurementForm.bodyShape = target.value;
+                      }}
+                    >
+                      {bodyShapeOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   {measurementFields.map((field) => (
                     <label key={field.key} class="grid gap-2 text-sm font-bold text-brand-ink/70">
                       {field.label}

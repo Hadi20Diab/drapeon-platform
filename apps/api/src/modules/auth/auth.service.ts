@@ -425,6 +425,7 @@ export class AuthService {
     measurements: RegisterDto["measurements"]
   ): Prisma.BodyMeasurementUncheckedCreateWithoutProfileInput {
     return {
+      bodyShape: measurements.bodyShape,
       heightCm: measurements.heightCm,
       weightKg: measurements.weightKg,
       chestCm: measurements.chestCm,

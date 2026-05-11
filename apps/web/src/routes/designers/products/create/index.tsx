@@ -12,6 +12,15 @@ import {
 const defaultImage =
   "https://images.unsplash.com/photo-1550639525-c97d455acf70?auto=format&fit=crop&w=1200&q=85";
 
+const bodyShapeOptions = [
+  { value: "HOURGLASS", label: "Hourglass" },
+  { value: "PEAR", label: "Pear" },
+  { value: "APPLE", label: "Apple" },
+  { value: "RECTANGLE", label: "Rectangle" },
+  { value: "INVERTED_TRIANGLE", label: "Inverted triangle" },
+  { value: "ATHLETIC", label: "Athletic" }
+] as const;
+
 function parseList(value: string): string[] {
   return value
     .split(",")
@@ -36,6 +45,7 @@ export default component$(() => {
   const stockQuantity = useSignal("2");
   const availabilityDates = useSignal("");
   const tags = useSignal("evening, editorial");
+  const bodyShapes = useSignal<string[]>(["RECTANGLE", "ATHLETIC"]);
   const imageLink = useSignal("");
   const imageUrls = useSignal<string[]>([defaultImage]);
 
@@ -89,6 +99,18 @@ export default component$(() => {
       });
   });
 
+  const toggleBodyShape = $((value: string) => {
+    const next = new Set(bodyShapes.value);
+
+    if (next.has(value)) {
+      next.delete(value);
+    } else if (next.size < 6) {
+      next.add(value);
+    }
+
+    bodyShapes.value = [...next];
+  });
+
   const startStripeOnboarding = $(async () => {
     error.value = "";
     notice.value = "";
@@ -136,11 +158,17 @@ export default component$(() => {
       availabilityDates: parseList(availabilityDates.value),
       images: imageUrls.value.length > 0 ? imageUrls.value : [defaultImage],
       tags: parseList(tags.value),
+      bodyShapes: bodyShapes.value,
       status: publish ? "ACTIVE" : "DRAFT"
     };
 
-    if (payload.sizes.length === 0 || payload.colors.length === 0 || payload.stockQuantity < 1) {
-      error.value = "Sizes, colors, and stock quantity are required.";
+    if (
+      payload.sizes.length === 0 ||
+      payload.colors.length === 0 ||
+      payload.bodyShapes.length === 0 ||
+      payload.stockQuantity < 1
+    ) {
+      error.value = "Sizes, colors, body-shape targets, and stock quantity are required.";
       return;
     }
 
@@ -198,6 +226,35 @@ export default component$(() => {
           <label class="grid gap-2 text-sm font-bold text-brand-ink/70">Colors<input class="min-h-12 border border-brand-ink/20 bg-white px-4" value={colors.value} disabled={!stripeReady} onInput$={(_, target) => (colors.value = target.value)} /></label>
           <label class="grid gap-2 text-sm font-bold text-brand-ink/70">Availability Dates<input class="min-h-12 border border-brand-ink/20 bg-white px-4" placeholder="2026-05-20, 2026-05-21" value={availabilityDates.value} disabled={!stripeReady} onInput$={(_, target) => (availabilityDates.value = target.value)} /></label>
           <label class="grid gap-2 text-sm font-bold text-brand-ink/70">Tags<input class="min-h-12 border border-brand-ink/20 bg-white px-4" value={tags.value} disabled={!stripeReady} onInput$={(_, target) => (tags.value = target.value)} /></label>
+          <div class="grid gap-2">
+            <div class="flex items-center justify-between gap-4">
+              <span class="text-sm font-bold text-brand-ink/70">Body Shape Match</span>
+              <span class="text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-brand-ink/45">
+                Helps the stylist match fit profiles faster
+              </span>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              {bodyShapeOptions.map((option) => {
+                const active = bodyShapes.value.includes(option.value);
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    class={`border px-4 py-3 text-xs font-extrabold uppercase tracking-[0.12em] transition ${
+                      active
+                        ? "border-brand-rose bg-brand-ink text-brand-sand"
+                        : "border-brand-ink/15 bg-white text-brand-ink hover:border-brand-rose"
+                    }`}
+                    disabled={!stripeReady}
+                    onClick$={() => toggleBodyShape(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           <div class="grid gap-3 md:grid-cols-[1fr_auto]">
             <label class="grid gap-2 text-sm font-bold text-brand-ink/70">Image by Link<input class="min-h-12 border border-brand-ink/20 bg-white px-4" placeholder="https://..." value={imageLink.value} disabled={!stripeReady} onInput$={(_, target) => (imageLink.value = target.value)} /></label>

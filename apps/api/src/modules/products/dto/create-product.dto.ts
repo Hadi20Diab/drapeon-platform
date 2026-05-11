@@ -1,4 +1,5 @@
 import {
+  ArrayMaxSize,
   IsArray,
   IsEnum,
   IsInt,
@@ -11,7 +12,7 @@ import {
   ValidateNested
 } from "class-validator";
 import { Type } from "class-transformer";
-import { ProductCategory } from "@prisma/client";
+import { BodyShape, ProductCategory } from "@prisma/client";
 
 
 class ProductImageDto {
@@ -64,4 +65,10 @@ export class CreateProductDto {
   @ValidateNested({ each: true })
   @Type(() => ProductVariantDto)
   variants!: ProductVariantDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(6)
+  @IsEnum(BodyShape, { each: true })
+  bodyShapes?: BodyShape[];
 }

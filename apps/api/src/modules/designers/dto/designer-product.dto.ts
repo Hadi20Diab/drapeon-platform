@@ -13,7 +13,7 @@ import {
   Min,
   MinLength
 } from "class-validator";
-import { ProductCategory, ProductStatus } from "@prisma/client";
+import { BodyShape, ProductCategory, ProductStatus } from "@prisma/client";
 
 export class DesignerProductDto {
   @IsString()
@@ -74,6 +74,12 @@ export class DesignerProductDto {
   @ArrayMaxSize(16)
   @IsString({ each: true })
   tags?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(6)
+  @IsEnum(BodyShape, { each: true })
+  bodyShapes?: BodyShape[];
 
   @IsOptional()
   @IsEnum(ProductStatus)

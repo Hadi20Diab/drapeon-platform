@@ -1,4 +1,5 @@
-import { IsNumber, IsOptional, IsString, MaxLength, ValidateNested } from "class-validator";
+import { BodyShape } from "@prisma/client";
+import { IsEnum, IsNumber, IsOptional, IsString, MaxLength, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 
 class AiFiltersDto {
@@ -13,9 +14,17 @@ class AiFiltersDto {
   @IsOptional()
   @IsString()
   color?: string;
+
+  @IsOptional()
+  @IsEnum(BodyShape)
+  bodyShape?: BodyShape;
 }
 
 class AiMeasurementContextDto {
+  @IsOptional()
+  @IsEnum(BodyShape)
+  bodyShape?: BodyShape;
+
   @IsOptional()
   @IsNumber()
   heightCm?: number;

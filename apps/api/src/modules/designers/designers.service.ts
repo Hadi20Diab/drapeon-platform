@@ -291,6 +291,7 @@ export class DesignersService {
         rentalPrice: new Prisma.Decimal(payload.rentalPrice),
         buyPrice: payload.buyPrice ? new Prisma.Decimal(payload.buyPrice) : undefined,
         tags: payload.tags ?? [],
+        bodyShapes: payload.bodyShapes ?? [],
         status: payload.status ?? ProductStatus.ACTIVE,
         images: {
           create: payload.images.map((url, index) => ({
@@ -337,6 +338,7 @@ export class DesignersService {
           rentalPrice: new Prisma.Decimal(payload.rentalPrice),
           buyPrice: payload.buyPrice ? new Prisma.Decimal(payload.buyPrice) : null,
           tags: payload.tags ?? [],
+          bodyShapes: payload.bodyShapes ?? [],
           status: payload.status ?? ProductStatus.ACTIVE,
           images: {
             create: payload.images.map((url, index) => ({
@@ -797,6 +799,7 @@ export class DesignersService {
       rentalPrice: true,
       buyPrice: true,
       tags: true,
+      bodyShapes: true,
       images: { take: 1, orderBy: { sortOrder: "asc" as const } },
       variants: {
         select: { sizeLabel: true, color: true, stockTotal: true, stockReserved: true }
