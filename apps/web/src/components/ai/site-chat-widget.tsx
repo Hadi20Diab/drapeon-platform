@@ -196,7 +196,8 @@ function animateAssistantReply(
   renderedMessages.value = { ...renderedMessages.value, [messageId]: "" };
 
   let index = 0;
-  const step = Math.max(1, Math.ceil(fullText.length / 90));
+  const step = Math.max(1, Math.ceil(fullText.length / 180));
+  const intervalMs = fullText.length > 420 ? 24 : 30;
 
   revealTimer.value = window.setInterval(() => {
     index = Math.min(fullText.length, index + step);
@@ -212,7 +213,7 @@ function animateAssistantReply(
       revealTimer.value = null;
       typingMessageId.value = null;
     }
-  }, 18);
+  }, intervalMs);
 }
 
 function scrollChatToLatest(
@@ -360,10 +361,10 @@ export const SiteChatWidget = component$(() => {
       messageCount,
       sending,
       typingId,
-      streamingLength: streamingText.length
+      streamingBucket: Math.floor(streamingText.length / 36)
     });
     const behavior: ScrollBehavior =
-      typingId || sending || lastScrollState.value.length === 0 ? "auto" : "smooth";
+      lastScrollState.value.length === 0 || sending ? "auto" : "smooth";
 
     if (scrollFrame.value != null) {
       window.cancelAnimationFrame(scrollFrame.value);
