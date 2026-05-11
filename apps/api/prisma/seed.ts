@@ -860,8 +860,7 @@ async function main(): Promise<void> {
         designers: designers.length,
         users: customers.length,
         products: seededProducts.length,
-        bookings: bookings.length,
-        orders: orders.length
+        bookings: bookings.length
       },
       null,
       2
