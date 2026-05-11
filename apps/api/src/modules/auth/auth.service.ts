@@ -11,6 +11,7 @@ import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { DesignerApprovalStatus, Prisma, UserRole } from "@prisma/client";
 
+import { MailidatorService } from "../../integrations/email-validation/mailidator.service";
 import { MailService } from "../../integrations/mail/mail.service";
 import { StripeConnectService } from "../../integrations/stripe/stripe-connect.service";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -46,7 +47,8 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly stripeConnectService: StripeConnectService,
-    private readonly mailService: MailService
+    private readonly mailService: MailService,
+    private readonly mailidatorService: MailidatorService
   ) {}
 
   async register(payload: RegisterDto): Promise<AuthResponse> {
@@ -58,6 +60,8 @@ export class AuthService {
     if (existingUser) {
       throw new ConflictException("Email is already registered");
     }
+
+    await this.mailidatorService.validateSignupEmail(payload.email);
 
     const role = payload.role === RegistrationRole.DESIGNER ? UserRole.DESIGNER : UserRole.USER;
     const passwordHash = this.hashPassword(payload.password);

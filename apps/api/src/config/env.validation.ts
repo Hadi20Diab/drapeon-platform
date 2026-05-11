@@ -28,6 +28,8 @@ const envSchema = z.object({
   CONTACT_TO_EMAIL: z.string().email().optional(),
   CONTACT_FROM_EMAIL: z.string().email().optional(),
   CONTACT_FROM_NAME: z.string().optional(),
+  MAILIDATOR_API_KEY: z.string().optional(),
+  MAILIDATOR_TIMEOUT_MS: z.coerce.number().int().positive().default(4000),
   EMAIL_VERIFICATION_TTL: z.coerce.number().int().positive().default(86_400),
   PASSWORD_RESET_TTL: z.coerce.number().int().positive().default(3_600)
 });

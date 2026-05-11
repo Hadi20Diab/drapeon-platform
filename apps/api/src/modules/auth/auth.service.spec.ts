@@ -88,13 +88,24 @@ describe("AuthService", () => {
       isConfigured: jest.fn(() => true),
       sendEmail: jest.fn().mockResolvedValue(undefined)
     } as any;
+    const mailidatorService = {
+      validateSignupEmail: jest.fn().mockResolvedValue(undefined)
+    } as any;
 
     return {
       prisma,
       jwtService,
       stripeConnectService,
       mailService,
-      service: new AuthService(prisma, jwtService, configService, stripeConnectService, mailService)
+      mailidatorService,
+      service: new AuthService(
+        prisma,
+        jwtService,
+        configService,
+        stripeConnectService,
+        mailService,
+        mailidatorService
+      )
     };
   }
 
@@ -103,10 +114,11 @@ describe("AuthService", () => {
   });
 
   it("stores body measurements and sends verification mail during registration", async () => {
-    const { service, prisma, mailService } = createService();
+    const { service, prisma, mailService, mailidatorService } = createService();
 
     const result = await service.register(baseRegisterPayload);
 
+    expect(mailidatorService.validateSignupEmail).toHaveBeenCalledWith(baseRegisterPayload.email);
     expect(prisma.user.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -134,10 +146,11 @@ describe("AuthService", () => {
   });
 
   it("rejects duplicate email registration", async () => {
-    const { service, prisma } = createService();
+    const { service, prisma, mailidatorService } = createService();
     prisma.user.findUnique.mockResolvedValue({ id: "existing-user" });
 
     await expect(service.register(baseRegisterPayload)).rejects.toThrow(ConflictException);
+    expect(mailidatorService.validateSignupEmail).not.toHaveBeenCalled();
   });
 
   it("verifies email tokens and marks the user as verified", async () => {

@@ -248,6 +248,10 @@ export default component$(() => {
                     Required for signup
                   </span>
                 </div>
+                <p class="text-sm leading-7 text-brand-ink/60">
+                  Signup also checks email quality. Temporary, disposable, forwarded, or invalid
+                  inboxes are rejected before the account is created.
+                </p>
 
                 <div class="grid gap-3 md:grid-cols-2">
                   {measurementFields.map((field) => (

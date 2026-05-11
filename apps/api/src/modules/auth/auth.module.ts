@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
 
+import { MailidatorModule } from "../../integrations/email-validation/mailidator.module";
 import { MailModule } from "../../integrations/mail/mail.module";
 import { StripeConnectService } from "../../integrations/stripe/stripe-connect.service";
 import { AuthController } from "./auth.controller";
@@ -13,6 +14,7 @@ import { JwtAccessStrategy } from "./strategies/jwt-access.strategy";
 
 @Module({
   imports: [
+    MailidatorModule,
     MailModule,
     PassportModule.register({ defaultStrategy: "jwt" }),
     JwtModule.registerAsync({
