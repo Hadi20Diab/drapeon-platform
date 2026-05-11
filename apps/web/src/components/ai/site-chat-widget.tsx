@@ -646,7 +646,7 @@ export const SiteChatWidget = component$(() => {
               </div>
             </div>
           </div>
-
+{/* 
           <div class="border-b border-brand-ink/8 bg-white/80 px-4 py-3 backdrop-blur-xl">
             <div class="flex items-center justify-between gap-3">
               <div class="min-w-0">
@@ -661,7 +661,7 @@ export const SiteChatWidget = component$(() => {
                 {conversations.value.length} Threads
               </button>
             </div>
-          </div>
+          </div> */}
 
           <div class="flex-1 overflow-hidden bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,243,235,0.98))]">
             <div class="grid h-full grid-rows-[auto_1fr_auto]">
@@ -699,7 +699,7 @@ export const SiteChatWidget = component$(() => {
                   )}
                 </div>
               )}
-              <div class="overflow-y-auto px-4 py-5 min-h-[27rem]">
+              <div class="overflow-y-auto px-4 py-5 min-h-[31rem]">
                 <div class="space-y-4">
                   {(activeConversation.value?.messages ?? []).map((message) => {
                     const displayedText =
