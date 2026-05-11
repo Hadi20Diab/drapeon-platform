@@ -420,6 +420,20 @@ export interface AdminProductRow {
   };
 }
 
+export interface AdminKnowledgeEntry {
+  id: string;
+  slug: string;
+  question: string;
+  answer: string;
+  category?: string | null;
+  tags: string[];
+  isPublished: boolean;
+  pineconeSyncedAt?: string | null;
+  pineconeSyncError?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PaginatedAdmin<T> {
   items: T[];
   pagination: {
@@ -1331,6 +1345,62 @@ export async function fetchAdminNotifications<T = unknown>(): Promise<T> {
 
 export async function fetchAdminSettings<T = unknown>(): Promise<T> {
   return requestApi<T>("/admin/settings", {
+    headers: authHeaders()
+  });
+}
+
+export async function fetchAdminKnowledge(query = ""): Promise<
+  PaginatedAdmin<AdminKnowledgeEntry> & { pinecone: { configured: boolean } }
+> {
+  return requestApi<PaginatedAdmin<AdminKnowledgeEntry> & { pinecone: { configured: boolean } }>(
+    `/admin/knowledge${query}`,
+    {
+      headers: authHeaders()
+    }
+  );
+}
+
+export async function createAdminKnowledge(payload: {
+  question: string;
+  answer: string;
+  category?: string;
+  tags?: string[];
+  isPublished?: boolean;
+}): Promise<AdminKnowledgeEntry> {
+  return requestApi<AdminKnowledgeEntry>("/admin/knowledge", {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function updateAdminKnowledge(
+  id: string,
+  payload: {
+    question: string;
+    answer: string;
+    category?: string;
+    tags?: string[];
+    isPublished?: boolean;
+  }
+): Promise<AdminKnowledgeEntry> {
+  return requestApi<AdminKnowledgeEntry>(`/admin/knowledge/${id}`, {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function deleteAdminKnowledge(id: string): Promise<{ deleted: boolean }> {
+  return requestApi<{ deleted: boolean }>(`/admin/knowledge/${id}`, {
+    method: "DELETE",
+    headers: authHeaders()
+  });
+}
+
+export async function syncAdminKnowledge(): Promise<{ synced: number; configured: boolean }> {
+  return requestApi<{ synced: number; configured: boolean }>("/admin/knowledge/sync", {
+    method: "POST",
     headers: authHeaders()
   });
 }

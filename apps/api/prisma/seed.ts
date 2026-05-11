@@ -213,6 +213,7 @@ async function main(): Promise<void> {
   await prisma.passwordResetToken.deleteMany();
   await prisma.aiMessage.deleteMany();
   await prisma.aiSession.deleteMany();
+  await prisma.companyKnowledgeEntry.deleteMany();
   await prisma.adminAuditLog.deleteMany();
   await prisma.designerMessage.deleteMany();
   await prisma.designerConversation.deleteMany();
@@ -257,6 +258,85 @@ async function main(): Promise<void> {
       email
     });
   }
+
+  console.log("Creating company knowledge...");
+
+  await prisma.companyKnowledgeEntry.createMany({
+    data: [
+      {
+        slug: "what-is-drapeon",
+        question: "What is Drapeon?",
+        answer:
+          "Drapeon is a multi-vendor fashion rental platform for premium suits and dresses, combining designer storefronts, fitting appointments, delivery coordination, and AI-guided styling.",
+        category: "company",
+        tags: ["about", "platform", "overview"],
+        isPublished: true
+      },
+      {
+        slug: "how-rentals-work",
+        question: "How do rentals work on Drapeon?",
+        answer:
+          "Customers browse verified designer inventory, choose a piece, request a fitting or checkout directly, and then complete payment before pickup or delivery. Designers manage availability, approvals, and fulfillment from their dashboard.",
+        category: "rentals",
+        tags: ["checkout", "rental", "process"],
+        isPublished: true
+      },
+      {
+        slug: "designer-approval",
+        question: "How does designer approval work?",
+        answer:
+          "Designers can apply through the platform, connect Stripe, and then wait for admin review. Admins verify store quality, payout readiness, and platform compliance before approving public marketplace access.",
+        category: "designers",
+        tags: ["designer", "approval", "onboarding"],
+        isPublished: true
+      },
+      {
+        slug: "stripe-payouts",
+        question: "How are designer payouts handled?",
+        answer:
+          "Payments are processed with Stripe Connect. The platform keeps its commission and routes the remaining payout amount to the connected designer account once Stripe marks the account ready for transfers.",
+        category: "payments",
+        tags: ["stripe", "payouts", "commission"],
+        isPublished: true
+      },
+      {
+        slug: "fitting-appointments",
+        question: "Can customers book fitting appointments before renting?",
+        answer:
+          "Yes. Customers can request fitting appointments from product detail pages. Designers can confirm, reject, and manage time slots in their appointments calendar to prevent double booking.",
+        category: "appointments",
+        tags: ["fitting", "appointments", "calendar"],
+        isPublished: true
+      },
+      {
+        slug: "delivery-coverage",
+        question: "Does Drapeon support delivery requests?",
+        answer:
+          "Yes. Products can be marked as delivery-ready, and customers can request delivery with address details, scheduling preferences, and status tracking through the order lifecycle.",
+        category: "delivery",
+        tags: ["delivery", "tracking", "logistics"],
+        isPublished: true
+      },
+      {
+        slug: "ai-stylist-data",
+        question: "How does the AI stylist choose recommendations?",
+        answer:
+          "The AI stylist uses the customer profile, body measurements, saved body shape, style preferences, and live product inventory from the database to recommend real catalog pieces instead of invented products.",
+        category: "ai",
+        tags: ["ai", "stylist", "measurements"],
+        isPublished: true
+      },
+      {
+        slug: "returns-and-care",
+        question: "What happens after the rental period ends?",
+        answer:
+          "After the rental period, the item is returned to the designer through the agreed fulfillment flow. Designers track the order state, confirm returns, and restore inventory availability for future bookings.",
+        category: "returns",
+        tags: ["returns", "inventory", "post-rental"],
+        isPublished: true
+      }
+    ]
+  });
 
   console.log("Creating designers...");
 

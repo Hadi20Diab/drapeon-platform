@@ -1,10 +1,13 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { UserRole } from "@prisma/client";
 
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { Roles } from "../auth/decorators/roles.decorator";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { RolesGuard } from "../auth/guards/roles.guard";
+import { CompanyKnowledgeService } from "../knowledge/knowledge.service";
+import { KnowledgeQueryDto } from "../knowledge/dto/knowledge-query.dto";
+import { UpsertKnowledgeEntryDto } from "../knowledge/dto/upsert-knowledge-entry.dto";
 import { AdminService } from "./admin.service";
 import { AdminDateRangeQueryDto } from "./dto/admin-date-range-query.dto";
 import { AdminDesignerQueryDto } from "./dto/admin-designer-query.dto";
@@ -18,7 +21,10 @@ import { UpdateUserStatusDto } from "./dto/update-user-status.dto";
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly companyKnowledgeService: CompanyKnowledgeService
+  ) {}
 
   @Get("dashboard")
   getDashboard() {
@@ -116,5 +122,45 @@ export class AdminController {
   @Get("settings")
   getSettings() {
     return this.adminService.getSettings();
+  }
+
+  @Get("knowledge")
+  listKnowledge(@Query() query: KnowledgeQueryDto) {
+    return this.companyKnowledgeService.listEntries(query);
+  }
+
+  @Get("knowledge/:id")
+  getKnowledgeEntry(@Param("id", new ParseUUIDPipe()) id: string) {
+    return this.companyKnowledgeService.getEntry(id);
+  }
+
+  @Post("knowledge")
+  createKnowledgeEntry(
+    @CurrentUser("sub") adminId: string,
+    @Body() payload: UpsertKnowledgeEntryDto
+  ) {
+    return this.companyKnowledgeService.createEntry(adminId, payload);
+  }
+
+  @Patch("knowledge/:id")
+  updateKnowledgeEntry(
+    @CurrentUser("sub") adminId: string,
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Body() payload: UpsertKnowledgeEntryDto
+  ) {
+    return this.companyKnowledgeService.updateEntry(adminId, id, payload);
+  }
+
+  @Post("knowledge/sync")
+  syncKnowledge(@CurrentUser("sub") adminId: string) {
+    return this.companyKnowledgeService.syncAll(adminId);
+  }
+
+  @Delete("knowledge/:id")
+  deleteKnowledgeEntry(
+    @CurrentUser("sub") adminId: string,
+    @Param("id", new ParseUUIDPipe()) id: string
+  ) {
+    return this.companyKnowledgeService.deleteEntry(adminId, id);
   }
 }

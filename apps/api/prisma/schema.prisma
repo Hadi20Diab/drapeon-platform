@@ -455,6 +455,23 @@ model AiMessage {
   @@index([sessionId, createdAt])
 }
 
+model CompanyKnowledgeEntry {
+  id                String   @id @default(uuid())
+  slug              String   @unique
+  question          String
+  answer            String
+  category          String?
+  tags              String[] @default([])
+  isPublished       Boolean  @default(true)
+  pineconeSyncedAt  DateTime?
+  pineconeSyncError String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([isPublished, updatedAt])
+  @@index([category])
+}
+
 model AdminAuditLog {
   id           String   @id @default(uuid())
   actorAdminId String

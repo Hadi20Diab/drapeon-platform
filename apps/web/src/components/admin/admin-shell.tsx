@@ -9,6 +9,7 @@ const navigation = [
   ["Payments", "/admin/payments"],
   ["Reports", "/admin/analytics"],
   ["AI", "/admin/ai"],
+  ["Knowledge", "/admin/knowledge"],
   ["Alerts", "/admin/notifications"],
   ["Settings", "/admin/settings"]
 ];

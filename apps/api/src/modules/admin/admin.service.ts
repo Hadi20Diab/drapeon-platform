@@ -670,9 +670,15 @@ export class AdminService {
         configured: Boolean(process.env.GEMINI_API_KEY),
         model: process.env.GEMINI_MODEL ?? "gemini-3-flash-preview"
       },
+      pinecone: {
+        configured: Boolean(process.env.PINECONE_API_KEY && process.env.PINECONE_INDEX_NAME),
+        indexName: process.env.PINECONE_INDEX_NAME ?? null,
+        namespace: process.env.PINECONE_NAMESPACE ?? "company-knowledge"
+      },
       featureToggles: {
         aiStylist: true,
         designerMessaging: true,
+        companyKnowledge: true,
         stripeConnect: true,
         productModeration: true
       }

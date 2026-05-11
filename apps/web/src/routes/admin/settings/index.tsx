@@ -7,6 +7,7 @@ interface AdminSettings {
   platform: { name: string; commissionRate: number; defaultCurrency: string; maintenanceMode: boolean };
   stripe: { configured: boolean; publishableConfigured: boolean; connectReturnUrl: string | null; webhookConfigured: boolean };
   ai: { configured: boolean; model: string };
+  pinecone: { configured: boolean; indexName: string | null; namespace: string };
   featureToggles: Record<string, boolean>;
 }
 
@@ -57,6 +58,16 @@ export default component$(() => {
             <div class="mt-7 grid gap-3 text-sm">
               <p class="flex justify-between border-b border-brand-ink/10 pb-3"><span class="font-semibold text-brand-ink/55">Gemini key</span><span class={`border px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] ${statusClass(settings.value.ai.configured ? "active" : "pending")}`}>{settings.value.ai.configured ? "Configured" : "Missing"}</span></p>
               <p class="flex justify-between border-b border-brand-ink/10 pb-3"><span class="font-semibold text-brand-ink/55">Model</span><span class="font-extrabold text-brand-ink">{settings.value.ai.model}</span></p>
+            </div>
+          </article>
+
+          <article class="glass-panel p-6">
+            <p class="eyebrow">Pinecone</p>
+            <h2 class="mt-2 font-display text-5xl leading-none text-brand-ink">Knowledge Search</h2>
+            <div class="mt-7 grid gap-3 text-sm">
+              <p class="flex justify-between border-b border-brand-ink/10 pb-3"><span class="font-semibold text-brand-ink/55">Configured</span><span class={`border px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] ${statusClass(settings.value.pinecone.configured ? "active" : "pending")}`}>{settings.value.pinecone.configured ? "Ready" : "Missing"}</span></p>
+              <p class="flex justify-between border-b border-brand-ink/10 pb-3"><span class="font-semibold text-brand-ink/55">Index</span><span class="font-extrabold text-brand-ink">{settings.value.pinecone.indexName ?? "Not set"}</span></p>
+              <p class="flex justify-between border-b border-brand-ink/10 pb-3"><span class="font-semibold text-brand-ink/55">Namespace</span><span class="font-extrabold text-brand-ink">{settings.value.pinecone.namespace}</span></p>
             </div>
           </article>
 
