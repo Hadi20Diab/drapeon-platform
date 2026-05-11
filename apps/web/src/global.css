@@ -365,6 +365,59 @@ a {
   box-shadow: 0 18px 42px rgba(17, 17, 17, 0.14);
 }
 
+.chatbot-richtext p {
+  margin: 0;
+}
+
+.chatbot-richtext p + p,
+.chatbot-richtext p + ul,
+.chatbot-richtext ul + p,
+.chatbot-richtext ul + ul {
+  margin-top: 0.9rem;
+}
+
+.chatbot-richtext strong {
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.chatbot-richtext em {
+  font-style: italic;
+}
+
+.chatbot-bubble-user .chatbot-richtext strong,
+.chatbot-bubble-user .chatbot-richtext em {
+  color: #fffaf2;
+}
+
+.chatbot-richtext ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.chatbot-richtext li + li {
+  margin-top: 0.45rem;
+}
+
+.chatbot-rich-link {
+  color: var(--accent);
+  font-weight: 800;
+  text-decoration: underline;
+  text-decoration-color: rgba(155, 18, 50, 0.34);
+  text-underline-offset: 0.18rem;
+  transition: color 180ms ease, text-decoration-color 180ms ease;
+}
+
+.chatbot-rich-link:hover {
+  color: var(--copper);
+  text-decoration-color: rgba(182, 106, 60, 0.5);
+}
+
+.chatbot-bubble-user .chatbot-rich-link {
+  color: #f4d28e;
+  text-decoration-color: rgba(244, 210, 142, 0.45);
+}
+
 .chatbot-product-card {
   border: 1px solid rgba(16, 16, 16, 0.08);
   border-radius: 22px;

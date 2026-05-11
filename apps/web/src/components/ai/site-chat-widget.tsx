@@ -89,6 +89,95 @@ function formatConversationTime(value: string): string {
   });
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function normalizeMessageLink(url: string): string {
+  try {
+    const parsed = new URL(url);
+    const productMatch = parsed.pathname.match(/^\/products\/([0-9a-f-]+)$/i);
+
+    if (parsed.hostname === "drapeon.com" && productMatch?.[1]) {
+      return `/catalog/${productMatch[1]}`;
+    }
+
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
+function renderInlineMarkdown(text: string): string {
+  const tokens: string[] = [];
+  let content = escapeHtml(text);
+
+  content = content.replace(
+    /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+    (_, label: string, url: string) => {
+      const token = `__CHAT_LINK_${tokens.length}__`;
+      const href = normalizeMessageLink(url);
+      const isInternal = href.startsWith("/");
+
+      tokens.push(
+        `<a class="chatbot-rich-link" href="${escapeHtml(href)}"${isInternal ? "" : ' target="_blank" rel="noreferrer"'}>${escapeHtml(label)}</a>`
+      );
+      return token;
+    }
+  );
+
+  content = content.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  content = content.replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s).,!?]|$)/g, "$1<em>$2</em>");
+
+  return tokens.reduce(
+    (resolved, tokenHtml, index) => resolved.replace(`__CHAT_LINK_${index}__`, tokenHtml),
+    content
+  );
+}
+
+function renderMessageHtml(text: string): string {
+  const lines = text.split(/\r?\n/);
+  const blocks: string[] = [];
+  let listItems: string[] = [];
+
+  const flushList = () => {
+    if (listItems.length === 0) {
+      return;
+    }
+
+    blocks.push(`<ul>${listItems.join("")}</ul>`);
+    listItems = [];
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+
+    if (!line) {
+      flushList();
+      continue;
+    }
+
+    const bulletMatch = line.match(/^[-*]\s+(.*)$/);
+
+    if (bulletMatch) {
+      listItems.push(`<li>${renderInlineMarkdown(bulletMatch[1] ?? "")}</li>`);
+      continue;
+    }
+
+    flushList();
+    blocks.push(`<p>${renderInlineMarkdown(line)}</p>`);
+  }
+
+  flushList();
+
+  return blocks.join("");
+}
+
 function syncConversationState(
   identity: string,
   conversations: PersistedChatConversation[],
@@ -480,7 +569,7 @@ export const SiteChatWidget = component$(() => {
       {isOpen.value && (
         <aside
           class={`chatbot-panel fixed bottom-4 right-4 z-50 flex h-[min(760px,calc(100vh-2rem))] w-[calc(100vw-1.25rem)] max-w-[480px] flex-col overflow-hidden ${isClosing.value ? "chatbot-panel-exit" : "chatbot-panel-enter"
-          }`}
+            }`}
         >
           <div class="chatbot-header border-b border-white/10 px-5 pb-3 pt-4 text-brand-sand">
             <div class="flex items-start justify-between gap-4">
@@ -504,7 +593,7 @@ export const SiteChatWidget = component$(() => {
                     isConversationMenuOpen.value = !isConversationMenuOpen.value;
                   }}
                 >
-                  •••
+                  ...
                 </button>
                 {isConversationMenuOpen.value && (
                   <div class="chatbot-menu absolute right-0 top-[calc(100%+0.75rem)] z-10 w-[290px] overflow-hidden">
@@ -533,7 +622,7 @@ export const SiteChatWidget = component$(() => {
                           class={`chatbot-menu-item ${conversation.id === activeConversationId.value
                               ? "chatbot-menu-item-active"
                               : ""
-                          }`}
+                            }`}
                           onClick$={() => openConversation(conversation.id)}
                         >
                           <span class="block truncate text-sm font-semibold text-brand-ink">
@@ -576,39 +665,40 @@ export const SiteChatWidget = component$(() => {
 
           <div class="flex-1 overflow-hidden bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,243,235,0.98))]">
             <div class="grid h-full grid-rows-[auto_1fr_auto]">
-              <div class="grid gap-3 border-b border-brand-ink/8 px-4 py-4">
-                {!session.value && (
-                  <div class="rounded-[24px] border border-brand-ink/8 bg-white/92 px-4 py-4 text-sm leading-7 text-brand-ink/65 shadow-[0_20px_50px_rgba(17,17,17,0.06)]">
-                    You can chat as a guest right away. Sign in only if you want the stylist to use your
-                    saved measurements, body shape, and preferences automatically.
-                    <div class="mt-4">
-                      <a href="/auth" class="btn-primary inline-flex rounded-full px-5">
-                        Sign In
-                      </a>
+              {(!session.value || toolEvents.value.length > 0 || Boolean(error.value)) && (
+                <div class="grid gap-3 border-b border-brand-ink/8 px-4 py-4">
+                  {!session.value && (
+                    <div class="rounded-[24px] border border-brand-ink/8 bg-white/92 px-4 py-4 text-sm leading-7 text-brand-ink/65 shadow-[0_20px_50px_rgba(17,17,17,0.06)]">
+                      You can chat as a guest right away. Sign in only if you want the stylist to use your
+                      saved measurements, body shape, and preferences automatically.
+                      <div class="mt-4">
+                        <a href="/auth" class="btn-primary inline-flex rounded-full px-5">
+                          Sign In
+                        </a>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {toolEvents.value.length > 0 && (
-                  <div class="flex flex-wrap gap-2">
-                    {toolEvents.value.map((event, index) => (
-                      <span
-                        key={`${event.tool}-${index}`}
-                        class="rounded-full bg-brand-sand px-3 py-2 text-[0.66rem] font-extrabold uppercase tracking-[0.12em] text-brand-ink/60"
-                      >
-                        {toolLabel(event.tool)}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                  {toolEvents.value.length > 0 && (
+                    <div class="flex flex-wrap gap-2">
+                      {toolEvents.value.map((event, index) => (
+                        <span
+                          key={`${event.tool}-${index}`}
+                          class="rounded-full bg-brand-sand px-3 py-2 text-[0.66rem] font-extrabold uppercase tracking-[0.12em] text-brand-ink/60"
+                        >
+                          {toolLabel(event.tool)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
 
-                {error.value && (
-                  <p class="rounded-[20px] border border-brand-rose/30 bg-brand-rose/10 px-4 py-3 text-sm font-semibold text-brand-rose">
-                    {error.value}
-                  </p>
-                )}
-              </div>
-
+                  {error.value && (
+                    <p class="rounded-[20px] border border-brand-rose/30 bg-brand-rose/10 px-4 py-3 text-sm font-semibold text-brand-rose">
+                      {error.value}
+                    </p>
+                  )}
+                </div>
+              )}
               <div class="overflow-y-auto px-4 py-5">
                 <div class="space-y-4">
                   {(activeConversation.value?.messages ?? []).map((message) => {
@@ -624,10 +714,15 @@ export const SiteChatWidget = component$(() => {
                           <p class={`text-[0.66rem] font-extrabold uppercase tracking-[0.16em] ${message.role === "agent" ? "text-brand-rose" : "text-brand-gold"}`}>
                             {message.role === "agent" ? "Drapeon" : "You"}
                           </p>
-                          <p class="mt-3 whitespace-pre-wrap text-sm leading-7">
-                            {displayedText}
-                            {isTyping && <span class="chatbot-stream-cursor" />}
-                          </p>
+                          <div
+                            class="chatbot-richtext mt-3 text-sm leading-7"
+                            dangerouslySetInnerHTML={renderMessageHtml(displayedText)}
+                          />
+                          {isTyping && (
+                            <p class="text-sm leading-7">
+                              <span class="chatbot-stream-cursor" />
+                            </p>
+                          )}
 
                           {message.products && message.products.length > 0 && (
                             <div class="mt-4 grid gap-3">
@@ -738,3 +833,4 @@ export const SiteChatWidget = component$(() => {
     </>
   );
 });
+
