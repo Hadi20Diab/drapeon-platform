@@ -1,4 +1,10 @@
-import { DesignerApprovalStatus, UserStatus } from "@prisma/client";
+import {
+  BookingStatus,
+  DesignerApprovalStatus,
+  DesignerSubscriptionStatus,
+  SubscriptionInterval,
+  UserStatus
+} from "@prisma/client";
 
 import { AdminService } from "./admin.service";
 
@@ -7,18 +13,42 @@ describe("AdminService", () => {
     const prisma = {
       user: {
         findUnique: jest.fn(),
+        findMany: jest.fn(),
         update: jest.fn()
       },
       designer: {
+        count: jest.fn(),
         findUnique: jest.fn(),
         update: jest.fn()
       },
+      designerSubscription: {
+        findMany: jest.fn(),
+        count: jest.fn()
+      },
+      product: {
+        count: jest.fn(),
+        findMany: jest.fn(),
+        groupBy: jest.fn()
+      },
+      booking: {
+        count: jest.fn(),
+        findMany: jest.fn()
+      },
+      aiSession: {
+        findMany: jest.fn(),
+        groupBy: jest.fn()
+      },
+      aiMessage: {
+        findMany: jest.fn()
+      },
       adminAuditLog: {
-        create: jest.fn()
+        create: jest.fn(),
+        findMany: jest.fn()
       },
       refreshToken: {
         updateMany: jest.fn()
-      }
+      },
+      $transaction: jest.fn()
     } as any;
 
     return { service: new AdminService(prisma), prisma };
@@ -95,5 +125,97 @@ describe("AdminService", () => {
         metadata: { status: DesignerApprovalStatus.APPROVED }
       }
     });
+  });
+
+  it("builds subscription analytics from active plans and fitting activity", async () => {
+    const { service, prisma } = createService();
+    const createdAt = new Date("2026-05-01T00:00:00.000Z");
+
+    prisma.$transaction.mockResolvedValue([
+      [
+        {
+          createdAt,
+          status: DesignerSubscriptionStatus.ACTIVE,
+          plan: { amount: 149, interval: SubscriptionInterval.MONTH }
+        },
+        {
+          createdAt,
+          status: DesignerSubscriptionStatus.INACTIVE,
+          plan: { amount: 79, interval: SubscriptionInterval.MONTH }
+        }
+      ],
+      [{ createdAt }, { createdAt }],
+      [
+        { category: "DRESS", status: "ACTIVE", _count: { bookings: 3 } },
+        { category: "SUIT", status: "ARCHIVED", _count: { bookings: 1 } }
+      ],
+      [
+        { category: "DRESS", _count: { _all: 1 } },
+        { category: "SUIT", _count: { _all: 1 } }
+      ],
+      2,
+      4,
+      [
+        { createdAt, status: BookingStatus.PENDING },
+        { createdAt, status: BookingStatus.CONFIRMED }
+      ]
+    ]);
+
+    const result = await service.getAnalytics({});
+
+    expect(result.conversionMetrics).toEqual({
+      signupToFitting: 100,
+      designerApprovalRate: 50
+    });
+    expect(result.productHealth).toEqual({
+      active: 1,
+      draft: 0,
+      archived: 1,
+      fittingLinked: 2
+    });
+    expect(result.fittingPerformance).toEqual(
+      expect.arrayContaining([
+        { status: BookingStatus.PENDING, count: 1 },
+        { status: BookingStatus.CONFIRMED, count: 1 }
+      ])
+    );
+    expect(result.topCategories).toEqual([
+      { category: "DRESS", products: 1 },
+      { category: "SUIT", products: 1 }
+    ]);
+    expect(result.revenueTrends.reduce((sum, row) => sum + row.value, 0)).toBe(149);
+  });
+
+  it("raises billing and fitting alerts from subscription-era signals", async () => {
+    const { service, prisma } = createService();
+
+    prisma.$transaction.mockResolvedValue([
+      2,
+      3,
+      1,
+      [{ userId: "user-1", _count: { _all: 6 } }],
+      4,
+      [{ id: "log-1", action: "designer.approved", targetType: "Designer" }]
+    ]);
+
+    const result = await service.getNotifications();
+
+    expect(result.alerts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "billing_attention",
+          href: "/admin/payments"
+        }),
+        expect.objectContaining({
+          type: "fitting_requests",
+          href: "/admin/operations"
+        }),
+        expect.objectContaining({
+          type: "designer_approval",
+          href: "/admin/designers"
+        })
+      ])
+    );
+    expect(result.recentAuditLogs).toEqual([{ id: "log-1", action: "designer.approved", targetType: "Designer" }]);
   });
 });
