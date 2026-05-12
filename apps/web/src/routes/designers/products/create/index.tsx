@@ -58,7 +58,7 @@ export default component$(() => {
     }
   });
 
-  const canPublish = Boolean(dashboard.value?.subscription.canCreateProducts);
+  const canPublish = () => Boolean(dashboard.value?.subscription.canCreateProducts);
 
   const addImageLink = $(() => {
     const url = imageLink.value.trim();
@@ -112,13 +112,19 @@ export default component$(() => {
     bodyShapes.value = [...next];
   });
 
+  const removeImage = $((url: string) => {
+    imageUrls.value = imageUrls.value.filter((u) => u !== url);
+  });
+
   const saveProduct = $(async (publish: boolean) => {
     error.value = "";
     notice.value = "";
+    const subscription = dashboard.value?.subscription ?? null;
+    const publishingEnabled = Boolean(subscription?.canCreateProducts);
 
-    if (!canPublish) {
+    if (!publishingEnabled) {
       error.value =
-        dashboard.value?.subscription.needsSubscription
+        subscription?.needsSubscription
           ? "Choose an active designer plan before publishing products."
           : "Your current plan has no publishing slots left this cycle.";
       return;
@@ -186,7 +192,7 @@ export default component$(() => {
         </p>
       )}
 
-      {dashboard.value && !canPublish && (
+      {dashboard.value && !canPublish() && (
         <article class="glass-panel grid gap-5 p-6 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
             <p class="eyebrow">Subscription Required</p>
@@ -205,14 +211,14 @@ export default component$(() => {
         </article>
       )}
 
-      <article class={`luxury-card p-6 ${!canPublish ? "opacity-60" : ""}`}>
+      <article class={`luxury-card p-6 ${!canPublish() ? "opacity-60" : ""}`}>
         <form class="grid gap-4" preventdefault:submit>
           <label class="grid gap-2 text-sm font-bold text-brand-ink/70">
             Title
             <input
               class="min-h-12 border border-brand-ink/20 bg-white px-4 outline-none focus:border-brand-rose"
               value={title.value}
-              disabled={!canPublish}
+              disabled={!canPublish()}
               onInput$={(_, target) => (title.value = target.value)}
             />
           </label>
@@ -221,7 +227,7 @@ export default component$(() => {
             <textarea
               class="min-h-32 border border-brand-ink/20 bg-white px-4 py-3 outline-none focus:border-brand-rose"
               value={description.value}
-              disabled={!canPublish}
+              disabled={!canPublish()}
               onInput$={(_, target) => (description.value = target.value)}
             />
           </label>
@@ -231,7 +237,7 @@ export default component$(() => {
               <select
                 class="min-h-12 border border-brand-ink/20 bg-white px-4"
                 value={category.value}
-                disabled={!canPublish}
+                disabled={!canPublish()}
                 onChange$={(_, target) =>
                   (category.value = target.value as "SUIT" | "DRESS")
                 }
@@ -247,7 +253,7 @@ export default component$(() => {
                 min="1"
                 class="min-h-12 border border-brand-ink/20 bg-white px-4"
                 value={rentalPrice.value}
-                disabled={!canPublish}
+                disabled={!canPublish()}
                 onInput$={(_, target) => (rentalPrice.value = target.value)}
               />
             </label>
@@ -260,7 +266,7 @@ export default component$(() => {
                 min="1"
                 class="min-h-12 border border-brand-ink/20 bg-white px-4"
                 value={buyPrice.value}
-                disabled={!canPublish}
+                disabled={!canPublish()}
                 onInput$={(_, target) => (buyPrice.value = target.value)}
               />
             </label>
@@ -271,7 +277,7 @@ export default component$(() => {
                 min="1"
                 class="min-h-12 border border-brand-ink/20 bg-white px-4"
                 value={stockQuantity.value}
-                disabled={!canPublish}
+                disabled={!canPublish()}
                 onInput$={(_, target) => (stockQuantity.value = target.value)}
               />
             </label>
@@ -281,7 +287,7 @@ export default component$(() => {
             <input
               class="min-h-12 border border-brand-ink/20 bg-white px-4"
               value={sizes.value}
-              disabled={!canPublish}
+              disabled={!canPublish()}
               onInput$={(_, target) => (sizes.value = target.value)}
             />
           </label>
@@ -290,7 +296,7 @@ export default component$(() => {
             <input
               class="min-h-12 border border-brand-ink/20 bg-white px-4"
               value={colors.value}
-              disabled={!canPublish}
+              disabled={!canPublish()}
               onInput$={(_, target) => (colors.value = target.value)}
             />
           </label>
@@ -300,7 +306,7 @@ export default component$(() => {
               class="min-h-12 border border-brand-ink/20 bg-white px-4"
               placeholder="2026-05-20, 2026-05-21"
               value={availabilityDates.value}
-              disabled={!canPublish}
+              disabled={!canPublish()}
               onInput$={(_, target) => (availabilityDates.value = target.value)}
             />
           </label>
@@ -309,7 +315,7 @@ export default component$(() => {
             <input
               class="min-h-12 border border-brand-ink/20 bg-white px-4"
               value={tags.value}
-              disabled={!canPublish}
+              disabled={!canPublish()}
               onInput$={(_, target) => (tags.value = target.value)}
             />
           </label>
@@ -333,7 +339,7 @@ export default component$(() => {
                         ? "border-brand-rose bg-brand-ink text-brand-sand"
                         : "border-brand-ink/15 bg-white text-brand-ink hover:border-brand-rose"
                     }`}
-                    disabled={!canPublish}
+                    disabled={!canPublish()}
                     onClick$={() => toggleBodyShape(option.value)}
                   >
                     {option.label}
@@ -350,14 +356,14 @@ export default component$(() => {
                 class="min-h-12 border border-brand-ink/20 bg-white px-4"
                 placeholder="https://..."
                 value={imageLink.value}
-                disabled={!canPublish}
+                disabled={!canPublish()}
                 onInput$={(_, target) => (imageLink.value = target.value)}
               />
             </label>
             <button
               type="button"
               class="btn-secondary self-end border-brand-ink/20 text-brand-ink"
-              disabled={!canPublish}
+              disabled={!canPublish()}
               onClick$={addImageLink}
             >
               Add Link
@@ -374,7 +380,7 @@ export default component$(() => {
               type="file"
               accept="image/*"
               multiple
-              disabled={!canPublish}
+              disabled={!canPublish()}
               onChange$={(_, target) => readFiles(target.files)}
             />
             <span class="font-display text-3xl text-brand-ink">
@@ -387,14 +393,23 @@ export default component$(() => {
 
           <div class="grid grid-cols-2 gap-2 md:grid-cols-4">
             {imageUrls.value.map((url) => (
-              <img
-                key={url.slice(0, 80)}
-                src={url}
-                alt="Product preview"
-                width={240}
-                height={160}
-                class="h-28 w-full object-cover"
-              />
+              <div key={url.slice(0, 80)} class="relative h-28 w-full overflow-hidden rounded">
+                <img
+                  src={url}
+                  alt="Product preview"
+                  width={240}
+                  height={160}
+                  class="h-28 w-full object-cover"
+                />
+                <button
+                  type="button"
+                  aria-label="Remove image"
+                  class="absolute top-1 right-1 z-10 inline-flex h-7 w-7 items-center justify-center rounded-full bg-brand-ink/80 text-xs font-bold text-brand-sand hover:bg-brand-rose"
+                  onClick$={() => removeImage(url)}
+                >
+                  ×
+                </button>
+              </div>
             ))}
           </div>
 
@@ -402,7 +417,7 @@ export default component$(() => {
             <button
               type="button"
               class="btn-secondary border-brand-ink/20 text-brand-ink"
-              disabled={isSaving.value || !canPublish}
+              disabled={isSaving.value || !canPublish()}
               onClick$={() => saveProduct(false)}
             >
               Save Draft
@@ -410,7 +425,7 @@ export default component$(() => {
             <button
               type="button"
               class="btn-primary"
-              disabled={isSaving.value || !canPublish}
+              disabled={isSaving.value || !canPublish()}
               onClick$={() => saveProduct(true)}
             >
               {isSaving.value ? "Saving..." : "Publish"}

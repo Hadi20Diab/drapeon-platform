@@ -45,6 +45,7 @@ type DesignerSubscriptionRecord = {
     id: string;
     slug: string;
     name: string;
+    description: string;
     amount: Prisma.Decimal;
     currency: string;
     interval: SubscriptionInterval;
@@ -57,6 +58,7 @@ type DesignerSubscriptionRecord = {
 type DesignerRecord = {
   id: string;
   userId: string;
+  slug: string;
   storeName: string;
   bio: string;
   location: string | null;
@@ -162,6 +164,7 @@ export class DesignersService {
 
     return {
       designerId: designer.id,
+      slug: designer.slug,
       storeName: designer.storeName,
       approvalStatus: designer.approvalStatus,
       location: designer.location,
@@ -182,6 +185,10 @@ export class DesignersService {
       conversations,
       subscription: this.serializeSubscriptionSummary(subscription)
     };
+  }
+
+  async findDesignerBySlug(slug: string) {
+    return this.prisma.designer.findFirst({ where: { slug } });
   }
 
   async listDesignerProducts(userId: string, query: DesignerProductQueryDto) {
@@ -571,6 +578,7 @@ export class DesignersService {
       where: { userId },
       select: {
         id: true,
+        slug: true,
         userId: true,
         storeName: true,
         bio: true,
@@ -598,6 +606,7 @@ export class DesignersService {
                 id: true,
                 slug: true,
                 name: true,
+                description: true,
                 amount: true,
                 currency: true,
                 interval: true,
@@ -712,6 +721,7 @@ export class DesignersService {
             id: true,
             slug: true,
             name: true,
+            description: true,
             amount: true,
             currency: true,
             interval: true,
