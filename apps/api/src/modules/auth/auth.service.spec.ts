@@ -171,6 +171,27 @@ describe("AuthService", () => {
     });
   });
 
+  it("resends verification emails for signed-in unverified users", async () => {
+    const { service, prisma, mailService } = createService();
+    prisma.user.findUnique.mockResolvedValue({
+      id: "user-1",
+      email: "client@example.com",
+      isEmailVerified: false,
+      profile: { firstName: "Maya" }
+    });
+
+    await expect(service.resendVerificationEmail("user-1")).resolves.toEqual({
+      delivered: true,
+      message: "A new verification link has been sent to your email address."
+    });
+    expect(prisma.emailVerificationToken.create).toHaveBeenCalled();
+    expect(mailService.sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: "Verify your Drapeon account"
+      })
+    );
+  });
+
   it("issues password reset emails without leaking account existence", async () => {
     const { service, prisma, mailService } = createService();
     prisma.user.findUnique.mockResolvedValue({
@@ -289,6 +310,26 @@ describe("AuthService", () => {
         storeName: "Admin Studio",
         description: "This should never be accepted because admin accounts cannot become vendors.",
         location: "Beirut"
+      })
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it("blocks unverified accounts from becoming designers", async () => {
+    const { service, prisma } = createService();
+    prisma.user.findUnique.mockResolvedValue({
+      id: "user-1",
+      email: "client@example.com",
+      role: UserRole.USER,
+      isEmailVerified: false,
+      profile: { firstName: "Maya", lastName: "Haddad" },
+      designerProfile: null
+    });
+
+    await expect(
+      service.becomeDesigner("user-1", {
+        storeName: "Maison Maya",
+        description: "A couture-led tailoring studio for private fittings and occasionwear rentals.",
+        location: "Beirut, Lebanon"
       })
     ).rejects.toThrow(ForbiddenException);
   });

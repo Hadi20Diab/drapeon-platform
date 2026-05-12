@@ -5,6 +5,7 @@ import {
   fetchCurrentUserProfile,
   persistAuthSession,
   readAuthSession,
+  resendVerificationEmail,
   subscribeToAuthSession,
   type AuthSession,
   type AuthUser
@@ -28,6 +29,8 @@ export default component$(() => {
   const error = useSignal("");
   const message = useSignal("");
   const isSubmitting = useSignal(false);
+  const isSendingVerification = useSignal(false);
+  const isEmailVerified = useSignal(false);
   const form = useStore({
     storeName: "",
     description: "",
@@ -50,6 +53,7 @@ export default component$(() => {
         return;
       }
 
+      isEmailVerified.value = session.user.isEmailVerified;
       status.value = "ready";
 
       try {
@@ -71,6 +75,11 @@ export default component$(() => {
   });
 
   const submit = $(async () => {
+    if (!isEmailVerified.value) {
+      error.value = "Verify your email address before applying to become a designer.";
+      return;
+    }
+
     error.value = "";
     message.value = "";
     isSubmitting.value = true;
@@ -95,6 +104,22 @@ export default component$(() => {
       error.value = caught instanceof Error ? caught.message : "Could not submit your seller application.";
     } finally {
       isSubmitting.value = false;
+    }
+  });
+
+  const resendVerification = $(async () => {
+    isSendingVerification.value = true;
+    error.value = "";
+    message.value = "";
+
+    try {
+      const result = await resendVerificationEmail();
+      message.value = result.message;
+    } catch (caught) {
+      error.value =
+        caught instanceof Error ? caught.message : "Could not send a verification email right now.";
+    } finally {
+      isSendingVerification.value = false;
     }
   });
 
@@ -216,6 +241,28 @@ export default component$(() => {
           </h2>
         </div>
 
+        {!isEmailVerified.value && (
+          <div class="border-b border-brand-rose/20 bg-brand-rose/8 px-6 py-5 md:px-8">
+            <p class="text-[0.68rem] font-extrabold uppercase tracking-[0.16em] text-brand-rose">
+              Verify Your Account First
+            </p>
+            <div class="mt-3 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <p class="max-w-2xl text-sm leading-7 text-brand-ink/70">
+                Seller applications are locked until your email address is verified. We will send
+                you a fresh verification link now if you need one.
+              </p>
+              <button
+                type="button"
+                class="btn-secondary border-brand-rose/30 text-brand-rose"
+                onClick$={resendVerification}
+                disabled={isSendingVerification.value}
+              >
+                {isSendingVerification.value ? "Sending..." : "Send Verification Email"}
+              </button>
+            </div>
+          </div>
+        )}
+
         <form class="grid gap-5 p-6 md:p-8" preventdefault:submit onSubmit$={submit}>
           <div class="grid gap-4 md:grid-cols-2">
             <label class="grid gap-2 text-sm font-bold text-brand-ink/70">
@@ -317,8 +364,16 @@ export default component$(() => {
               After submission, we will switch your account into designer mode, create the studio,
               and keep approval status pending until admin review.
             </p>
-            <button type="submit" class="btn-primary min-w-[220px] justify-center" disabled={isSubmitting.value}>
-              {isSubmitting.value ? "Submitting..." : "Submit Seller Application"}
+            <button
+              type="submit"
+              class="btn-primary min-w-[220px] justify-center disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isSubmitting.value || !isEmailVerified.value}
+            >
+              {isSubmitting.value
+                ? "Submitting..."
+                : !isEmailVerified.value
+                  ? "Verify Email to Continue"
+                  : "Submit Seller Application"}
             </button>
           </div>
         </form>

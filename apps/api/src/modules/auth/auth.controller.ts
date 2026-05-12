@@ -35,6 +35,12 @@ export class AuthController {
     return this.authService.verifyEmail(payload);
   }
 
+  @Post("resend-verification")
+  @UseGuards(JwtAuthGuard)
+  resendVerification(@CurrentUser("sub") userId: string) {
+    return this.authService.resendVerificationEmail(userId);
+  }
+
   @Post("forgot-password")
   forgotPassword(@Body() payload: ForgotPasswordDto) {
     return this.authService.forgotPassword(payload);

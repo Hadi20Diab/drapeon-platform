@@ -2,6 +2,7 @@ import { component$, Slot } from "@builder.io/qwik";
 import { useLocation } from "@builder.io/qwik-city";
 
 import { SiteChatWidget } from "../components/ai/site-chat-widget";
+import { EmailVerificationBanner } from "../components/layout/email-verification-banner";
 import { SiteFooter } from "../components/layout/site-footer";
 import { SiteHeader } from "../components/layout/site-header";
 
@@ -14,6 +15,7 @@ export default component$(() => {
 
   return (
     <div class="page-shell">
+      <EmailVerificationBanner />
       <SiteHeader />
       <main class="min-h-[50vh]">
         <Slot />

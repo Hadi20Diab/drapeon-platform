@@ -924,6 +924,16 @@ export async function verifyEmailToken(payload: {
   });
 }
 
+export async function resendVerificationEmail(): Promise<{
+  delivered: boolean;
+  message: string;
+}> {
+  return requestApi<{ delivered: boolean; message: string }>("/auth/resend-verification", {
+    method: "POST",
+    headers: authHeaders()
+  });
+}
+
 export async function applyToBecomeDesigner(
   payload: BecomeDesignerPayload
 ): Promise<AuthSession> {

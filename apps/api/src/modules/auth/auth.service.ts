@@ -183,6 +183,12 @@ export class AuthService {
       throw new ConflictException("You already have a designer application. Open your designer dashboard instead.");
     }
 
+    if (!user.isEmailVerified) {
+      throw new ForbiddenException(
+        "Verify your email address before applying to become a designer."
+      );
+    }
+
     const updatedUser = await this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -283,6 +289,45 @@ export class AuthService {
       message: verificationToken.user.isEmailVerified
         ? "Email address is already verified."
         : "Email address verified successfully."
+    };
+  }
+
+  async resendVerificationEmail(
+    userId: string
+  ): Promise<{ delivered: boolean; message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        profile: {
+          select: {
+            firstName: true
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      throw new NotFoundException("Account not found");
+    }
+
+    if (user.isEmailVerified) {
+      return {
+        delivered: false,
+        message: "Your email address is already verified."
+      };
+    }
+
+    const delivered = await this.dispatchVerificationEmail(
+      user.id,
+      user.email,
+      user.profile?.firstName ?? "there"
+    );
+
+    return {
+      delivered,
+      message: delivered
+        ? "A new verification link has been sent to your email address."
+        : "Verification email is not configured yet."
     };
   }
 
