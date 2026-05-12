@@ -956,6 +956,25 @@ export function persistAuthSession(session: AuthSession): void {
   emitAuthSessionChange("updated");
 }
 
+export function markCurrentSessionEmailVerified(): AuthSession | null {
+  const session = readAuthSession();
+
+  if (!session || session.user.isEmailVerified) {
+    return session;
+  }
+
+  const nextSession: AuthSession = {
+    ...session,
+    user: {
+      ...session.user,
+      isEmailVerified: true
+    }
+  };
+
+  persistAuthSession(nextSession);
+  return nextSession;
+}
+
 export function readAuthSession(): AuthSession | null {
   try {
     const primaryValue = readBrowserStorage(authStorageKey);

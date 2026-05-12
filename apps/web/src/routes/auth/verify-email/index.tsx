@@ -1,28 +1,76 @@
 import { component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
 import { Link, useLocation } from "@builder.io/qwik-city";
 
-import { verifyEmailToken } from "../../../lib/api";
+import {
+  markCurrentSessionEmailVerified,
+  readAuthSession,
+  subscribeToAuthSession,
+  type AuthUser,
+  verifyEmailToken
+} from "../../../lib/api";
+
+function primaryHrefForUser(user: AuthUser | null): string {
+  if (!user) {
+    return "/auth";
+  }
+
+  if (user.role === "DESIGNER") {
+    return "/designers/dashboard";
+  }
+
+  if (user.role === "ADMIN") {
+    return "/admin/dashboard";
+  }
+
+  return "/profile";
+}
+
+function primaryLabelForUser(user: AuthUser | null): string {
+  if (!user) {
+    return "Return to sign in";
+  }
+
+  if (user.role === "DESIGNER") {
+    return "Open designer dashboard";
+  }
+
+  if (user.role === "ADMIN") {
+    return "Open admin dashboard";
+  }
+
+  return "Open my profile";
+}
 
 export default component$(() => {
   const location = useLocation();
   const token = location.url.searchParams.get("token") ?? "";
   const status = useSignal<"loading" | "success" | "error">(token ? "loading" : "error");
   const message = useSignal(token ? "Verifying your email..." : "Verification link is missing or invalid.");
+  const user = useSignal<AuthUser | null>(null);
 
   useVisibleTask$(async () => {
+    user.value = readAuthSession()?.user ?? null;
+
+    const unsubscribe = subscribeToAuthSession((session) => {
+      user.value = session?.user ?? null;
+    });
+
     if (!token) {
       status.value = "error";
-      return;
+      return unsubscribe;
     }
 
     try {
       const response = await verifyEmailToken({ token });
+      markCurrentSessionEmailVerified();
       status.value = "success";
       message.value = response.message;
     } catch (caught) {
       status.value = "error";
       message.value = caught instanceof Error ? caught.message : "Could not verify this email link.";
     }
+
+    return unsubscribe;
   });
 
   return (
@@ -52,8 +100,8 @@ export default component$(() => {
         </div>
 
         <div class="mt-6 flex flex-wrap gap-3">
-          <Link href="/auth" class="btn-primary">
-            Return to sign in
+          <Link href={primaryHrefForUser(user.value)} class="btn-primary">
+            {primaryLabelForUser(user.value)}
           </Link>
           <Link
             href="/catalog"
