@@ -4,10 +4,11 @@ import { AuthModule } from "../auth/auth.module";
 import { DesignerRealtimeGateway } from "./designer-realtime.gateway";
 import { DesignersController } from "./designers.controller";
 import { DesignersService } from "./designers.service";
+import { StoresController } from "./stores.controller";
 
 @Module({
   imports: [AuthModule],
-  controllers: [DesignersController],
+  controllers: [DesignersController, StoresController],
   providers: [DesignersService, DesignerRealtimeGateway],
   exports: [DesignersService]
 })

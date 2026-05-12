@@ -145,7 +145,7 @@ export default component$(() => {
                 Save Settings
               </button>
               <a
-                href={`/stores/${slugify(storeName.value, dashboard.value?.designerId)}`}
+                href={`/stores/${dashboard.value?.slug ?? slugify(storeName.value, dashboard.value?.designerId)}`}
                 class="btn-secondary"
               >
                 View Store

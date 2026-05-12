@@ -125,6 +125,7 @@ export interface DesignerSubscriptionSummary {
 
 export interface DesignerDashboard {
   designerId: string;
+  slug?: string;
   storeName: string;
   approvalStatus: string;
   location: string | null;
