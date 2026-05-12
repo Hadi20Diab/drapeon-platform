@@ -88,28 +88,45 @@ export const SiteHeader = component$(() => {
               </button>
 
               {isProfileOpen.value && (
-                <div class="absolute right-0 z-50 mt-3 w-56 rounded-lg border border-brand-ink/10 bg-white shadow-lg">
+                <div class="absolute right-0 z-50 mt-3 w-64 overflow-hidden rounded-lg border border-brand-ink/10 bg-white shadow-2xl">
                   <div class="p-3">
-                    <div class="mb-2 text-sm text-brand-ink/70">Logged in as</div>
-                    <div class="mb-3 truncate text-sm font-semibold text-brand-ink">{user.value.email}</div>
-                    <nav class="flex flex-col gap-2">
-                      <a href="/profile" class="block rounded px-3 py-2 text-sm hover:bg-brand-ink/5">Profile</a>
+                    <div class="flex items-center gap-3 border-b border-brand-ink/10 pb-3 mb-3">
+                      <span class="h-10 w-10 flex-shrink-0 overflow-hidden rounded-full border border-brand-ink/10 bg-brand-sand">
+                        {(user.value as any)?.avatarUrl ? (
+                          <img src={(user.value as any).avatarUrl} alt={user.value.email ?? "Profile"} class="h-full w-full object-cover" />
+                        ) : (
+                          <span class="grid h-full w-full place-items-center font-bold text-sm text-brand-ink">
+                            {user.value.email ? user.value.email.slice(0, 1).toUpperCase() : "U"}
+                          </span>
+                        )}
+                      </span>
+                      <div class="min-w-0">
+                        <div class="text-xs font-extrabold uppercase tracking-[0.12em] text-brand-ink/45">Account</div>
+                        <div class="truncate text-sm font-semibold text-brand-ink">{user.value.email}</div>
+                      </div>
+                    </div>
+
+                    <nav class="grid gap-1">
+                      <a href="/profile" class="block rounded px-3 py-2 text-sm text-brand-ink hover:bg-brand-ink/5 transition-colors">Profile</a>
                       {user.value.role === "DESIGNER" && (
-                        <a href="/designers/dashboard" class="block rounded px-3 py-2 text-sm hover:bg-brand-ink/5">Designer Dashboard</a>
+                        <a href="/designers/dashboard" class="block rounded px-3 py-2 text-sm text-brand-ink hover:bg-brand-ink/5 transition-colors">Designer Dashboard</a>
                       )}
                       {user.value.role === "ADMIN" && (
-                        <a href="/admin/dashboard" class="block rounded px-3 py-2 text-sm hover:bg-brand-ink/5">Admin Dashboard</a>
+                        <a href="/admin/dashboard" class="block rounded px-3 py-2 text-sm text-brand-ink hover:bg-brand-ink/5 transition-colors">Admin Dashboard</a>
                       )}
-                      <button
-                        type="button"
-                        class="mt-2 w-full rounded bg-white px-3 py-2 text-left text-sm text-brand-rose hover:bg-brand-rose/10"
-                        onClick$={() => {
-                          isProfileOpen.value = false;
-                          logout();
-                        }}
-                      >
-                        Log out
-                      </button>
+
+                      <div class="mt-3 border-t border-brand-ink/10 pt-3">
+                        <button
+                          type="button"
+                          class="w-full rounded px-3 py-2 text-left text-sm font-semibold text-brand-rose hover:bg-brand-rose/10 transition-colors"
+                          onClick$={() => {
+                            isProfileOpen.value = false;
+                            logout();
+                          }}
+                        >
+                          Log out
+                        </button>
+                      </div>
                     </nav>
                   </div>
                 </div>
