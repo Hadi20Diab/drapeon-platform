@@ -1,5 +1,6 @@
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
+import { Logger } from "@nestjs/common";
 import {
   ConnectedSocket,
   MessageBody,
@@ -22,6 +23,7 @@ import { AiService } from "./ai.service";
   }
 })
 export class AiGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  private readonly logger = new Logger(AiGateway.name);
   private readonly socketUsers = new Map<string, AuthJwtPayload>();
 
   constructor(
@@ -76,13 +78,26 @@ export class AiGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ): Promise<void> {
     const user = this.socketUsers.get(client.id);
 
-    const result = await this.aiService.recommend(user?.sub, payload, {
-      channel: "WS",
-      onEvent: (event) => {
-        client.emit("ai.recommendations.event", event);
-      }
-    });
-    client.emit("ai.recommendations.response", result);
+    try {
+      const result = await this.aiService.recommend(user?.sub, payload, {
+        channel: "WS",
+        onEvent: (event) => {
+          client.emit("ai.recommendations.event", event);
+        }
+      });
+      client.emit("ai.recommendations.response", result);
+    } catch (error) {
+      this.logger.error(
+        `Live AI recommendation failed for socket ${client.id}`,
+        error instanceof Error ? error.stack : undefined
+      );
+      client.emit("ai.error", {
+        message:
+          error instanceof Error && error.message.trim().length > 0
+            ? error.message
+            : "The live stylist is unavailable right now. Please try again in a moment."
+      });
+    }
   }
 
   private extractToken(client: Socket): string | null {

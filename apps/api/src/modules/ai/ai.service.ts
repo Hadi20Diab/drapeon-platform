@@ -48,6 +48,12 @@ interface RecommendOptions {
 }
 
 type UserProfileContext = GroundedUserProfileContext;
+type GroundedRecommendationContext = {
+  prompt: string;
+  filters: Record<string, unknown> | null;
+  profile: UserProfileContext;
+  usedStoredMeasurements: boolean;
+};
 
 type ParsedSearchFilters = {
   category?: ProductCategory;
@@ -75,6 +81,7 @@ type ProductWithRelations = Prisma.ProductGetPayload<{
 @Injectable()
 export class AiService {
   private readonly logger = new Logger(AiService.name);
+  private readonly modelRetryDelaysMs = [350, 900];
   private readonly gemini: GoogleGenAI;
   private readonly modelName: string;
   private readonly functionDeclarations: FunctionDeclaration[] = [
@@ -155,6 +162,7 @@ export class AiService {
       userId,
       this.toRecord(payload.measurements)
     );
+    const groundedContext = this.buildGroundedContext(payload, userProfile);
     const prompt = this.buildPrompt(payload, userProfile);
     const contents: Content[] = [createUserContent(prompt)];
     const collectedCards = new Map<string, ProductCard>();
@@ -178,17 +186,7 @@ export class AiService {
 
     try {
       for (let turn = 0; turn < 6; turn += 1) {
-        const response = await this.gemini.models.generateContent({
-          model: this.modelName,
-          contents,
-          config: {
-            tools: [
-              {
-                functionDeclarations: this.functionDeclarations
-              }
-            ]
-          }
-        });
+        const response = await this.generateContentWithRetry(contents);
         const modelContent = response.candidates?.[0]?.content;
 
         if (modelContent) {
@@ -198,38 +196,12 @@ export class AiService {
         const functionCalls = response.functionCalls ?? [];
 
         if (functionCalls.length === 0) {
-          const finalProducts = selectGroundedProducts(Array.from(collectedCards.values()), {
-            prompt: payload.prompt,
-            filters: (this.toRecord(payload.filters) ?? null) as Record<string, unknown> | null,
-            profile: userProfile,
-            usedStoredMeasurements: payload.measurements == null && userProfile.measurements != null
-          });
-          const finalKnowledgeEntries = Array.from(collectedKnowledge.values()).slice(0, 2);
-          const recommendationText = composeGroundedRecommendationText(
-            {
-              prompt: payload.prompt,
-              filters: (this.toRecord(payload.filters) ?? null) as Record<string, unknown> | null,
-              profile: userProfile,
-              usedStoredMeasurements: payload.measurements == null && userProfile.measurements != null
-            },
-            finalProducts,
-            finalKnowledgeEntries
+          return this.finalizeRecommendation(
+            session.id,
+            groundedContext,
+            collectedCards,
+            collectedKnowledge
           );
-
-          await this.logAiMessage(session.id, {
-            role: AiMessageRole.AGENT,
-            content: recommendationText
-          });
-
-          return {
-            recommendationText,
-            products: finalProducts,
-            knowledgeEntries: finalKnowledgeEntries,
-            context: {
-              usedStoredMeasurements:
-                payload.measurements == null && userProfile.measurements != null
-            }
-          };
         }
 
         const toolResponseParts: Part[] = [];
@@ -249,37 +221,27 @@ export class AiService {
         contents.push(createUserContent(toolResponseParts));
       }
 
-      const finalProducts = selectGroundedProducts(Array.from(collectedCards.values()), {
-        prompt: payload.prompt,
-        filters: (this.toRecord(payload.filters) ?? null) as Record<string, unknown> | null,
-        profile: userProfile,
-        usedStoredMeasurements: payload.measurements == null && userProfile.measurements != null
-      });
-      const finalKnowledgeEntries = Array.from(collectedKnowledge.values()).slice(0, 2);
-      const fallbackText = composeGroundedRecommendationText(
-        {
-          prompt: payload.prompt,
-          filters: (this.toRecord(payload.filters) ?? null) as Record<string, unknown> | null,
-          profile: userProfile,
-          usedStoredMeasurements: payload.measurements == null && userProfile.measurements != null
-        },
-        finalProducts,
-        finalKnowledgeEntries
+      return this.finalizeRecommendation(
+        session.id,
+        groundedContext,
+        collectedCards,
+        collectedKnowledge
       );
+    } catch (error) {
+      if (this.isTransientModelError(error)) {
+        this.logger.warn(
+          `Gemini was unavailable for model ${this.modelName}. Falling back to grounded catalog response.`
+        );
+        return this.buildModelAvailabilityFallback(
+          session.id,
+          payload,
+          groundedContext,
+          collectedCards,
+          collectedKnowledge
+        );
+      }
 
-      await this.logAiMessage(session.id, {
-        role: AiMessageRole.AGENT,
-        content: fallbackText
-      });
-
-      return {
-        recommendationText: fallbackText,
-        products: finalProducts,
-        knowledgeEntries: finalKnowledgeEntries,
-        context: {
-          usedStoredMeasurements: payload.measurements == null && userProfile.measurements != null
-        }
-      };
+      throw error;
     } finally {
       await this.prisma.aiSession.update({
         where: { id: session.id },
@@ -633,5 +595,208 @@ export class AiService {
       value === "INVERTED_TRIANGLE" ||
       value === "ATHLETIC"
     );
+  }
+
+  private buildGroundedContext(
+    payload: AiRecommendationDto,
+    profile: UserProfileContext
+  ): GroundedRecommendationContext {
+    return {
+      prompt: payload.prompt,
+      filters: (this.toRecord(payload.filters) ?? null) as Record<string, unknown> | null,
+      profile,
+      usedStoredMeasurements: payload.measurements == null && profile.measurements != null
+    };
+  }
+
+  private async finalizeRecommendation(
+    sessionId: string,
+    groundedContext: GroundedRecommendationContext,
+    collectedCards: Map<string, ProductCard>,
+    collectedKnowledge: Map<string, KnowledgeEntryCard>,
+    preface?: string
+  ): Promise<RecommendationResult> {
+    const finalProducts = selectGroundedProducts(Array.from(collectedCards.values()), groundedContext);
+    const finalKnowledgeEntries = Array.from(collectedKnowledge.values()).slice(0, 2);
+    const recommendationText = [
+      preface?.trim(),
+      composeGroundedRecommendationText(groundedContext, finalProducts, finalKnowledgeEntries)
+    ]
+      .filter((section): section is string => Boolean(section))
+      .join("\n\n");
+
+    await this.logAiMessage(sessionId, {
+      role: AiMessageRole.AGENT,
+      content: recommendationText
+    });
+
+    return {
+      recommendationText,
+      products: finalProducts,
+      knowledgeEntries: finalKnowledgeEntries,
+      context: {
+        usedStoredMeasurements: groundedContext.usedStoredMeasurements
+      }
+    };
+  }
+
+  private async generateContentWithRetry(contents: Content[]) {
+    for (let attempt = 0; attempt <= this.modelRetryDelaysMs.length; attempt += 1) {
+      try {
+        return await this.gemini.models.generateContent({
+          model: this.modelName,
+          contents,
+          config: {
+            tools: [
+              {
+                functionDeclarations: this.functionDeclarations
+              }
+            ]
+          }
+        });
+      } catch (error) {
+        if (!this.isTransientModelError(error) || attempt >= this.modelRetryDelaysMs.length) {
+          throw error;
+        }
+
+        await this.delay(this.modelRetryDelaysMs[attempt]!);
+      }
+    }
+
+    throw new Error("The AI response could not be generated.");
+  }
+
+  private async buildModelAvailabilityFallback(
+    sessionId: string,
+    payload: AiRecommendationDto,
+    groundedContext: GroundedRecommendationContext,
+    collectedCards: Map<string, ProductCard>,
+    collectedKnowledge: Map<string, KnowledgeEntryCard>
+  ): Promise<RecommendationResult> {
+    if (collectedCards.size === 0 && this.shouldSearchFallbackCatalog(payload)) {
+      try {
+        const productFallback = await this.searchProductsTool(
+          this.buildFallbackSearchArgs(payload, groundedContext.profile)
+        );
+
+        for (const item of productFallback.items) {
+          collectedCards.set(item.id, item);
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Catalog fallback search failed after model overload: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
+      }
+    }
+
+    if (
+      collectedKnowledge.size === 0 &&
+      (this.shouldSearchFallbackKnowledge(payload.prompt) || collectedCards.size === 0)
+    ) {
+      try {
+        const knowledgeFallback = await this.searchCompanyKnowledgeTool({
+          query: payload.prompt,
+          limit: 2
+        });
+
+        for (const item of knowledgeFallback.items) {
+          collectedKnowledge.set(item.id, item);
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Knowledge fallback search failed after model overload: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
+      }
+    }
+
+    const preface =
+      collectedCards.size > 0 || collectedKnowledge.size > 0
+        ? "Our live stylist model is under heavy demand right now, so I pulled the closest verified matches directly from Drapeon's live catalog tools."
+        : "Our live stylist model is under heavy demand right now. I could not verify fresh matches from the tools just yet, but I can still help if you add your preferred category, color, or event type.";
+
+    return this.finalizeRecommendation(
+      sessionId,
+      groundedContext,
+      collectedCards,
+      collectedKnowledge,
+      preface
+    );
+  }
+
+  private buildFallbackSearchArgs(
+    payload: AiRecommendationDto,
+    profile: UserProfileContext
+  ): Record<string, unknown> {
+    const filters = this.toRecord(payload.filters) ?? {};
+    const prompt = payload.prompt.toLowerCase();
+    const bodyShape = this.extractBodyShape(filters.bodyShape) ?? this.extractBodyShape(profile.measurements?.bodyShape);
+
+    return {
+      category:
+        typeof filters.category === "string"
+          ? filters.category
+          : /\b(suit|tuxedo|tailoring|jacket)\b/.test(prompt)
+            ? ProductCategory.SUIT
+            : /\b(dress|gown|cocktail|eveningwear)\b/.test(prompt)
+              ? ProductCategory.DRESS
+              : undefined,
+      size: typeof filters.size === "string" ? filters.size : undefined,
+      color: typeof filters.color === "string" ? filters.color : undefined,
+      bodyShape,
+      limit: 6
+    };
+  }
+
+  private extractBodyShape(value: unknown): BodyShape | undefined {
+    return this.isBodyShape(value) ? value : undefined;
+  }
+
+  private shouldSearchFallbackKnowledge(prompt: string): boolean {
+    const normalized = prompt.toLowerCase();
+
+    return /\b(drapeon|policy|process|return|subscription|designer|onboarding|payment|fitting|appointment|how|what|why)\b/.test(
+      normalized
+    );
+  }
+
+  private shouldSearchFallbackCatalog(payload: AiRecommendationDto): boolean {
+    const filters = this.toRecord(payload.filters) ?? {};
+
+    if (
+      typeof filters.category === "string" ||
+      typeof filters.size === "string" ||
+      typeof filters.color === "string" ||
+      this.isBodyShape(filters.bodyShape)
+    ) {
+      return true;
+    }
+
+    return /\b(find|recommend|show|need|want|looking|wear|dress|gown|suit|tuxedo|tailoring|style|outfit|catalog|product)\b/.test(
+      payload.prompt.toLowerCase()
+    );
+  }
+
+  private isTransientModelError(error: unknown): boolean {
+    const record = error as
+      | {
+          status?: number | string;
+          message?: string;
+          error?: { code?: number | string; message?: string; status?: string };
+        }
+      | undefined;
+    const status = record?.status ?? record?.error?.code;
+    const message = `${record?.message ?? ""} ${record?.error?.message ?? ""} ${record?.error?.status ?? ""}`.toLowerCase();
+
+    return (
+      status === 429 ||
+      status === 503 ||
+      status === "429" ||
+      status === "503" ||
+      /unavailable|resource_exhausted|high demand|temporar|rate limit|overloaded/.test(message)
+    );
+  }
+
+  private async delay(durationMs: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, durationMs));
   }
 }
