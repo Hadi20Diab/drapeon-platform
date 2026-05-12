@@ -1,4 +1,4 @@
-import { $, component$ } from "@builder.io/qwik";
+import { $, component$, useSignal, useTask$ } from "@builder.io/qwik";
 import { routeLoader$, useLocation, useNavigate } from "@builder.io/qwik-city";
 
 import { ProductCard } from "../../components/catalog/product-card";
@@ -64,6 +64,14 @@ export default component$(() => {
   const loc = useLocation();
   const nav = useNavigate();
 
+  const isSearching = useSignal(false);
+
+  useTask$(() => {
+    // when the route loader data changes, assume the search finished
+    void data.value;
+    isSearching.value = false;
+  });
+
   const selectedCategory = loc.url.searchParams.get("category") || "";
   const selectedSize = loc.url.searchParams.get("size") || "";
   const selectedColor = loc.url.searchParams.get("color") || "";
@@ -77,6 +85,8 @@ export default component$(() => {
 
   const updateFilters = $((updates: Record<string, string>) => {
     const newUrl = new URL(loc.url.href);
+    // show loading placeholders while the new route loader runs
+    isSearching.value = true;
     let resetPage = false;
     for (const [key, value] of Object.entries(updates)) {
       if (key !== "page") resetPage = true;
@@ -248,7 +258,36 @@ export default component$(() => {
             </div>
           </div>
 
-          {data.value.items.length > 0 ? (
+          {isSearching.value ? (
+            <div class="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: pageSize }).map((_, i) => (
+                <div key={i} class="group block border-b border-brand-ink/10 bg-transparent pb-5">
+                  <div class="image-sheen relative aspect-[4/5] overflow-hidden bg-brand-ink animate-pulse">
+                    <div class="h-full w-full bg-brand-ink/10" />
+                  </div>
+
+                  <div class="space-y-4 pt-4">
+                    <div class="flex items-start justify-between gap-4">
+                      <div>
+                        <div class="h-6 w-48 bg-brand-ink/10" />
+                        <div class="mt-2 h-3 w-32 bg-brand-ink/10" />
+                      </div>
+                      <div class="shrink-0 h-5 w-14 bg-brand-ink/10" />
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-between gap-3 text-[0.68rem] font-extrabold uppercase tracking-[0.12em] text-brand-ink/60">
+                      <span class="h-3 w-28 bg-brand-ink/10" />
+                      <div class="flex items-center gap-1.5">
+                        <span class="h-3 w-3 rounded-full bg-brand-ink/10" />
+                        <span class="h-3 w-3 rounded-full bg-brand-ink/10" />
+                        <span class="h-3 w-3 rounded-full bg-brand-ink/10" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : data.value.items.length > 0 ? (
             <div class="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
               {data.value.items.map((product) => (
                 <ProductCard key={product.id} product={product} />
