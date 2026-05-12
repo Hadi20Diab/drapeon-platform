@@ -8,6 +8,7 @@ type StripeCheckoutSessionParams = Parameters<StripeClient["checkout"]["sessions
 type StripeBillingPortalSessionParams = Parameters<
   StripeClient["billingPortal"]["sessions"]["create"]
 >[0];
+type StripeSubscription = Awaited<ReturnType<StripeClient["subscriptions"]["retrieve"]>>;
 
 @Injectable()
 export class StripeBillingService {
@@ -41,6 +42,16 @@ export class StripeBillingService {
     }
 
     return stripe.billingPortal.sessions.create(payload);
+  }
+
+  async retrieveSubscription(subscriptionId: string): Promise<StripeSubscription | null> {
+    const stripe = this.getClient();
+
+    if (!stripe) {
+      return null;
+    }
+
+    return stripe.subscriptions.retrieve(subscriptionId);
   }
 
   constructWebhookEvent(

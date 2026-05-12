@@ -24,6 +24,18 @@ function tone(featured: boolean) {
     : "border-brand-ink/10 bg-white text-brand-ink";
 }
 
+function compactDate(value?: string | null) {
+  if (!value) {
+    return "Not scheduled";
+  }
+
+  return new Date(value).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  });
+}
+
 export default component$(() => {
   const dashboard = useSignal<DesignerDashboard | null>(null);
   const plans = useSignal<DesignerSubscriptionPlan[]>([]);
@@ -127,6 +139,18 @@ export default component$(() => {
                   ? `${dashboard.value.subscription.productsPublishedThisPeriod}/${dashboard.value.subscription.productLimit} posting slots used this cycle.`
                   : "Activate a Stripe plan before you begin publishing rental inventory."}
               </p>
+              {dashboard.value.subscription.plan && (
+                <div class="mt-5 flex flex-wrap gap-3 text-[0.68rem] font-extrabold uppercase tracking-[0.14em]">
+                  <span class="border border-brand-ink/10 bg-white px-3 py-2 text-brand-ink/70">
+                    Status: {dashboard.value.subscription.status.replaceAll("_", " ")}
+                  </span>
+                  {dashboard.value.subscription.cancelAtPeriodEnd && (
+                    <span class="border border-brand-rose/20 bg-brand-rose/10 px-3 py-2 text-brand-rose">
+                      Cancels on {compactDate(dashboard.value.subscription.currentPeriodEnd)}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             {!dashboard.value.subscription.needsSubscription && (
@@ -150,14 +174,22 @@ export default component$(() => {
 
           <div class="grid gap-6 xl:grid-cols-3">
             {plans.value.map((plan) => {
+              const subscription = dashboard.value?.subscription;
               const isCurrent =
-                dashboard.value?.subscription.plan?.id === plan.id &&
-                !dashboard.value.subscription.needsSubscription;
+                subscription != null &&
+                subscription.plan?.id === plan.id &&
+                !subscription.needsSubscription;
+              const isScheduledForCancellation =
+                isCurrent && Boolean(subscription?.cancelAtPeriodEnd);
               const buttonLabel = isCurrent
-                ? "Current Plan"
+                ? isScheduledForCancellation
+                  ? "Current Plan | Cancels Soon"
+                  : "Current Plan"
                 : busyPlanId.value === plan.id
                   ? "Redirecting..."
-                  : "Choose Plan";
+                  : subscription?.plan && !subscription.needsSubscription
+                    ? "Switch to Plan"
+                    : "Choose Plan";
 
               return (
                 <article

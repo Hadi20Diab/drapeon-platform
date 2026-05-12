@@ -38,6 +38,7 @@ describe("PaymentsService", () => {
       isConfigured: jest.fn(() => false),
       createCheckoutSession: jest.fn(),
       createBillingPortalSession: jest.fn(),
+      retrieveSubscription: jest.fn(),
       constructWebhookEvent: jest.fn(),
       ...(overrides?.stripe ?? {})
     } as any;
@@ -65,6 +66,16 @@ describe("PaymentsService", () => {
     sortOrder: 1,
     notes: null,
     features: ["10 active products", "Priority support"]
+  };
+  const growthPlan = {
+    ...plan,
+    id: "plan-2",
+    slug: "atelier-growth",
+    name: "Atelier Growth",
+    stripePriceId: "price_growth",
+    stripeProductId: "prod_growth",
+    amount: 249,
+    productLimit: 30
   };
 
   const designer = {
@@ -114,6 +125,7 @@ describe("PaymentsService", () => {
     prisma.designer.findUnique.mockResolvedValue({
       ...designer,
       subscription: {
+        planId: "plan-1",
         stripeCustomerId: "cus_123",
         status: DesignerSubscriptionStatus.ACTIVE
       }
@@ -126,6 +138,56 @@ describe("PaymentsService", () => {
     expect(result.url).toBe("https://billing.stripe.test/portal");
     expect(stripe.createBillingPortalSession).toHaveBeenCalledWith(
       expect.objectContaining({ customer: "cus_123" })
+    );
+  });
+
+  it("opens a targeted Stripe update flow when an active subscriber selects a different plan", async () => {
+    const { service, prisma, stripe } = createService({
+      configValues: {
+        WEB_ORIGIN: "http://localhost:5173",
+        STRIPE_BILLING_PORTAL_RETURN_URL: "/designers/billing"
+      },
+      stripe: {
+        isConfigured: jest.fn(() => true),
+        retrieveSubscription: jest.fn().mockResolvedValue({
+          id: "sub_123",
+          items: {
+            data: [{ id: "si_123", quantity: 1 }]
+          }
+        }),
+        createBillingPortalSession: jest.fn().mockResolvedValue({
+          url: "https://billing.stripe.test/update-flow"
+        })
+      }
+    });
+    prisma.designer.findUnique.mockResolvedValue({
+      ...designer,
+      subscription: {
+        planId: "plan-1",
+        stripeCustomerId: "cus_123",
+        stripeSubscriptionId: "sub_123",
+        status: DesignerSubscriptionStatus.ACTIVE
+      }
+    });
+    prisma.subscriptionPlan.findFirst.mockResolvedValue(growthPlan);
+
+    const result = await service.createDesignerSubscriptionCheckout("user-1", { planId: "plan-2" });
+
+    expect(result.mode).toBe("billing_portal");
+    expect(result.url).toBe("https://billing.stripe.test/update-flow");
+    expect(stripe.retrieveSubscription).toHaveBeenCalledWith("sub_123");
+    expect(stripe.createBillingPortalSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customer: "cus_123",
+        return_url: "http://localhost:5173/designers/billing",
+        flow_data: expect.objectContaining({
+          type: "subscription_update_confirm",
+          subscription_update_confirm: expect.objectContaining({
+            subscription: "sub_123",
+            items: [{ id: "si_123", price: "price_growth", quantity: 1 }]
+          })
+        })
+      })
     );
   });
 

@@ -97,7 +97,15 @@ export class PaymentsService {
       designer.subscription?.stripeCustomerId &&
       ACTIVE_SUBSCRIPTION_STATUSES.has(designer.subscription.status)
     ) {
-      const portal = await this.createPortalSession(designer.subscription.stripeCustomerId);
+      const wantsPlanChange =
+        designer.subscription.planId != null && designer.subscription.planId !== plan.id;
+      const portal = wantsPlanChange && designer.subscription.stripeSubscriptionId
+        ? await this.createSubscriptionUpdatePortalSession(
+            designer.subscription.stripeCustomerId,
+            designer.subscription.stripeSubscriptionId,
+            plan.stripePriceId
+          )
+        : await this.createPortalSession(designer.subscription.stripeCustomerId);
 
       return {
         mode: "billing_portal",
@@ -105,7 +113,9 @@ export class PaymentsService {
         url: portal?.url ?? null,
         plan: this.serializePlan(plan),
         message:
-          "This designer already has an active subscription. Open the Stripe customer portal to change or cancel the plan."
+          wantsPlanChange
+            ? "Your current subscription is active. We opened Stripe so you can confirm the plan change."
+            : "This designer already has an active subscription. Open the Stripe customer portal to change or cancel the plan."
       };
     }
 
@@ -407,6 +417,56 @@ export class PaymentsService {
         "STRIPE_BILLING_PORTAL_RETURN_URL",
         `${webOrigin}/designers/billing`
       )
+    });
+  }
+
+  private async createSubscriptionUpdatePortalSession(
+    customerId: string,
+    stripeSubscriptionId: string,
+    targetPriceId: string
+  ) {
+    const subscription = await this.stripeBillingService.retrieveSubscription(stripeSubscriptionId);
+
+    if (!subscription) {
+      throw new BadRequestException("Stripe billing is not configured.");
+    }
+
+    const subscriptionItem = subscription.items.data[0];
+
+    if (!subscriptionItem?.id) {
+      throw new BadRequestException(
+        "Could not find the active Stripe subscription item for this designer."
+      );
+    }
+
+    return this.stripeBillingService.createBillingPortalSession({
+      customer: customerId,
+      return_url: this.resolveStripeUrl(
+        "STRIPE_BILLING_PORTAL_RETURN_URL",
+        `${this.configService.get<string>("WEB_ORIGIN", "http://localhost:5173")}/designers/billing`
+      ),
+      flow_data: {
+        type: "subscription_update_confirm",
+        after_completion: {
+          type: "redirect",
+          redirect: {
+            return_url: this.resolveStripeUrl(
+              "STRIPE_BILLING_PORTAL_RETURN_URL",
+              `${this.configService.get<string>("WEB_ORIGIN", "http://localhost:5173")}/designers/billing`
+            )
+          }
+        },
+        subscription_update_confirm: {
+          subscription: stripeSubscriptionId,
+          items: [
+            {
+              id: subscriptionItem.id,
+              price: targetPriceId,
+              quantity: subscriptionItem.quantity ?? 1
+            }
+          ]
+        }
+      }
     });
   }
 
