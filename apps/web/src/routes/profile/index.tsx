@@ -229,7 +229,30 @@ export default component$(() => {
       isLoading.value = false;
     }
 
-    return subscribeToAuthSession(async () => {
+    // After loading profile, if there's a hash in the URL, attempt to scroll to it.
+    const scrollToHash = () => {
+      try {
+        const hash = typeof window !== "undefined" ? window.location.hash : "";
+        if (hash) {
+          const id = hash.startsWith("#") ? hash.slice(1) : hash;
+          const el = document.getElementById(id);
+          if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    // Run once now
+    scrollToHash();
+
+    // Also handle future hash changes
+    const onHashChange = () => scrollToHash();
+    window.addEventListener("hashchange", onHashChange);
+
+    const unsubscribe = subscribeToAuthSession(async () => {
       isLoading.value = true;
 
       try {
@@ -240,6 +263,15 @@ export default component$(() => {
         isLoading.value = false;
       }
     });
+
+    return () => {
+      try {
+        unsubscribe();
+      } catch {}
+      try {
+        window.removeEventListener("hashchange", onHashChange);
+      } catch {}
+    };
   });
 
   const saveProfile = $(async () => {

@@ -1,6 +1,6 @@
 import { $, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
 
-import { DesignerShell } from "../../../components/designers/designer-shell";
+import { DesignerShell, DesignerSkeleton } from "../../../components/designers/designer-shell";
 import {
   fetchDesignerDashboard,
   updateDesignerSettings,
@@ -29,6 +29,16 @@ export default component$(() => {
       error.value = "Sign in as a designer to edit settings.";
     }
   });
+
+  function slugify(value: string | undefined, fallback?: string) {
+    if (!value) return fallback ?? "";
+    return value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-");
+  }
 
   const saveSettings = $(async () => {
     error.value = "";
@@ -67,6 +77,8 @@ export default component$(() => {
           {notice.value}
         </p>
       )}
+
+      {!dashboard.value && !error.value && <DesignerSkeleton />}
 
       <div class="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <article class="luxury-card p-6">
@@ -128,9 +140,17 @@ export default component$(() => {
                 onInput$={(_, target) => (tiktokUrl.value = target.value)}
               />
             </div>
-            <button type="button" class="btn-primary justify-self-start" onClick$={saveSettings}>
-              Save Settings
-            </button>
+            <div class="flex items-center gap-3">
+              <button type="button" class="btn-primary" onClick$={saveSettings}>
+                Save Settings
+              </button>
+              <a
+                href={`/stores/${slugify(storeName.value, dashboard.value?.designerId)}`}
+                class="btn-secondary"
+              >
+                View Store
+              </a>
+            </div>
           </div>
         </article>
 

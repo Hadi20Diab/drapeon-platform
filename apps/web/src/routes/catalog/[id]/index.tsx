@@ -324,7 +324,7 @@ export default component$(() => {
                 </a>
               )}
               {authUser.value?.role === "USER" && (
-                <a href="/profile" class="btn-secondary">
+                <a href="/profile#booking-history" class="btn-secondary">
                   View My Bookings
                 </a>
               )}

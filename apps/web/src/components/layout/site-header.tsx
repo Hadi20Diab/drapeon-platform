@@ -13,6 +13,7 @@ export const SiteHeader = component$(() => {
   const isHomePage = location.url.pathname === "/";
   const user = useSignal<AuthUser | null>(null);
   const isMobileMenuOpen = useSignal(false);
+  const isProfileOpen = useSignal(false);
 
   useVisibleTask$(() => {
     user.value = readAuthSession()?.user ?? null;
@@ -50,12 +51,6 @@ export const SiteHeader = component$(() => {
           <a href="/contactus" class="transition hover:text-brand-gold">
             Contact
           </a>
-          {/* <a href="/designers/dashboard" class="transition hover:text-brand-gold">
-            Designer
-          </a> */}
-          {/* <a href="/admin/dashboard" class="transition hover:text-brand-gold">
-            Admin
-          </a> */}
           <a href="/wishlist" class="transition hover:text-brand-gold">
             Wishlist
           </a>
@@ -74,22 +69,51 @@ export const SiteHeader = component$(() => {
         {/* User Actions & Mobile Toggle */}
         <div class="flex items-center gap-3">
           {user.value ? (
-            <div class="flex items-center justify-end gap-3">
-              <a
-                href={
-                  user.value.role === "DESIGNER"
-                    ? "/designers/dashboard"
-                    : user.value.role === "ADMIN"
-                      ? "/admin/dashboard"
-                      : "/profile"
-                }
-                class="hidden text-xs font-extrabold uppercase tracking-[0.12em] text-brand-ink/70 md:block"
+            <div class="relative">
+              <button
+                type="button"
+                class="flex items-center gap-3 rounded-full border border-transparent bg-white/0 px-0 py-0"
+                onClick$={$(() => (isProfileOpen.value = !isProfileOpen.value))}
+                aria-label="Open account menu"
               >
-                {user.value.role}
-              </a>
-              <button class="btn-primary px-4 py-2" type="button" onClick$={logout}>
-                Logout
+                <span class="h-10 w-10 overflow-hidden rounded-full border border-brand-ink/10 bg-brand-sand">
+                  {(user.value as any)?.avatarUrl ? (
+                    <img src={(user.value as any).avatarUrl} alt={user.value.email ?? "Profile"} class="h-full w-full object-cover" />
+                  ) : (
+                    <span class="grid h-full w-full place-items-center font-bold text-sm text-brand-ink">
+                      {user.value.email ? user.value.email.slice(0, 1).toUpperCase() : "U"}
+                    </span>
+                  )}
+                </span>
               </button>
+
+              {isProfileOpen.value && (
+                <div class="absolute right-0 z-50 mt-3 w-56 rounded-lg border border-brand-ink/10 bg-white shadow-lg">
+                  <div class="p-3">
+                    <div class="mb-2 text-sm text-brand-ink/70">Logged in as</div>
+                    <div class="mb-3 truncate text-sm font-semibold text-brand-ink">{user.value.email}</div>
+                    <nav class="flex flex-col gap-2">
+                      <a href="/profile" class="block rounded px-3 py-2 text-sm hover:bg-brand-ink/5">Profile</a>
+                      {user.value.role === "DESIGNER" && (
+                        <a href="/designers/dashboard" class="block rounded px-3 py-2 text-sm hover:bg-brand-ink/5">Designer Dashboard</a>
+                      )}
+                      {user.value.role === "ADMIN" && (
+                        <a href="/admin/dashboard" class="block rounded px-3 py-2 text-sm hover:bg-brand-ink/5">Admin Dashboard</a>
+                      )}
+                      <button
+                        type="button"
+                        class="mt-2 w-full rounded bg-white px-3 py-2 text-left text-sm text-brand-rose hover:bg-brand-rose/10"
+                        onClick$={() => {
+                          isProfileOpen.value = false;
+                          logout();
+                        }}
+                      >
+                        Log out
+                      </button>
+                    </nav>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <a href="/auth" class="btn-primary px-4 py-2">
