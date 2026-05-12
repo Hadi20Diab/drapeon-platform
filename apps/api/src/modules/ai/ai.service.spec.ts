@@ -95,14 +95,63 @@ describe("AiService", () => {
         candidates: [],
         functionCalls: []
       });
+    prisma.product.findMany.mockResolvedValue([]);
 
     const result = await service.recommend(null, {
       prompt: "Find me a dress for a formal dinner."
     });
 
     expect(generateContent).toHaveBeenCalledTimes(2);
-    expect(prisma.product.findMany).not.toHaveBeenCalled();
+    expect(prisma.product.findMany).toHaveBeenCalledTimes(1);
     expect(result.recommendationText).not.toContain("under heavy demand");
     expect(result.products).toEqual([]);
+  });
+
+  it("grounds shopping prompts with inferred price and color filters when the model skips tool calls", async () => {
+    const { service, prisma, generateContent } = createService();
+    generateContent.mockResolvedValue({
+      candidates: [],
+      functionCalls: []
+    });
+    prisma.product.findMany.mockResolvedValue([
+      {
+        id: "product-2",
+        title: "Slim Midnight Formal Suit",
+        rentalPrice: 180,
+        bodyShapes: [BodyShape.ATHLETIC],
+        images: [{ url: "https://cdn.example.com/suit.jpg" }],
+        variants: [{ sizeLabel: "50", color: "Black", isActive: true }],
+        designer: {
+          storeName: "Malik Atelier",
+          slug: "malik-atelier"
+        }
+      }
+    ]);
+
+    const result = await service.recommend(null, {
+      prompt: "Hello give me an black suit under 250$"
+    });
+
+    expect(prisma.product.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          category: "SUIT",
+          rentalPrice: expect.objectContaining({
+            lte: expect.anything()
+          }),
+          variants: expect.objectContaining({
+            some: expect.objectContaining({
+              color: "Black"
+            })
+          })
+        })
+      })
+    );
+    expect(result.products).toEqual([
+      expect.objectContaining({
+        id: "product-2",
+        title: "Slim Midnight Formal Suit"
+      })
+    ]);
   });
 });

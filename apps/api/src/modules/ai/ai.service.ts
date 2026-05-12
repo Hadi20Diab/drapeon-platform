@@ -200,7 +200,8 @@ export class AiService {
             session.id,
             groundedContext,
             collectedCards,
-            collectedKnowledge
+            collectedKnowledge,
+            payload
           );
         }
 
@@ -225,7 +226,8 @@ export class AiService {
         session.id,
         groundedContext,
         collectedCards,
-        collectedKnowledge
+        collectedKnowledge,
+        payload
       );
     } catch (error) {
       if (this.isTransientModelError(error)) {
@@ -614,8 +616,13 @@ export class AiService {
     groundedContext: GroundedRecommendationContext,
     collectedCards: Map<string, ProductCard>,
     collectedKnowledge: Map<string, KnowledgeEntryCard>,
+    payload?: AiRecommendationDto,
     preface?: string
   ): Promise<RecommendationResult> {
+    if (payload) {
+      await this.hydrateGroundedCollections(payload, groundedContext, collectedCards, collectedKnowledge);
+    }
+
     const finalProducts = selectGroundedProducts(Array.from(collectedCards.values()), groundedContext);
     const finalKnowledgeEntries = Array.from(collectedKnowledge.values()).slice(0, 2);
     const recommendationText = [
@@ -664,6 +671,50 @@ export class AiService {
     }
 
     throw new Error("The AI response could not be generated.");
+  }
+
+  private async hydrateGroundedCollections(
+    payload: AiRecommendationDto,
+    groundedContext: GroundedRecommendationContext,
+    collectedCards: Map<string, ProductCard>,
+    collectedKnowledge: Map<string, KnowledgeEntryCard>
+  ): Promise<void> {
+    if (collectedCards.size === 0 && this.shouldSearchFallbackCatalog(payload)) {
+      try {
+        const catalogResult = await this.searchProductsTool(
+          this.buildFallbackSearchArgs(payload, groundedContext.profile)
+        );
+
+        for (const item of catalogResult.items) {
+          collectedCards.set(item.id, item);
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Catalog grounding search failed: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
+      }
+    }
+
+    if (
+      collectedKnowledge.size === 0 &&
+      collectedCards.size === 0 &&
+      this.shouldSearchFallbackKnowledge(payload.prompt)
+    ) {
+      try {
+        const knowledgeResult = await this.searchCompanyKnowledgeTool({
+          query: payload.prompt,
+          limit: 2
+        });
+
+        for (const item of knowledgeResult.items) {
+          collectedKnowledge.set(item.id, item);
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Knowledge grounding search failed: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
+      }
+    }
   }
 
   private async buildModelAvailabilityFallback(
@@ -719,6 +770,7 @@ export class AiService {
       groundedContext,
       collectedCards,
       collectedKnowledge,
+      payload,
       preface
     );
   }
@@ -730,6 +782,9 @@ export class AiService {
     const filters = this.toRecord(payload.filters) ?? {};
     const prompt = payload.prompt.toLowerCase();
     const bodyShape = this.extractBodyShape(filters.bodyShape) ?? this.extractBodyShape(profile.measurements?.bodyShape);
+    const budget = this.extractBudgetRange(prompt);
+    const color = typeof filters.color === "string" ? filters.color : this.extractPromptColor(prompt);
+    const size = typeof filters.size === "string" ? filters.size : this.extractPromptSize(prompt);
 
     return {
       category:
@@ -740,9 +795,11 @@ export class AiService {
             : /\b(dress|gown|cocktail|eveningwear)\b/.test(prompt)
               ? ProductCategory.DRESS
               : undefined,
-      size: typeof filters.size === "string" ? filters.size : undefined,
-      color: typeof filters.color === "string" ? filters.color : undefined,
+      size,
+      color,
       bodyShape,
+      minPrice: budget.minPrice,
+      maxPrice: budget.maxPrice,
       limit: 6
     };
   }
@@ -774,6 +831,88 @@ export class AiService {
     return /\b(find|recommend|show|need|want|looking|wear|dress|gown|suit|tuxedo|tailoring|style|outfit|catalog|product)\b/.test(
       payload.prompt.toLowerCase()
     );
+  }
+
+  private extractBudgetRange(prompt: string): {
+    minPrice?: number;
+    maxPrice?: number;
+  } {
+    const normalized = prompt.toLowerCase();
+    const underMatch = normalized.match(/\b(?:under|below|less than|max(?:imum)?(?: budget)?(?: of)?|up to)\s*\$?\s*(\d{2,4})\b/);
+    const overMatch = normalized.match(/\b(?:over|above|more than|min(?:imum)?(?: budget)?(?: of)?|starting at)\s*\$?\s*(\d{2,4})\b/);
+    const betweenMatch = normalized.match(/\bbetween\s*\$?\s*(\d{2,4})\s*(?:and|-)\s*\$?\s*(\d{2,4})\b/);
+    const rangeMatch = normalized.match(/\$\s*(\d{2,4})\s*-\s*\$?\s*(\d{2,4})\b/);
+
+    if (betweenMatch?.[1] && betweenMatch[2]) {
+      return {
+        minPrice: Number(betweenMatch[1]),
+        maxPrice: Number(betweenMatch[2])
+      };
+    }
+
+    if (rangeMatch?.[1] && rangeMatch[2]) {
+      return {
+        minPrice: Number(rangeMatch[1]),
+        maxPrice: Number(rangeMatch[2])
+      };
+    }
+
+    return {
+      minPrice: overMatch?.[1] ? Number(overMatch[1]) : undefined,
+      maxPrice: underMatch?.[1] ? Number(underMatch[1]) : undefined
+    };
+  }
+
+  private extractPromptColor(prompt: string): string | undefined {
+    const colors = [
+      "black",
+      "midnight blue",
+      "navy",
+      "ivory",
+      "emerald",
+      "burgundy",
+      "champagne",
+      "sand",
+      "slate grey",
+      "gray",
+      "grey",
+      "white"
+    ];
+    const normalized = prompt.toLowerCase();
+    const matched = colors.find((color) => normalized.includes(color));
+
+    if (!matched) {
+      return undefined;
+    }
+
+    if (matched === "navy") {
+      return "Midnight Blue";
+    }
+
+    if (matched === "gray" || matched === "grey" || matched === "slate grey") {
+      return "Slate Grey";
+    }
+
+    if (matched === "white") {
+      return "Ivory";
+    }
+
+    return matched
+      .split(" ")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  }
+
+  private extractPromptSize(prompt: string): string | undefined {
+    const normalized = prompt.toLowerCase();
+    const alphaSize = normalized.match(/\b(?:size\s*)?(xs|s|m|l|xl)\b/);
+
+    if (alphaSize?.[1]) {
+      return alphaSize[1].toUpperCase();
+    }
+
+    const numericSize = normalized.match(/\b(?:size\s*)?(46|48|50|52|54)\b/);
+    return numericSize?.[1];
   }
 
   private isTransientModelError(error: unknown): boolean {
