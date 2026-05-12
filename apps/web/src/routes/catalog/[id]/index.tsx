@@ -323,7 +323,7 @@ export default component$(() => {
                   Sign In
                 </a>
               )}
-              {authUser.value?.role === "USER" && (
+              {(authUser.value?.role === "USER" || authUser.value?.role === "DESIGNER" )&& (
                 <a href="/profile#booking-history" class="btn-secondary">
                   View My Bookings
                 </a>
