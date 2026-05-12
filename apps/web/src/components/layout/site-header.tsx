@@ -14,12 +14,35 @@ export const SiteHeader = component$(() => {
   const user = useSignal<AuthUser | null>(null);
   const isMobileMenuOpen = useSignal(false);
   const isProfileOpen = useSignal(false);
+  const avatarValid = useSignal(false);
 
   useVisibleTask$(() => {
     user.value = readAuthSession()?.user ?? null;
 
+    const checkAvatar = (url?: string | null) => {
+      if (!url) {
+        avatarValid.value = false;
+        return;
+      }
+
+      // optimistic true while we load
+      avatarValid.value = true;
+
+      const img = new Image();
+      img.onload = () => {
+        avatarValid.value = true;
+      };
+      img.onerror = () => {
+        avatarValid.value = false;
+      };
+      img.src = url;
+    };
+
+    checkAvatar((user.value as any)?.avatarUrl);
+
     return subscribeToAuthSession((session) => {
       user.value = session?.user ?? null;
+      checkAvatar((user.value as any)?.avatarUrl);
     });
   });
 
