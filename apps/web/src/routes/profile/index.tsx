@@ -240,8 +240,8 @@ export default component$(() => {
             el.scrollIntoView({ behavior: "smooth", block: "start" });
           }
         }
-      } catch (e) {
-        // ignore
+      } catch {
+        // ignore errors while attempting to read location or scroll
       }
     };
 
@@ -265,12 +265,13 @@ export default component$(() => {
     });
 
     return () => {
-      try {
+      if (typeof unsubscribe === "function") {
         unsubscribe();
-      } catch {}
-      try {
+      }
+
+      if (typeof window !== "undefined") {
         window.removeEventListener("hashchange", onHashChange);
-      } catch {}
+      }
     };
   });
 
