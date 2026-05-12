@@ -28,7 +28,7 @@ export default component$(() => {
   const bookingNotice = useSignal("");
   const isBooking = useSignal(false);
   const bookingDate = useSignal(new Date(Date.now() + 86400000).toISOString().slice(0, 10));
-  const bookingTime = useSignal("14:00");
+    const bookingTime = useSignal("14:00");
   const bookingDuration = useSignal("60");
   const authUser = useSignal<AuthUser | null>(null);
 

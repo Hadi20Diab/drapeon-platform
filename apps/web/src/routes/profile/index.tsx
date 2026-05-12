@@ -248,6 +248,11 @@ export default component$(() => {
     // Run once now
     scrollToHash();
 
+    // Retry scrolling a few times to handle late-rendered content
+    const retryIds: number[] = [];
+    retryIds.push(setTimeout(() => scrollToHash(), 50) as unknown as number);
+    retryIds.push(setTimeout(() => scrollToHash(), 250) as unknown as number);
+
     // Also handle future hash changes
     const onHashChange = () => scrollToHash();
     window.addEventListener("hashchange", onHashChange);
@@ -272,6 +277,9 @@ export default component$(() => {
       if (typeof window !== "undefined") {
         window.removeEventListener("hashchange", onHashChange);
       }
+
+      // clear retry timers
+      retryIds.forEach((id) => clearTimeout(id));
     };
   });
 
@@ -703,8 +711,8 @@ export default component$(() => {
             )}
             {authUser.value.role === "USER" && bookings.value.length === 0 && (
               <div class="px-5 py-10 text-sm leading-7 text-brand-ink/55">
-                You have not booked a fitting or rental yet. Explore the catalog and reserve a
-                session when a look stands out.
+                <p>You have not booked a fitting or rental yet. Explore the catalog and reserve a session when a look stands out.</p>
+                <p class="mt-3">If you expect bookings here but see none, ensure you're signed in with a client account (role `USER`). For local testing, you can reseed the demo data with <span class="font-mono">pnpm -C apps/api prisma:reseed</span>.</p>
               </div>
             )}
             {authUser.value.role === "USER" &&

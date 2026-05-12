@@ -25,8 +25,8 @@ export const SiteHeader = component$(() => {
         return;
       }
 
-      // optimistic true while we load
-      avatarValid.value = true;
+      // start as invalid until we confirm load
+      avatarValid.value = false;
 
       const img = new Image();
       img.onload = () => {
@@ -100,8 +100,13 @@ export const SiteHeader = component$(() => {
                 aria-label="Open account menu"
               >
                 <span class="h-10 w-10 overflow-hidden rounded-full border border-brand-ink/10 bg-brand-sand">
-                  {(user.value as any)?.avatarUrl ? (
-                    <img src={(user.value as any).avatarUrl} alt={user.value.email ?? "Profile"} class="h-full w-full object-cover" />
+                  {avatarValid.value && (user.value as any)?.avatarUrl ? (
+                    <img
+                      src={(user.value as any).avatarUrl}
+                      alt={user.value.email ?? "Profile"}
+                      class="h-full w-full object-cover"
+                      onError$={$(() => (avatarValid.value = false))}
+                    />
                   ) : (
                     <span class="grid h-full w-full place-items-center font-bold text-sm text-brand-ink">
                       {user.value.email ? user.value.email.slice(0, 1).toUpperCase() : "U"}
@@ -115,8 +120,13 @@ export const SiteHeader = component$(() => {
                   <div class="p-3">
                     <div class="flex items-center gap-3 border-b border-brand-ink/10 pb-3 mb-3">
                       <span class="h-10 w-10 flex-shrink-0 overflow-hidden rounded-full border border-brand-ink/10 bg-brand-sand">
-                        {(user.value as any)?.avatarUrl ? (
-                          <img src={(user.value as any).avatarUrl} alt={user.value.email ?? "Profile"} class="h-full w-full object-cover" />
+                        {avatarValid.value && (user.value as any)?.avatarUrl ? (
+                          <img
+                            src={(user.value as any).avatarUrl}
+                            alt={user.value.email ?? "Profile"}
+                            class="h-full w-full object-cover"
+                            onError$={$(() => (avatarValid.value = false))}
+                          />
                         ) : (
                           <span class="grid h-full w-full place-items-center font-bold text-sm text-brand-ink">
                             {user.value.email ? user.value.email.slice(0, 1).toUpperCase() : "U"}
