@@ -14,13 +14,13 @@ import { BookingsService } from "./bookings.service";
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
-  @Roles(UserRole.USER)
+  @Roles(UserRole.USER, UserRole.DESIGNER)
   @Post()
   createBooking(@CurrentUser("sub") userId: string, @Body() payload: CreateBookingDto) {
     return this.bookingsService.createBooking(userId, payload);
   }
 
-  @Roles(UserRole.USER)
+  @Roles(UserRole.USER, UserRole.DESIGNER)
   @Get("me")
   listUserBookings(@CurrentUser("sub") userId: string) {
     return this.bookingsService.listUserBookings(userId);

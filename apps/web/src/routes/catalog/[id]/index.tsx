@@ -75,8 +75,8 @@ export default component$(() => {
         return;
       }
 
-      if (session.user.role !== "USER") {
-        bookingError.value = "Fitting requests are available from client accounts only.";
+      if (session.user.role !== "USER" && session.user.role !== "DESIGNER") {
+        bookingError.value = "Fitting requests are available from verified accounts only.";
         return;
       }
 
@@ -266,8 +266,8 @@ export default component$(() => {
                 </p>
               </div>
               <span class="text-xs font-extrabold uppercase tracking-[0.14em] text-brand-rose">
-                {authUser.value?.role === "USER"
-                  ? "Client booking enabled"
+                {authUser.value?.role === "USER" || authUser.value?.role === "DESIGNER"
+                  ? "Booking enabled"
                   : authUser.value
                     ? `${authUser.value.role.toLowerCase()} account`
                     : "Sign in required"}
@@ -326,6 +326,11 @@ export default component$(() => {
               {authUser.value?.role === "USER" && (
                 <a href="/profile#booking-history" class="btn-secondary">
                   View My Bookings
+                </a>
+              )}
+              {authUser.value?.role === "DESIGNER" && (
+                <a href="/designers/dashboard" class="btn-secondary">
+                  Review Appointments
                 </a>
               )}
             </div>
