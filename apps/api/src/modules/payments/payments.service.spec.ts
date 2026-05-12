@@ -162,6 +162,85 @@ describe("PaymentsService", () => {
     );
   });
 
+  it("expands WEB_ORIGIN placeholders for Stripe checkout URLs", async () => {
+    const { service, prisma, stripe } = createService({
+      configValues: {
+        WEB_ORIGIN: "http://localhost:5173",
+        STRIPE_SUBSCRIPTION_SUCCESS_URL:
+          "${WEB_ORIGIN}/designers/billing?status=success&session_id={CHECKOUT_SESSION_ID}",
+        STRIPE_SUBSCRIPTION_CANCEL_URL: "${WEB_ORIGIN}/designers/billing?status=cancelled"
+      },
+      stripe: {
+        isConfigured: jest.fn(() => true),
+        createCheckoutSession: jest.fn().mockResolvedValue({
+          id: "cs_test",
+          url: "https://checkout.stripe.test/subscription",
+          customer: "cus_123"
+        })
+      }
+    });
+    prisma.designer.findUnique.mockResolvedValue(designer);
+    prisma.subscriptionPlan.findFirst.mockResolvedValue(plan);
+    prisma.designerSubscription.upsert.mockResolvedValue({ id: "sub-row-1" });
+
+    await service.createDesignerSubscriptionCheckout("user-1", { planId: "plan-1" });
+
+    expect(stripe.createCheckoutSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success_url:
+          "http://localhost:5173/designers/billing?status=success&session_id={CHECKOUT_SESSION_ID}",
+        cancel_url: "http://localhost:5173/designers/billing?status=cancelled"
+      })
+    );
+  });
+
+  it("accepts relative Stripe return paths and resolves them against WEB_ORIGIN", async () => {
+    const { service, prisma, stripe } = createService({
+      configValues: {
+        WEB_ORIGIN: "http://localhost:5173",
+        STRIPE_BILLING_PORTAL_RETURN_URL: "/designers/billing"
+      },
+      stripe: {
+        isConfigured: jest.fn(() => true),
+        createBillingPortalSession: jest.fn().mockResolvedValue({
+          url: "https://billing.stripe.test/portal"
+        })
+      }
+    });
+    prisma.designer.findUnique.mockResolvedValue({
+      ...designer,
+      subscription: {
+        stripeCustomerId: "cus_123",
+        status: DesignerSubscriptionStatus.ACTIVE
+      }
+    });
+
+    await service.createDesignerBillingPortal("user-1");
+
+    expect(stripe.createBillingPortalSession).toHaveBeenCalledWith({
+      customer: "cus_123",
+      return_url: "http://localhost:5173/designers/billing"
+    });
+  });
+
+  it("throws a readable error for malformed Stripe redirect URLs", async () => {
+    const { service, prisma } = createService({
+      configValues: {
+        WEB_ORIGIN: "http://localhost:5173",
+        STRIPE_SUBSCRIPTION_SUCCESS_URL: "not-a-url"
+      },
+      stripe: {
+        isConfigured: jest.fn(() => true)
+      }
+    });
+    prisma.designer.findUnique.mockResolvedValue(designer);
+    prisma.subscriptionPlan.findFirst.mockResolvedValue(plan);
+
+    await expect(
+      service.createDesignerSubscriptionCheckout("user-1", { planId: "plan-1" })
+    ).rejects.toThrow(BadRequestException);
+  });
+
   it("blocks rejected designers from starting a subscription", async () => {
     const { service, prisma } = createService();
     prisma.designer.findUnique.mockResolvedValue({

@@ -112,12 +112,14 @@ export class PaymentsService {
     const webOrigin = this.configService.get<string>("WEB_ORIGIN", "http://localhost:5173");
     const session = await this.stripeBillingService.createCheckoutSession({
       mode: "subscription",
-      success_url:
-        this.configService.get<string>("STRIPE_SUBSCRIPTION_SUCCESS_URL") ??
-        `${webOrigin}/designers/billing?status=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url:
-        this.configService.get<string>("STRIPE_SUBSCRIPTION_CANCEL_URL") ??
-        `${webOrigin}/designers/billing?status=cancelled`,
+      success_url: this.resolveStripeUrl(
+        "STRIPE_SUBSCRIPTION_SUCCESS_URL",
+        `${webOrigin}/designers/billing?status=success&session_id={CHECKOUT_SESSION_ID}`
+      ),
+      cancel_url: this.resolveStripeUrl(
+        "STRIPE_SUBSCRIPTION_CANCEL_URL",
+        `${webOrigin}/designers/billing?status=cancelled`
+      ),
       customer: designer.subscription?.stripeCustomerId ?? undefined,
       customer_email: designer.subscription?.stripeCustomerId ? undefined : designer.user.email,
       client_reference_id: designer.userId,
@@ -401,10 +403,41 @@ export class PaymentsService {
 
     return this.stripeBillingService.createBillingPortalSession({
       customer: customerId,
-      return_url:
-        this.configService.get<string>("STRIPE_BILLING_PORTAL_RETURN_URL") ??
+      return_url: this.resolveStripeUrl(
+        "STRIPE_BILLING_PORTAL_RETURN_URL",
         `${webOrigin}/designers/billing`
+      )
     });
+  }
+
+  private resolveStripeUrl(key: string, fallback: string): string {
+    const webOrigin = this.normalizeOrigin(
+      this.configService.get<string>("WEB_ORIGIN", "http://localhost:5173")
+    );
+    const configured = this.configService.get<string>(key)?.trim();
+    const candidate = configured && configured.length > 0 ? configured : fallback;
+    const resolved = candidate.replace(/\$\{WEB_ORIGIN\}/g, webOrigin);
+
+    try {
+      if (resolved.startsWith("/")) {
+        return new URL(resolved, `${webOrigin}/`).toString();
+      }
+
+      return new URL(resolved).toString();
+    } catch {
+      throw new BadRequestException(
+        `${key} must be a valid absolute URL or start with '/'. Current value: ${candidate}`
+      );
+    }
+  }
+
+  private normalizeOrigin(value: string): string {
+    try {
+      const url = new URL(value);
+      return url.toString().replace(/\/$/, "");
+    } catch {
+      throw new BadRequestException("WEB_ORIGIN must be a valid absolute URL for Stripe redirects.");
+    }
   }
 
   private serializePlan(
