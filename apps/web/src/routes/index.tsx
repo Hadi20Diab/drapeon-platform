@@ -11,7 +11,7 @@ import {
 } from "../lib/api";
 
 export const useFeaturedProducts = routeLoader$(async () => {
-  return fetchCatalogProducts(6);
+  return fetchCatalogProducts({ limit: 6 });
 });
 
 const heroImage =
@@ -162,7 +162,7 @@ export default component$(() => {
         </div>
 
         <div class="grid gap-7 md:grid-cols-2 xl:grid-cols-3">
-          {products.value.map((product) => (
+          {products.value.items.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>

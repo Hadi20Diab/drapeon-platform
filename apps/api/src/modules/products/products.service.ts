@@ -64,6 +64,14 @@ export class ProductsService {
       status: ProductStatus.ACTIVE,
       designer: this.publicDesignerVisibility(),
       ...(filters.category ? { category: filters.category } : {}),
+      ...(filters.query
+        ? {
+            OR: [
+              { title: { contains: filters.query, mode: "insensitive" } },
+              { designer: { storeName: { contains: filters.query, mode: "insensitive" } } }
+            ]
+          }
+        : {}),
       ...(filters.minPrice != null || filters.maxPrice != null
         ? {
             rentalPrice: {
@@ -108,9 +116,7 @@ export class ProductsService {
         },
         skip: page * limit,
         take: limit,
-        orderBy: {
-          createdAt: "desc"
-        }
+        orderBy: filters.sort === "price" ? { rentalPrice: "asc" } : { createdAt: "desc" }
       }),
       this.prisma.product.count({ where })
     ]);

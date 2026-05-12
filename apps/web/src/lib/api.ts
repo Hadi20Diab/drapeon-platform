@@ -808,26 +808,41 @@ async function refreshAuthSession(): Promise<AuthSession | null> {
   }
 }
 
-export async function fetchCatalogProducts(limit = 24): Promise<CatalogProduct[]> {
+export async function fetchCatalogProducts(
+  filters: Record<string, string | number> = { limit: 24 }
+): Promise<{ items: CatalogProduct[]; total: number }> {
   const apiBase = apiBaseUrl();
-  const endpoint = `${apiBase}/api/products?limit=${limit}`;
+  const searchParams = new URLSearchParams();
+  
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== undefined && value !== "") {
+      searchParams.set(key, String(value));
+    }
+  }
+
+  const endpoint = `${apiBase}/api/products?${searchParams.toString()}`;
 
   try {
     const response = await fetch(endpoint);
 
     if (!response.ok) {
-      return FALLBACK_PRODUCTS;
+      return { items: FALLBACK_PRODUCTS, total: FALLBACK_PRODUCTS.length };
     }
 
-    const payload = extractData<ProductListPayload>(await response.json());
+    const payload = extractData<ProductListPayload & { pagination?: { total: number } }>(
+      await response.json()
+    );
 
     if (!payload?.items) {
-      return FALLBACK_PRODUCTS;
+      return { items: FALLBACK_PRODUCTS, total: FALLBACK_PRODUCTS.length };
     }
 
-    return payload.items.map(normalizeProduct);
+    return { 
+      items: payload.items.map(normalizeProduct),
+      total: payload.pagination?.total ?? payload.items.length
+    };
   } catch {
-    return FALLBACK_PRODUCTS;
+    return { items: FALLBACK_PRODUCTS, total: FALLBACK_PRODUCTS.length };
   }
 }
 

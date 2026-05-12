@@ -9,6 +9,10 @@ export class ProductFiltersDto {
 
   @IsOptional()
   @IsString()
+  query?: string;
+
+  @IsOptional()
+  @IsString()
   size?: string;
 
   @IsOptional()
@@ -38,4 +42,8 @@ export class ProductFiltersDto {
   @IsInt()
   @Min(1)
   limit?: number;
+
+  @IsOptional()
+  @IsString()
+  sort?: string;
 }

@@ -2,11 +2,11 @@ import { component$ } from "@builder.io/qwik";
 import { Link, routeLoader$ } from "@builder.io/qwik-city";
 
 import { ProductCard } from "../../../components/catalog/product-card";
-import { fetchCatalogProducts } from "../../../lib/api";
+import { fetchCatalogProducts, type CatalogProduct } from "../../../lib/api";
 
 export const useStorePage = routeLoader$(async ({ params, status }) => {
-  const products = await fetchCatalogProducts(240);
-  const items = products.filter((product) => product.designer.slug === params.slug);
+  const productsResponse = await fetchCatalogProducts({ limit: 240 });
+  const items = productsResponse.items.filter((product) => product.designer.slug === params.slug);
 
   if (items.length === 0) {
     status(404);
@@ -72,7 +72,7 @@ export default component$(() => {
       </div>
 
       <div class="mt-8 grid gap-8 md:grid-cols-2 xl:grid-cols-3">
-        {store.value.products.map((product) => (
+        {store.value.products.map((product: CatalogProduct) => (
           <ProductCard key={product.id} product={product} />
         ))}
       </div>
