@@ -8,6 +8,7 @@ import { component$ } from "@builder.io/qwik";
 export const RouterHead = component$(() => {
   const head = useDocumentHead();
   const loc = useLocation();
+  const APP_VERSION = "0.1.3";
 
   return (
     <>
@@ -15,12 +16,10 @@ export const RouterHead = component$(() => {
 
       <link rel="canonical" href={loc.url.href} />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-      <link rel="icon" href="/logo.png" type="image/png" />
-      <link rel="icon" type="image/png" sizes="32x32" href="/logo.png" />
-      <link rel="icon" type="image/png" sizes="16x16" href="/logo.png" />
-      <link rel="shortcut icon" href="/logo.png" />
-      <link rel="apple-touch-icon" href="/logo.png" />
+      <link rel="icon" type="image/png" href={`/logo.png?v=${APP_VERSION}`} />
+      <link rel="shortcut icon" href={`/logo.png?v=${APP_VERSION}`} />
+      <link rel="apple-touch-icon" href={`/logo.png?v=${APP_VERSION}`} />
+      <meta name="theme-color" content="#ffffff" />
 
       {head.meta.map((m) => (
         <meta key={m.key} {...m} />
