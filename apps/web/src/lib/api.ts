@@ -619,8 +619,20 @@ function normalizeProduct(product: RawProduct): CatalogProduct {
     title: product.title,
     description: product.description,
     rentalPrice: Number(product.rentalPrice),
-    imageUrl: isSeedPlaceholder(rawImageUrl) ? curatedImage(product) : rawImageUrl ?? curatedImage(product),
-    images: [isSeedPlaceholder(rawImageUrl) ? curatedImage(product) : rawImageUrl ?? curatedImage(product)],
+    imageUrl: (() => {
+      const candidate = isSeedPlaceholder(rawImageUrl) ? curatedImage(product) : rawImageUrl ?? curatedImage(product);
+      return candidate;
+    })(),
+    images: ((): string[] => {
+      if (Array.isArray(product.images) && product.images.length > 0) {
+        const mapped = product.images
+          .map((img) => (typeof img === "string" ? img : img.url ?? null))
+          .filter(Boolean) as string[];
+        if (mapped.length > 0) return mapped;
+      }
+      const fallback = isSeedPlaceholder(rawImageUrl) ? curatedImage(product) : rawImageUrl ?? curatedImage(product);
+      return [fallback];
+    })(),
     category: product.category,
     designer: {
       id: product.designer?.id,

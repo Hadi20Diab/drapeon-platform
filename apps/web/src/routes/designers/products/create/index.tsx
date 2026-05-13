@@ -369,12 +369,24 @@ export default component$(() => {
             </button>
           </div>
 
-          <label
-            class="group grid min-h-40 cursor-pointer place-items-center border border-dashed border-brand-ink/30 bg-white/70 px-5 py-8 text-center transition hover:bg-brand-sand"
+          <div
+            class="group grid min-h-40 place-items-center border border-dashed border-brand-ink/30 bg-white/70 px-5 py-8 text-center transition hover:bg-brand-sand"
             preventdefault:dragover
+            preventdefault:drop
             onDrop$={(event) => readFiles(event.dataTransfer?.files ?? null)}
+            onDragOver$={(event) => {
+              const dt = (event as DragEvent).dataTransfer;
+              if (dt) dt.dropEffect = "copy";
+            }}
+            onDragEnter$={(event) => {
+              if (event.preventDefault) event.preventDefault();
+            }}
+            onDragLeave$={(event) => {
+              if (event.preventDefault) event.preventDefault();
+            }}
           >
             <input
+              id="product-images-file"
               class="hidden"
               type="file"
               accept="image/*"
@@ -382,13 +394,21 @@ export default component$(() => {
               disabled={!canPublish()}
               onChange$={(_, target) => readFiles(target.files)}
             />
-            <span class="font-display text-3xl text-brand-ink">
-              Drop images, click upload, or add links
-            </span>
-            <span class="mt-2 text-xs font-bold uppercase tracking-[0.14em] text-brand-ink/45">
-              Up to 8 product images
-            </span>
-          </label>
+            <div class="grid gap-2">
+              <span class="font-display text-3xl text-brand-ink">Drop images, click upload, or add links</span>
+              <span class="mt-2 text-xs font-bold uppercase tracking-[0.14em] text-brand-ink/45">Up to 8 product images</span>
+              <div class="mt-3">
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  disabled={!canPublish()}
+                  onClick$={() => document.getElementById("product-images-file")?.click()}
+                >
+                  Upload Images
+                </button>
+              </div>
+            </div>
+          </div>
 
           <div class="grid grid-cols-2 gap-2 md:grid-cols-4">
             {imageUrls.value.map((url) => (

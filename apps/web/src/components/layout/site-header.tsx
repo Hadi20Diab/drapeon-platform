@@ -5,6 +5,7 @@ import {
   clearAuthSession,
   readAuthSession,
   subscribeToAuthSession,
+  fetchDesignerDashboard,
   type AuthUser
 } from "../../lib/api";
 
@@ -15,6 +16,7 @@ export const SiteHeader = component$(() => {
   const isMobileMenuOpen = useSignal(false);
   const isProfileOpen = useSignal(false);
   const avatarValid = useSignal(false);
+  const storeSlug = useSignal<string | null>(null);
 
   useVisibleTask$(() => {
     user.value = readAuthSession()?.user ?? null;
@@ -39,10 +41,25 @@ export const SiteHeader = component$(() => {
     };
 
     checkAvatar((user.value as any)?.avatarUrl);
+    // If a designer signs in, fetch their store slug for the "View Store" link.
+    const maybeFetchStore = async (u: AuthUser | null) => {
+      storeSlug.value = null;
+      if (u && u.role === "DESIGNER") {
+        try {
+          const dashboard = await fetchDesignerDashboard();
+          storeSlug.value = dashboard.slug ?? null;
+        } catch {
+          storeSlug.value = null;
+        }
+      }
+    };
+
+    void maybeFetchStore(user.value);
 
     return subscribeToAuthSession((session) => {
       user.value = session?.user ?? null;
       checkAvatar((user.value as any)?.avatarUrl);
+      void maybeFetchStore(user.value);
     });
   });
 
@@ -142,7 +159,12 @@ export const SiteHeader = component$(() => {
                     <nav class="grid gap-1">
                       <a href="/profile" class="block rounded px-3 py-2 text-sm text-brand-ink hover:bg-brand-ink/5 transition-colors">Profile</a>
                       {user.value.role === "DESIGNER" && (
-                        <a href="/designers/dashboard" class="block rounded px-3 py-2 text-sm text-brand-ink hover:bg-brand-ink/5 transition-colors">Designer Dashboard</a>
+                        <>
+                          <a href="/designers/dashboard" class="block rounded px-3 py-2 text-sm text-brand-ink hover:bg-brand-ink/5 transition-colors">Designer Dashboard</a>
+                          {storeSlug.value && (
+                            <a href={`/stores/${encodeURIComponent(storeSlug.value)}`} target="_blank" rel="noopener noreferrer" class="block rounded px-3 py-2 text-sm text-brand-ink hover:bg-brand-ink/5 transition-colors">View Store</a>
+                          )}
+                        </>
                       )}
                       {user.value.role === "ADMIN" && (
                         <a href="/admin/dashboard" class="block rounded px-3 py-2 text-sm text-brand-ink hover:bg-brand-ink/5 transition-colors">Admin Dashboard</a>

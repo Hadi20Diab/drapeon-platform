@@ -116,20 +116,28 @@ export default component$(() => {
         {view.value === "grid" && (
           <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {(products.value?.items ?? []).map((product) => (
-              <article key={product.id} class="luxury-card overflow-hidden">
-                <img src={product.images[0]?.url ?? fallbackImage} alt={product.title} width={720} height={480} class="h-64 w-full object-cover" />
-                <div class="p-5">
-                  <div class="flex items-start justify-between gap-4">
-                    <div><p class="font-display text-3xl leading-none text-brand-ink">{product.title}</p><p class="mt-2 text-sm text-brand-ink/50">{product.status} - {productStock(product)} units</p></div>
-                    <p class="font-display text-3xl text-brand-ink">${Number(product.rentalPrice).toFixed(0)}</p>
+                <article key={product.id} class="luxury-card overflow-hidden">
+                  <a href={`/catalog/${product.id}`} target="_blank" rel="noopener noreferrer" class="group block">
+                    <img src={product.images[0]?.url ?? fallbackImage} alt={product.title} width={720} height={480} class="h-64 w-full object-cover" />
+                    <div class="p-5">
+                      <div class="flex items-start justify-between gap-4">
+                        <div>
+                          <p class="font-display text-3xl leading-none text-brand-ink">{product.title}</p>
+                          <p class="mt-2 text-sm text-brand-ink/50">{product.status} - {productStock(product)} units</p>
+                        </div>
+                        <p class="font-display text-3xl text-brand-ink">${Number(product.rentalPrice).toFixed(0)}</p>
+                      </div>
+                    </div>
+                  </a>
+
+                  <div class="p-5 mt-2">
+                    <div class="mt-1 flex flex-wrap gap-2">
+                      <button class="btn-secondary border-brand-ink/20 text-brand-ink" type="button" onClick$={async (ev) => { ev.preventDefault(); ev.stopPropagation(); await setStatus(product.id, "ARCHIVED"); }}>Archive</button>
+                      <button class="btn-primary" type="button" onClick$={async (ev) => { ev.preventDefault(); ev.stopPropagation(); await setStatus(product.id, product.status === "ACTIVE" ? "DRAFT" : "ACTIVE"); }}>{product.status === "ACTIVE" ? "Unavailable" : "Activate"}</button>
+                    </div>
                   </div>
-                  <div class="mt-5 flex flex-wrap gap-2">
-                    <button class="btn-secondary border-brand-ink/20 text-brand-ink" type="button" onClick$={() => setStatus(product.id, "ARCHIVED")}>Archive</button>
-                    <button class="btn-primary" type="button" onClick$={() => setStatus(product.id, product.status === "ACTIVE" ? "DRAFT" : "ACTIVE")}>{product.status === "ACTIVE" ? "Unavailable" : "Activate"}</button>
-                  </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              ))}
           </div>
         )}
 
@@ -138,7 +146,16 @@ export default component$(() => {
             <table class="w-full min-w-[720px] text-left text-sm">
               <thead class="bg-brand-ink text-brand-sand"><tr>{["Piece", "Status", "Stock", "Rental", "Fittings", "Actions"].map((head) => <th key={head} class="px-4 py-3 text-xs uppercase tracking-[0.14em]">{head}</th>)}</tr></thead>
               <tbody>
-                {(products.value?.items ?? []).map((product) => <tr key={product.id} class="border-b border-brand-ink/10"><td class="px-4 py-3 font-semibold">{product.title}</td><td class="px-4 py-3">{product.status}</td><td class="px-4 py-3">{productStock(product)}</td><td class="px-4 py-3">${Number(product.rentalPrice).toFixed(0)}</td><td class="px-4 py-3">{product.fittingCount ?? 0}</td><td class="px-4 py-3"><button type="button" class="font-bold text-brand-rose" onClick$={() => setStatus(product.id, "ARCHIVED")}>Archive</button></td></tr>)}
+                {(products.value?.items ?? []).map((product) => (
+                  <tr key={product.id} class="border-b border-brand-ink/10">
+                    <td class="px-4 py-3 font-semibold"><a href={`/catalog/${product.id}`} target="_blank" rel="noopener noreferrer" class="hover:underline">{product.title}</a></td>
+                    <td class="px-4 py-3">{product.status}</td>
+                    <td class="px-4 py-3">{productStock(product)}</td>
+                    <td class="px-4 py-3">${Number(product.rentalPrice).toFixed(0)}</td>
+                    <td class="px-4 py-3">{product.fittingCount ?? 0}</td>
+                    <td class="px-4 py-3"><button type="button" class="font-bold text-brand-rose" onClick$={async (ev) => { ev.preventDefault(); ev.stopPropagation(); await setStatus(product.id, "ARCHIVED"); }}>Archive</button></td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
