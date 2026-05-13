@@ -606,6 +606,10 @@ img {
   gap: 1rem;
 }
 
+.is-hidden {
+  display: none !important;
+}
+
 .ai-demo__header {
   display: flex;
   align-items: flex-start;
@@ -636,6 +640,54 @@ img {
 
 .ai-demo__prompts {
   margin-top: 1.1rem;
+}
+
+.ai-live-panel {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 1.2rem;
+}
+
+.ai-live-panel__lead,
+.ai-live-note {
+  margin: 0;
+  color: var(--ink-soft);
+  line-height: 1.85;
+}
+
+.ai-live-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.ai-live-steps li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1rem;
+  align-items: start;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  background: rgba(17, 17, 17, 0.03);
+}
+
+.ai-live-steps span {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: rgba(182, 140, 94, 0.15);
+  color: var(--gold);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.ai-live-actions {
+  display: grid;
+  gap: 1rem;
 }
 
 .chip {

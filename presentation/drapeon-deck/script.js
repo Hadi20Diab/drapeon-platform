@@ -1,4 +1,6 @@
-﻿const slides = Array.from(document.querySelectorAll('.slide'));
+﻿const AI_DEMO_MODE = 'live'; // 'live' or 'fallback'
+
+const slides = Array.from(document.querySelectorAll('.slide'));
 const deck = document.getElementById('deck');
 const slideCounter = document.getElementById('slide-counter');
 const dotsHost = document.getElementById('slide-dots');
@@ -7,6 +9,8 @@ const nextButton = document.getElementById('next-slide');
 const promptButtons = Array.from(document.querySelectorAll('[data-prompt-index]'));
 const aiResponseNode = document.querySelector('#ai-chat-response p');
 const aiProductsNode = document.getElementById('ai-demo-products');
+const aiLiveDemoNode = document.getElementById('ai-demo-live');
+const aiFallbackDemoNode = document.getElementById('ai-demo-fallback');
 const inspirationToggle = document.getElementById('inspiration-toggle');
 const inspirationAnswer = document.getElementById('inspiration-answer');
 
@@ -192,11 +196,16 @@ function hydrateLinks() {
   const portfolioUrl = document.body.dataset.portfolioUrl || 'https://your-portfolio-url.com';
 
   const demoLink = document.getElementById('final-demo-link');
+  const aiLiveDemoLink = document.getElementById('ai-live-demo-link');
   const githubLink = document.getElementById('github-link');
   const portfolioLink = document.getElementById('portfolio-link');
 
   if (demoLink) {
     demoLink.href = demoUrl;
+  }
+
+  if (aiLiveDemoLink) {
+    aiLiveDemoLink.href = demoUrl;
   }
 
   if (githubLink) {
@@ -213,6 +222,10 @@ function hydrateLinks() {
 }
 
 function renderProducts(products) {
+  if (!aiProductsNode) {
+    return;
+  }
+
   aiProductsNode.innerHTML = products
     .map(
       (product) => `
@@ -229,6 +242,10 @@ function renderProducts(products) {
 }
 
 function typeResponse(text) {
+  if (!aiResponseNode) {
+    return;
+  }
+
   if (typingTimer) {
     window.clearInterval(typingTimer);
   }
@@ -252,6 +269,10 @@ function loadScenario(index) {
   const scenario = demoScenarios[index];
   const userBubble = document.querySelector('.ai-chat__message--user p');
 
+  if (!userBubble) {
+    return;
+  }
+
   promptButtons.forEach((button, buttonIndex) => {
     button.classList.toggle('is-active', buttonIndex === index);
   });
@@ -262,6 +283,15 @@ function loadScenario(index) {
 }
 
 function bindAiDemo() {
+  if (AI_DEMO_MODE === 'live') {
+    aiFallbackDemoNode?.classList.add('is-hidden');
+    aiLiveDemoNode?.classList.remove('is-hidden');
+    return;
+  }
+
+  aiLiveDemoNode?.classList.add('is-hidden');
+  aiFallbackDemoNode?.classList.remove('is-hidden');
+
   promptButtons.forEach((button) => {
     button.addEventListener('click', () => {
       const index = Number(button.dataset.promptIndex || 0);

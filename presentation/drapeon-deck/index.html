@@ -289,13 +289,67 @@
             </div>
 
             <div class="ai-layout ai-layout--demo">
-              <div class="ai-demo glass-card reveal reveal-delay-1">
+              <div class="ai-demo ai-demo--live glass-card reveal reveal-delay-1" id="ai-demo-live">
                 <div class="ai-demo__header">
                   <div>
-                    <p class="eyebrow">Quick AI Demo</p>
+                    <p class="eyebrow">Live Website Demo</p>
+                    <h3>Use the real chatbot on the site</h3>
+                  </div>
+                  <span class="ai-demo__status">Live mode</span>
+                </div>
+                <div class="ai-live-panel">
+                  <p class="ai-live-panel__lead">
+                    When the internet is stable, this slide stays minimal and lets you move directly
+                    into the real Drapeon experience.
+                  </p>
+                  <ol class="ai-live-steps">
+                    <li>
+                      <span>01</span>
+                      <div>
+                        <strong>Open the live site</strong>
+                        <p>Launch the hosted Drapeon demo in the browser.</p>
+                      </div>
+                    </li>
+                    <li>
+                      <span>02</span>
+                      <div>
+                        <strong>Open the AI stylist widget</strong>
+                        <p>Show the floating assistant directly inside the storefront journey.</p>
+                      </div>
+                    </li>
+                    <li>
+                      <span>03</span>
+                      <div>
+                        <strong>Ask a real prompt</strong>
+                        <p>Example: “Find me a black-tie suit under $250” or “Explain fittings.”</p>
+                      </div>
+                    </li>
+                  </ol>
+                  <div class="ai-live-actions">
+                    <a
+                      id="ai-live-demo-link"
+                      class="demo-link demo-link--dark"
+                      href="https://your-demo-url.com"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open Live Demo
+                    </a>
+                    <p class="ai-live-note">
+                      If the connection is unstable, switch to fallback mode in `script.js` and the
+                      simulated AI conversation will appear again.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="ai-demo ai-demo--fallback glass-card reveal reveal-delay-1" id="ai-demo-fallback">
+                <div class="ai-demo__header">
+                  <div>
+                    <p class="eyebrow">Offline Backup Demo</p>
                     <h3>Interactive stylist conversation</h3>
                   </div>
-                  <span class="ai-demo__status">Live simulation</span>
+                  <span class="ai-demo__status">Fallback mode</span>
                 </div>
                 <div class="ai-demo__prompts">
                   <button type="button" class="chip chip--prompt" data-prompt-index="0">Black tie under $250</button>
