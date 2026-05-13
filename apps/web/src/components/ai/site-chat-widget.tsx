@@ -58,20 +58,11 @@ function aiTransportMode(): AiTransportMode {
 function shouldUseSocketTransport(): boolean {
   const mode = aiTransportMode();
 
-  if (mode === "rest") {
-    return false;
-  }
-
   if (mode === "socket") {
     return true;
   }
 
-  try {
-    const hostname = new URL(apiBaseUrl()).hostname.toLowerCase();
-    return hostname === "localhost" || hostname === "127.0.0.1";
-  } catch {
-    return false;
-  }
+  return false;
 }
 
 function toHistory(conversation: PersistedChatConversation | null): AiHistoryMessage[] {
@@ -1024,9 +1015,7 @@ export const SiteChatWidget = component$(() => {
                           <span class="chatbot-thinking-dot" />
                           <span class="chatbot-thinking-dot" />
                           <span class="ml-2">
-                            {waitingForSocketResponse.value
-                              ? "Thinking through fit, knowledge, and inventory..."
-                              : "Preparing your request..."}
+                            Thinking through fit, knowledge, and inventory...
                           </span>
                         </div>
                       </div>
