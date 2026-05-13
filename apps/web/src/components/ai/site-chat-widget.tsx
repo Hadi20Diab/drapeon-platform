@@ -909,14 +909,17 @@ export const SiteChatWidget = component$(() => {
                         <p class="text-sm font-semibold text-brand-ink/60">Try a suggestion</p>
                         <div class="flex flex-wrap gap-2">
                           {[
-                            "Show me evening dresses",
-                            "How do I choose my size?",
-                            "Find designers near me"
+                            // "Show me evening dresses",
+                            // "How do I choose my size?",
+                            // "Find designers near me"
+                            "Find me a black-tie suit with a clean shoulder line.",
+                            "What is the Drapeon fitting process?",
+                            "Show dresses that work for an hourglass body shape."
                           ].map((suggestion) => (
                             <button
                               key={suggestion}
                               type="button"
-                              class="btn-secondary border-brand-ink/10 text-brand-ink"
+                              class="btn-secondary border-brand-ink/10 text-brand-ink !text-left !border-[rgba(143,140,140,0.28)]"
                               onClick$={() => {
                                 input.value = suggestion;
                                 // focus composer
