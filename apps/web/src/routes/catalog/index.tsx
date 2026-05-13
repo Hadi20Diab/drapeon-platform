@@ -66,9 +66,11 @@ export default component$(() => {
 
   const isSearching = useSignal(false);
 
-  useTask$(() => {
-    // when the route loader data changes, assume the search finished
-    void data.value;
+  useTask$(({ track }) => {
+    // Clear the searching state when the route loader or the URL search string changes.
+    // Tracking `loc.url.search` ensures the skeleton hides after navigation completes.
+    track(() => loc.url.search);
+    track(() => data.value);
     isSearching.value = false;
   });
 
