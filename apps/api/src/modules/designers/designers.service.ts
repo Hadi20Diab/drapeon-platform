@@ -263,9 +263,8 @@ export class DesignersService {
     const slug = await this.resolveUniqueProductSlug(this.toSlug(payload.title));
     const variants = this.buildVariants(payload);
     const usageWindow = this.resolveUsageWindow(subscription);
-
-    return this.prisma.$transaction(async (tx) => {
-      const created = await tx.product.create({
+    const operations: Prisma.PrismaPromise<unknown>[] = [
+      this.prisma.product.create({
         data: {
           designerId: designer.id,
           category: payload.category,
@@ -301,10 +300,12 @@ export class DesignersService {
           }
         },
         include: { images: true, variants: { include: { availability: true } } }
-      });
+      })
+    ];
 
-      if (subscription) {
-        await tx.designerSubscription.update({
+    if (subscription) {
+      operations.push(
+        this.prisma.designerSubscription.update({
           where: { id: subscription.id },
           data: {
             productsPublishedThisPeriod: { increment: 1 },
@@ -314,11 +315,12 @@ export class DesignersService {
             currentPeriodEnd: usageWindow.end,
             lastSyncedAt: new Date()
           }
-        });
-      }
+        })
+      );
+    }
 
-      return created;
-    });
+    const [created] = await this.prisma.$transaction(operations);
+    return created;
   }
 
   async updateDesignerProduct(userId: string, productId: string, payload: DesignerProductDto) {

@@ -445,6 +445,12 @@ export class AiService {
       throw new Error("Missing required knowledge search query");
     }
 
+    if (!this.isPromptWithinKnowledgeScope(query)) {
+      return {
+        items: []
+      };
+    }
+
     const items = await this.companyKnowledgeService.searchKnowledge(query, limit);
 
     return {
@@ -639,10 +645,17 @@ export class AiService {
     }
 
     const finalProducts = selectGroundedProducts(Array.from(collectedCards.values()), groundedContext);
-    const finalKnowledgeEntries = Array.from(collectedKnowledge.values()).slice(0, 2);
+    const finalKnowledgeEntries =
+      payload && !this.isPromptWithinKnowledgeScope(payload.prompt)
+        ? []
+        : Array.from(collectedKnowledge.values()).slice(0, 2);
+    const outOfScopeMessage =
+      payload && finalProducts.length === 0 && finalKnowledgeEntries.length === 0 && !this.isPromptWithinAssistantScope(payload)
+        ? "I’m here to help with Drapeon products, designer storefronts, fittings, subscriptions, and styling guidance. I can’t answer unrelated general-world questions like cars, but if you ask about suits, dresses, sizing, or how Drapeon works, I’ll help right away."
+        : null;
     const recommendationText = [
       preface?.trim(),
-      composeGroundedRecommendationText(groundedContext, finalProducts, finalKnowledgeEntries)
+      outOfScopeMessage ?? composeGroundedRecommendationText(groundedContext, finalProducts, finalKnowledgeEntries)
     ]
       .filter((section): section is string => Boolean(section))
       .join("\n\n");
@@ -873,11 +886,7 @@ export class AiService {
   }
 
   private shouldSearchFallbackKnowledge(prompt: string): boolean {
-    const normalized = prompt.toLowerCase();
-
-    return /\b(drapeon|policy|process|return|subscription|designer|onboarding|payment|fitting|appointment|how|what|why)\b/.test(
-      normalized
-    );
+    return this.isPromptWithinKnowledgeScope(prompt);
   }
 
   private shouldSearchFallbackCatalog(payload: AiRecommendationDto): boolean {
@@ -895,6 +904,18 @@ export class AiService {
     return /\b(find|give|recommend|show|need|want|looking|wear|dress|dresses|gown|gowns|suit|suits|tuxedo|tuxedos|tailoring|style|outfit|catalog|product)\b/.test(
       payload.prompt.toLowerCase()
     );
+  }
+
+  private isPromptWithinKnowledgeScope(prompt: string): boolean {
+    const normalized = prompt.toLowerCase();
+
+    return /\b(drapeon|ai stylist|stylist|designer|atelier|storefront|store|catalog|product|wishlist|profile|fitting|fit|appointment|subscription|billing|payment|onboarding|policy|process|return|client journey|how does drapeon|how do designers|how can i book)\b/.test(
+      normalized
+    );
+  }
+
+  private isPromptWithinAssistantScope(payload: AiRecommendationDto): boolean {
+    return this.shouldSearchFallbackCatalog(payload) || this.isPromptWithinKnowledgeScope(payload.prompt);
   }
 
   private extractBudgetRange(prompt: string): {

@@ -203,4 +203,23 @@ describe("AiService", () => {
       })
     ]);
   });
+
+  it("does not route unrelated general-world questions into Drapeon knowledge answers", async () => {
+    const { service, prisma, companyKnowledgeService, generateContent } = createService();
+    generateContent.mockResolvedValue({
+      candidates: [],
+      functionCalls: []
+    });
+    prisma.product.findMany.mockResolvedValue([]);
+
+    const result = await service.recommend(null, {
+      prompt: "what is the best car in 2024?"
+    });
+
+    expect(companyKnowledgeService.searchKnowledge).not.toHaveBeenCalled();
+    expect(result.products).toEqual([]);
+    expect(result.knowledgeEntries).toEqual([]);
+    expect(result.recommendationText).toContain("Drapeon products");
+    expect(result.recommendationText).toContain("can’t answer unrelated general-world questions");
+  });
 });

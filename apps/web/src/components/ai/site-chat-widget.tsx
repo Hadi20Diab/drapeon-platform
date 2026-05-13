@@ -914,7 +914,7 @@ export const SiteChatWidget = component$(() => {
                             // "Find designers near me"
                             "Find me a black-tie suit with a clean shoulder line.",
                             "What is the Drapeon fitting process?",
-                            "Show dresses that work for an hourglass body shape."
+                            "Find me a sand-colored Rami Tannous dress, size XS, for under $300."
                           ].map((suggestion) => (
                             <button
                               key={suggestion}
