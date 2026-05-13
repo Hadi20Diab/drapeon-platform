@@ -9,6 +9,7 @@ import {
 
 export default component$(() => {
   const dashboard = useSignal<DesignerDashboard | null>(null);
+  const isLoading = useSignal(true);
   const storeName = useSignal("");
   const description = useSignal("");
   const location = useSignal("");
@@ -27,6 +28,9 @@ export default component$(() => {
       brandColor.value = dashboard.value.brandColor ?? "#9b1232";
     } catch {
       error.value = "Sign in as a designer to edit settings.";
+    }
+    finally {
+      isLoading.value = false;
     }
   });
 
@@ -83,75 +87,95 @@ export default component$(() => {
       <div class="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <article class="luxury-card p-6">
           <p class="eyebrow">Profile & Branding</p>
-          <div class="mt-6 grid gap-4">
-            <label class="grid gap-2 text-sm font-bold text-brand-ink/70">
-              Store name
-              <input
-                class="min-h-12 border border-brand-ink/20 bg-white px-4"
-                value={storeName.value}
-                onInput$={(_, target) => (storeName.value = target.value)}
-              />
-            </label>
-            <label class="grid gap-2 text-sm font-bold text-brand-ink/70">
-              Studio story
-              <textarea
-                class="min-h-32 border border-brand-ink/20 bg-white px-4 py-3"
-                placeholder="Write at least 20 characters when updating the public store description."
-                value={description.value}
-                onInput$={(_, target) => (description.value = target.value)}
-              />
-            </label>
-            <div class="grid gap-4 md:grid-cols-2">
+          {isLoading.value ? (
+            <div class="mt-6 grid gap-4 animate-pulse">
+              <div class="h-6 w-48 bg-brand-ink/10 rounded" />
+              <div class="h-28 w-full bg-brand-ink/10 rounded" />
+              <div class="grid gap-4 md:grid-cols-2">
+                <div class="h-10 w-full bg-brand-ink/10 rounded" />
+                <div class="h-12 w-32 bg-brand-ink/10 rounded" />
+              </div>
+              <div class="grid gap-4 md:grid-cols-3">
+                <div class="h-10 bg-brand-ink/10 rounded" />
+                <div class="h-10 bg-brand-ink/10 rounded" />
+                <div class="h-10 bg-brand-ink/10 rounded" />
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="h-12 w-36 bg-brand-ink/10 rounded" />
+                <div class="h-12 w-36 bg-brand-ink/10 rounded" />
+              </div>
+            </div>
+          ) : (
+            <div class="mt-6 grid gap-4">
               <label class="grid gap-2 text-sm font-bold text-brand-ink/70">
-                Location
+                Store name
                 <input
                   class="min-h-12 border border-brand-ink/20 bg-white px-4"
-                  value={location.value}
-                  onInput$={(_, target) => (location.value = target.value)}
+                  value={storeName.value}
+                  onInput$={(_, target) => (storeName.value = target.value)}
                 />
               </label>
               <label class="grid gap-2 text-sm font-bold text-brand-ink/70">
-                Brand color
-                <input
-                  type="color"
-                  class="h-12 border border-brand-ink/20 bg-white px-2"
-                  value={brandColor.value}
-                  onInput$={(_, target) => (brandColor.value = target.value)}
+                Studio story
+                <textarea
+                  class="min-h-32 border border-brand-ink/20 bg-white px-4 py-3"
+                  placeholder="Write at least 20 characters when updating the public store description."
+                  value={description.value}
+                  onInput$={(_, target) => (description.value = target.value)}
                 />
               </label>
+              <div class="grid gap-4 md:grid-cols-2">
+                <label class="grid gap-2 text-sm font-bold text-brand-ink/70">
+                  Location
+                  <input
+                    class="min-h-12 border border-brand-ink/20 bg-white px-4"
+                    value={location.value}
+                    onInput$={(_, target) => (location.value = target.value)}
+                  />
+                </label>
+                <label class="grid gap-2 text-sm font-bold text-brand-ink/70">
+                  Brand color
+                  <input
+                    type="color"
+                    class="h-12 border border-brand-ink/20 bg-white px-2"
+                    value={brandColor.value}
+                    onInput$={(_, target) => (brandColor.value = target.value)}
+                  />
+                </label>
+              </div>
+              <div class="grid gap-4 md:grid-cols-3">
+                <input
+                  class="min-h-12 border border-brand-ink/20 bg-white px-4"
+                  placeholder="Website URL"
+                  value={websiteUrl.value}
+                  onInput$={(_, target) => (websiteUrl.value = target.value)}
+                />
+                <input
+                  class="min-h-12 border border-brand-ink/20 bg-white px-4"
+                  placeholder="Instagram URL"
+                  value={instagramUrl.value}
+                  onInput$={(_, target) => (instagramUrl.value = target.value)}
+                />
+                <input
+                  class="min-h-12 border border-brand-ink/20 bg-white px-4"
+                  placeholder="TikTok URL"
+                  value={tiktokUrl.value}
+                  onInput$={(_, target) => (tiktokUrl.value = target.value)}
+                />
+              </div>
+              <div class="flex items-center gap-3">
+                <button type="button" class="btn-primary" onClick$={saveSettings} disabled={isLoading.value}>
+                  Save Settings
+                </button>
+                <a
+                  href={`/stores/${dashboard.value?.slug ?? slugify(storeName.value, dashboard.value?.designerId)}`}
+                  class="btn-secondary"
+                >
+                  View Store
+                </a>
+              </div>
             </div>
-            <div class="grid gap-4 md:grid-cols-3">
-              <input
-                class="min-h-12 border border-brand-ink/20 bg-white px-4"
-                placeholder="Website URL"
-                value={websiteUrl.value}
-                onInput$={(_, target) => (websiteUrl.value = target.value)}
-              />
-              <input
-                class="min-h-12 border border-brand-ink/20 bg-white px-4"
-                placeholder="Instagram URL"
-                value={instagramUrl.value}
-                onInput$={(_, target) => (instagramUrl.value = target.value)}
-              />
-              <input
-                class="min-h-12 border border-brand-ink/20 bg-white px-4"
-                placeholder="TikTok URL"
-                value={tiktokUrl.value}
-                onInput$={(_, target) => (tiktokUrl.value = target.value)}
-              />
-            </div>
-            <div class="flex items-center gap-3">
-              <button type="button" class="btn-primary" onClick$={saveSettings}>
-                Save Settings
-              </button>
-              <a
-                href={`/stores/${dashboard.value?.slug ?? slugify(storeName.value, dashboard.value?.designerId)}`}
-                class="btn-secondary"
-              >
-                View Store
-              </a>
-            </div>
-          </div>
+          )}
         </article>
 
         <aside class="space-y-6">
@@ -160,24 +184,45 @@ export default component$(() => {
             <h2 class="mt-2 font-display text-5xl leading-none text-brand-ink">
               Designer Subscription
             </h2>
-            <div class="mt-6 grid gap-3 text-sm">
-              <p class="flex justify-between border-b border-brand-ink/10 pb-3">
-                <span>Plan</span>
-                <strong>{dashboard.value?.subscription.plan?.name ?? "None"}</strong>
-              </p>
-              <p class="flex justify-between border-b border-brand-ink/10 pb-3">
-                <span>Status</span>
-                <strong>{dashboard.value?.subscription.status ?? "INACTIVE"}</strong>
-              </p>
-              <p class="flex justify-between border-b border-brand-ink/10 pb-3">
-                <span>Posting limit</span>
-                <strong>{dashboard.value?.subscription.productLimit ?? 0}</strong>
-              </p>
-              <p class="flex justify-between">
-                <span>Remaining</span>
-                <strong>{dashboard.value?.subscription.productsRemainingThisPeriod ?? 0}</strong>
-              </p>
-            </div>
+            {isLoading.value ? (
+              <div class="mt-6 grid gap-3 text-sm animate-pulse">
+                <p class="flex justify-between border-b border-brand-ink/10 pb-3">
+                  <span>Plan</span>
+                  <strong class="h-4 w-24 bg-brand-ink/10 rounded" />
+                </p>
+                <p class="flex justify-between border-b border-brand-ink/10 pb-3">
+                  <span>Status</span>
+                  <strong class="h-4 w-20 bg-brand-ink/10 rounded" />
+                </p>
+                <p class="flex justify-between border-b border-brand-ink/10 pb-3">
+                  <span>Posting limit</span>
+                  <strong class="h-4 w-12 bg-brand-ink/10 rounded" />
+                </p>
+                <p class="flex justify-between">
+                  <span>Remaining</span>
+                  <strong class="h-4 w-12 bg-brand-ink/10 rounded" />
+                </p>
+              </div>
+            ) : (
+              <div class="mt-6 grid gap-3 text-sm">
+                <p class="flex justify-between border-b border-brand-ink/10 pb-3">
+                  <span>Plan</span>
+                  <strong>{dashboard.value?.subscription.plan?.name ?? "None"}</strong>
+                </p>
+                <p class="flex justify-between border-b border-brand-ink/10 pb-3">
+                  <span>Status</span>
+                  <strong>{dashboard.value?.subscription.status ?? "INACTIVE"}</strong>
+                </p>
+                <p class="flex justify-between border-b border-brand-ink/10 pb-3">
+                  <span>Posting limit</span>
+                  <strong>{dashboard.value?.subscription.productLimit ?? 0}</strong>
+                </p>
+                <p class="flex justify-between">
+                  <span>Remaining</span>
+                  <strong>{dashboard.value?.subscription.productsRemainingThisPeriod ?? 0}</strong>
+                </p>
+              </div>
+            )}
             <a href="/designers/billing" class="btn-primary mt-6 block text-center">
               Manage Billing
             </a>

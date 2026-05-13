@@ -17,7 +17,12 @@ export class StoresController {
     return {
       slug: designer.slug,
       storeName: designer.storeName,
-      location: designer.location ?? "Global atelier"
+      location: designer.location ?? "Global atelier",
+      description: designer.bio ?? null,
+      brandColor: designer.brandColor ?? null,
+      websiteUrl: designer.websiteUrl ?? null,
+      instagramUrl: designer.instagramUrl ?? null,
+      tiktokUrl: designer.tiktokUrl ?? null
     };
   }
 }
