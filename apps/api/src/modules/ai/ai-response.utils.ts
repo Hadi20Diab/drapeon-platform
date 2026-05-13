@@ -336,11 +336,11 @@ export function composeGroundedRecommendationText(
       );
     }
   } else if (knowledgeEntries.length > 0) {
+    const primaryEntry = knowledgeEntries[0]!;
     sections.push(`${greeting}Here is the verified answer from Drapeon's approved knowledge base:`);
-
-    for (const entry of knowledgeEntries.slice(0, 2)) {
-      sections.push(`**${entry.question}**\n${entry.answer}`);
-    }
+    sections.push(
+      `I found the most relevant verified guidance for **${primaryEntry.question}** in the knowledge cards below.`
+    );
   } else {
     sections.push(
       `${greeting}I could not verify a strong match from the current tool results yet. Try adding the event type, preferred color, or size and I will narrow the search.`

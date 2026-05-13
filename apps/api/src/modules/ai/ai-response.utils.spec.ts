@@ -4,6 +4,7 @@ import {
   composeGroundedRecommendationText,
   selectDiverseProductCards,
   selectGroundedProducts,
+  type GroundedKnowledgeEntryCard,
   type GroundedProductCard
 } from "./ai-response.utils";
 
@@ -113,5 +114,47 @@ describe("ai-response utils", () => {
     expect(text).toContain("Mira Atelier");
     expect(text).toContain("Hourglass");
     expect(text).not.toContain("Satin Column Evening Dress");
+  });
+
+  it("keeps knowledge-only answers concise so cards do not duplicate the same text", () => {
+    const knowledgeEntries: GroundedKnowledgeEntryCard[] = [
+      {
+        id: "knowledge-1",
+        question: "How does the AI stylist choose recommendations?",
+        answer:
+          "The AI stylist uses the customer profile, body measurements, saved body shape, style preferences, and live product inventory from the database to recommend real catalog pieces instead of invented products.",
+        category: "ai",
+        tags: ["ai", "recommendations"]
+      },
+      {
+        id: "knowledge-2",
+        question: "How does the client journey work on Drapeon?",
+        answer:
+          "Customers browse verified designer inventory, save favorite looks, and request fittings directly from product pages. Designers review those requests, confirm appointments, and manage their publishing workflow from the dashboard.",
+        category: "rentals",
+        tags: ["journey"]
+      }
+    ];
+
+    const text = composeGroundedRecommendationText(
+      {
+        prompt: "How does the AI stylist choose recommendations?",
+        filters: null,
+        profile: {
+          firstName: "Hadi",
+          measurements: null,
+          preferences: null
+        },
+        usedStoredMeasurements: false
+      },
+      [],
+      knowledgeEntries
+    );
+
+    expect(text).toContain("approved knowledge base");
+    expect(text).toContain("knowledge cards below");
+    expect(text).toContain("How does the AI stylist choose recommendations?");
+    expect(text).not.toContain(knowledgeEntries[0]!.answer);
+    expect(text).not.toContain(knowledgeEntries[1]!.answer);
   });
 });
