@@ -1,4 +1,5 @@
 import { randomBytes, randomUUID, scryptSync } from "node:crypto";
+import { Pinecone } from "@pinecone-database/pinecone";
 
 import {
   AiMessageRole,
@@ -339,6 +340,55 @@ async function main(): Promise<void> {
       }
     ]
   });
+
+  // If Pinecone is configured, upsert seeded knowledge entries so they are
+  // immediately available for AI searches without requiring a separate admin sync.
+  try {
+    const pineconeApiKey = process.env.PINECONE_API_KEY?.trim();
+    const pineconeIndexName = process.env.PINECONE_INDEX_NAME?.trim();
+    const pineconeNamespace = process.env.PINECONE_NAMESPACE ?? "company-knowledge";
+    const pineconeTextField = process.env.PINECONE_TEXT_FIELD ?? "text";
+
+    if (pineconeApiKey && pineconeIndexName) {
+      console.log("Pinecone configured — syncing company knowledge entries...");
+      const pinecone = new Pinecone({ apiKey: pineconeApiKey });
+      const index = pinecone.index(pineconeIndexName).namespace(pineconeNamespace);
+
+      const entries = await prisma.companyKnowledgeEntry.findMany({ orderBy: { updatedAt: "desc" } });
+
+      const records = entries.map((entry) => ({
+        id: entry.id,
+        [pineconeTextField]: [
+          `Question: ${entry.question}`,
+          `Answer: ${entry.answer}`,
+          entry.category ? `Category: ${entry.category}` : null,
+          entry.tags && entry.tags.length ? `Tags: ${entry.tags.join(", ")}` : null
+        ].filter(Boolean).join("\n"),
+        slug: entry.slug,
+        question: entry.question,
+        answer: entry.answer,
+        category: entry.category ?? "general",
+        tags: (entry.tags ?? []).join(", ")
+      }));
+
+      const chunkSize = 100;
+      for (let i = 0; i < records.length; i += chunkSize) {
+        const chunk = records.slice(i, i + chunkSize);
+        await index.upsertRecords({ records: chunk });
+      }
+
+      await prisma.companyKnowledgeEntry.updateMany({ data: { pineconeSyncedAt: new Date(), pineconeSyncError: null } });
+
+      console.log(`Synced ${records.length} knowledge entries to Pinecone.`);
+    } else {
+      console.log("Pinecone not configured — skipping knowledge sync.");
+    }
+  } catch (err) {
+    console.error("Pinecone sync failed:", err instanceof Error ? err.message : err);
+    try {
+      await prisma.companyKnowledgeEntry.updateMany({ data: { pineconeSyncError: err instanceof Error ? err.message : "Pinecone sync failed" } });
+    } catch {}
+  }
 
   console.log("Creating subscription plans...");
 
