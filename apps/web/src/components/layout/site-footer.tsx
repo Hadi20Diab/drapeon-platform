@@ -9,7 +9,7 @@ export const SiteFooter = component$(() => {
         <div>
           <a href="/" class="flex items-center gap-3">
             <span class="flex h-16 w-16 items-center justify-center overflow-hidden">
-              <img src="/logo.png" alt="Drapeon logo" width={96} height={96} class="h-full w-full object-contain" />
+              <img src="/logo_light.png" alt="Drapeon logo" width={96} height={96} class="h-full w-full object-contain" />
             </span>
             <span class="font-display text-4xl font-semibold">Drapeon</span>
           </a>

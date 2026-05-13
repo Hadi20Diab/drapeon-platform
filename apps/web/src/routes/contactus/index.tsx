@@ -44,7 +44,7 @@ export default component$(() => {
     <section class="section-wrap mt-12 grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
       <aside class="luxury-card bg-brand-ink p-8 text-brand-sand lg:sticky lg:top-24 lg:h-max">
         <div class="flex h-20 w-20 items-center justify-center overflow-hidden">
-          <img src="/logo.png" alt="Drapeon logo" width={160} height={160} class="h-full w-full object-contain" />
+          <img src="/logo_light.png" alt="Drapeon logo" width={160} height={160} class="h-full w-full object-contain" />
         </div>
         <p class="eyebrow mt-6 text-brand-gold">Contact</p>
         <h1 class="mt-4 font-display text-6xl leading-none md:text-7xl">

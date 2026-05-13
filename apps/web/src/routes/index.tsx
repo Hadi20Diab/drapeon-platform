@@ -86,7 +86,7 @@ export default component$(() => {
           <div class="max-w-5xl animate-rise">
             <div class="inline-flex items-center gap-4 border border-white/10 bg-white/6 px-4 py-3 backdrop-blur-md">
               <span class="flex h-14 w-14 items-center justify-center overflow-hidden border border-white/10 bg-white/96 shadow-[0_18px_50px_rgba(0,0,0,0.25)]">
-                <img src="/logo.png" alt="Drapeon logo" width={140} height={140} class="h-full w-full object-contain" />
+                <img src="/logo_light.png" alt="Drapeon logo" width={140} height={140} class="h-full w-full object-contain" />
               </span>
               <div>
                 <p class="text-xs font-extrabold uppercase tracking-[0.18em] text-brand-gold">
