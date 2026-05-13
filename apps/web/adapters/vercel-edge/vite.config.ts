@@ -11,6 +11,6 @@ export default extendConfig(baseConfig, () => {
         input: ["src/entry.vercel-edge.tsx", "@qwik-city-plan"],
       },
     },
-    plugins: [vercelEdgeAdapter({ ssg: null })],
+    plugins: [vercelEdgeAdapter({ ssg: { include: [] } })],
   };
 });
