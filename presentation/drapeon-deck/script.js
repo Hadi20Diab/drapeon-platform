@@ -19,7 +19,7 @@ const demoScenarios = [
   {
     prompt: 'I need a sharp black-tie suit under $250.',
     response:
-      'I would guide the user toward structured black evening suits with clean shoulders, a narrow lapel line, and verified budget fit. The response stays grounded to live catalog inventory and explains why each option matches the event.',
+      'The assistant guides the user toward structured black evening suits with clean shoulders, a narrow lapel line, and verified budget fit. The response stays grounded to live catalog inventory and explains why each option matches the event.',
     products: [
       {
         title: 'Slim Midnight Formal Suit',
