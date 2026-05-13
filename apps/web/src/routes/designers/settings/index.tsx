@@ -26,6 +26,10 @@ export default component$(() => {
       storeName.value = dashboard.value.storeName;
       location.value = dashboard.value.location ?? "";
       brandColor.value = dashboard.value.brandColor ?? "#9b1232";
+      description.value = dashboard.value.description ?? "";
+      websiteUrl.value = dashboard.value.websiteUrl ?? "";
+      instagramUrl.value = dashboard.value.instagramUrl ?? "";
+      tiktokUrl.value = dashboard.value.tiktokUrl ?? "";
     } catch {
       error.value = "Sign in as a designer to edit settings.";
     }

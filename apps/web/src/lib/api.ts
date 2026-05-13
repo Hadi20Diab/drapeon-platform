@@ -139,8 +139,12 @@ export interface DesignerDashboard {
   slug?: string;
   storeName: string;
   approvalStatus: string;
+  description?: string | null;
   location: string | null;
   brandColor?: string | null;
+  websiteUrl?: string | null;
+  instagramUrl?: string | null;
+  tiktokUrl?: string | null;
   productsCount: number;
   activeProductsCount: number;
   draftProductsCount: number;
