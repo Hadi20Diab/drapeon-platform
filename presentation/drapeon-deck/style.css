@@ -1,13 +1,9 @@
-:root {
+﻿:root {
   --gold: #b68c5e;
-  --gold-soft: rgba(182, 140, 94, 0.18);
-  --gold-strong: rgba(182, 140, 94, 0.38);
   --ink: #111111;
   --ink-soft: rgba(17, 17, 17, 0.68);
   --ink-muted: rgba(17, 17, 17, 0.42);
   --sand: #f5f5f5;
-  --sand-deep: #ebe7e2;
-  --white-glass: rgba(255, 255, 255, 0.62);
   --border-glass: rgba(17, 17, 17, 0.08);
   --shadow-soft: 0 24px 80px rgba(17, 17, 17, 0.08);
   --shadow-gold: 0 24px 64px rgba(182, 140, 94, 0.18);
@@ -15,7 +11,7 @@
   --radius-lg: 24px;
   --radius-md: 18px;
   --content-max: 1280px;
-  --progress: 10%;
+  --progress: 9.09%;
 }
 
 *,
@@ -55,10 +51,10 @@ body::after {
   content: "";
   position: fixed;
   inset: 0;
-  background: url("../../apps/web/public/logo.png") center center / min(50vw, 34rem) no-repeat;
-  opacity: 0.035;
+  background: url("./logo.png") center center / min(48vw, 32rem) no-repeat;
+  opacity: 0.032;
   pointer-events: none;
-  filter: saturate(0) contrast(1.1);
+  filter: saturate(0) contrast(1.08);
 }
 
 a {
@@ -237,6 +233,11 @@ img {
   gap: 2rem;
 }
 
+.slide__content--center {
+  place-items: center;
+  text-align: center;
+}
+
 .slide__backdrop {
   position: absolute;
   inset: 0;
@@ -264,38 +265,110 @@ img {
   box-shadow: var(--shadow-soft);
 }
 
-.slide-heading {
-  max-width: 60rem;
-}
-
-.slide-heading h2,
-.hero-copy h1,
-.final-copy h2,
-.end-copy h2 {
-  margin: 0.6rem 0 0;
-  font-family: "Cormorant Garamond", serif;
-  font-size: clamp(3rem, 7vw, 5.75rem);
-  line-height: 0.95;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-}
-
-.slide-heading h2 {
-  font-size: clamp(2.5rem, 5.4vw, 4.75rem);
-}
-
-.hero-grid {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 1.5rem;
-}
-
+.cover-lockup,
+.cover-question,
 .hero-copy,
 .final-copy,
 .final-card,
 .end-copy,
-.end-card {
-  padding: clamp(1.5rem, 2vw, 2.4rem);
+.end-card,
+.ai-demo,
+.audience-panel,
+.problem-card,
+.solution-card,
+.feature-card,
+.tech-card,
+.challenge-grid article,
+.future-columns article {
+  padding: clamp(1.35rem, 2vw, 2.3rem);
+}
+
+.cover-lockup {
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+}
+
+.cover-lockup__logo {
+  width: min(21rem, 46vw);
+  filter: drop-shadow(0 18px 34px rgba(17, 17, 17, 0.08));
+}
+
+.cover-lockup h1,
+.hero-copy h2,
+.slide-heading h2,
+.cover-question h2,
+.end-copy h2 {
+  margin: 0;
+  font-family: "Cormorant Garamond", serif;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 0.96;
+}
+
+.cover-lockup h1 {
+  font-size: clamp(4rem, 10vw, 7rem);
+}
+
+.hero-copy h2,
+.slide-heading h2,
+.cover-question h2,
+.end-copy h2 {
+  font-size: clamp(2.4rem, 5.6vw, 4.8rem);
+}
+
+.cover-lockup__subtitle,
+.hero-copy__lead,
+.cover-question p,
+.problem-card p,
+.solution-card p,
+.feature-card p,
+.tech-card p,
+.audience-panel p,
+.ai-step p,
+.challenge-grid p,
+.future-columns p,
+.end-copy p,
+.end-card__caption {
+  color: var(--ink-soft);
+}
+
+.cover-lockup__subtitle {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.8;
+}
+
+.cover-question {
+  max-width: 52rem;
+}
+
+.cover-question p {
+  margin: 1rem auto 0;
+  max-width: 42rem;
+  line-height: 1.8;
+}
+
+.cover-question__answer {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 320ms ease, opacity 320ms ease, margin-top 320ms ease;
+}
+
+.cover-question__answer.is-open {
+  max-height: 10rem;
+  opacity: 1;
+  margin-top: 1rem;
+}
+
+.hero-grid,
+.audience-layout,
+.ai-layout,
+.end-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
 }
 
 .hero-brand-lockup {
@@ -305,16 +378,12 @@ img {
 }
 
 .hero-brand-lockup__logo {
-  width: clamp(4.75rem, 10vw, 7rem);
+  width: clamp(4.5rem, 10vw, 6.75rem);
   height: auto;
-  object-fit: contain;
-  filter: drop-shadow(0 14px 34px rgba(17, 17, 17, 0.08));
 }
 
 .hero-copy__lead {
-  margin: 1.5rem 0 0;
-  max-width: 40rem;
-  color: var(--ink-soft);
+  margin: 1.4rem 0 0;
   font-size: 1.05rem;
   line-height: 1.9;
 }
@@ -330,22 +399,6 @@ img {
   padding: 1rem 1.1rem;
   border-radius: var(--radius-md);
   background: rgba(17, 17, 17, 0.03);
-}
-
-.hero-copy__metrics span,
-.tech-card p,
-.feature-card p,
-.solution-card p,
-.problem-card p,
-.audience-panel p,
-.final-copy p,
-.challenge-grid p,
-.future-columns p,
-.ai-step p,
-.ai-benefits p,
-.end-copy p,
-.end-card__caption {
-  color: var(--ink-soft);
 }
 
 .hero-copy__metrics span {
@@ -374,10 +427,15 @@ img {
   gap: 1rem;
 }
 
-.hero-visual {
+.hero-visual,
+.feature-card--media,
+.problem-card--visual {
   overflow: hidden;
   padding: 0;
   position: relative;
+}
+
+.hero-visual {
   min-height: 17rem;
 }
 
@@ -386,7 +444,6 @@ img {
 }
 
 .hero-visual img,
-.problem-visual img,
 .feature-card--media img {
   width: 100%;
   height: 100%;
@@ -398,9 +455,9 @@ img {
   inset: auto 1rem 1rem 1rem;
   padding: 0.9rem 1rem;
   border-radius: var(--radius-md);
-  background: rgba(17, 17, 17, 0.5);
+  background: rgba(17, 17, 17, 0.48);
   color: var(--sand);
-  backdrop-filter: blur(16px);
+  backdrop-filter: blur(12px);
 }
 
 .hero-visual__caption span {
@@ -425,7 +482,7 @@ img {
   justify-content: center;
   gap: 0.7rem;
   width: fit-content;
-  min-height: 3.2rem;
+  min-height: 3.15rem;
   padding: 0.95rem 1.35rem;
   border-radius: 999px;
   border: 1px solid transparent;
@@ -436,7 +493,7 @@ img {
   letter-spacing: 0.18em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease, border-color 180ms ease;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
   box-shadow: var(--shadow-gold);
 }
 
@@ -444,6 +501,13 @@ img {
 .github-button:hover,
 .demo-link:hover {
   transform: translateY(-2px);
+}
+
+.slide-cta--light {
+  background: transparent;
+  color: var(--ink);
+  border-color: rgba(17, 17, 17, 0.12);
+  box-shadow: none;
 }
 
 .problem-grid,
@@ -456,30 +520,10 @@ img {
   gap: 1.25rem;
 }
 
-.problem-grid--visual {
+.problem-grid--tight,
+.challenge-grid,
+.future-columns {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-items: stretch;
-}
-
-.problem-card,
-.problem-visual,
-.solution-card,
-.feature-card,
-.tech-card,
-.challenge-grid article,
-.future-columns article,
-.audience-panel,
-.ai-flow,
-.ai-benefits article,
-.ai-demo {
-  padding: 1.4rem;
-}
-
-.problem-visual {
-  grid-column: span 1;
-  padding: 0;
-  overflow: hidden;
-  min-height: 21rem;
 }
 
 .solution-grid {
@@ -491,20 +535,14 @@ img {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.challenge-grid,
-.future-columns {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
 .problem-card h3,
 .solution-card h3,
 .feature-card h3,
 .tech-card h3,
+.ai-demo h3,
 .audience-panel h3,
 .challenge-grid h3,
-.future-columns h3,
-.ai-benefits h3,
-.ai-demo h3 {
+.future-columns h3 {
   margin: 0;
   font-size: 1.2rem;
 }
@@ -520,34 +558,6 @@ img {
   color: var(--gold);
   font-size: 0.75rem;
   font-weight: 800;
-}
-
-.quote-band {
-  padding: 1.6rem 1.8rem;
-  border-left: 3px solid var(--gold);
-  background: rgba(255, 255, 255, 0.52);
-  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
-}
-
-.quote-band p {
-  margin: 0;
-  font-family: "Cormorant Garamond", serif;
-  font-size: clamp(1.5rem, 2.6vw, 2.35rem);
-  line-height: 1.15;
-  color: var(--ink);
-}
-
-.audience-layout,
-.ai-layout,
-.final-layout,
-.end-layout {
-  display: grid;
-  gap: 1.5rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.ai-layout--demo {
-  grid-template-columns: 1.18fr 0.82fr;
 }
 
 .timeline {
@@ -579,17 +589,16 @@ img {
   font-weight: 800;
 }
 
-.feature-card--media {
-  padding: 0;
-  overflow: hidden;
-}
-
 .feature-card--media img {
-  height: 15rem;
+  height: 14rem;
 }
 
 .feature-card--media div {
-  padding: 1.2rem 1.3rem 1.4rem;
+  padding: 1.1rem 1.2rem 1.4rem;
+}
+
+.ai-layout--demo {
+  grid-template-columns: 1.14fr 0.86fr;
 }
 
 .ai-benefits {
@@ -617,18 +626,16 @@ img {
   text-transform: uppercase;
 }
 
-.ai-demo__prompts {
+.ai-demo__prompts,
+.chip-row,
+.end-copy__links {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
-  margin-top: 1.1rem;
 }
 
-.chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: 1rem;
+.ai-demo__prompts {
+  margin-top: 1.1rem;
 }
 
 .chip {
@@ -656,7 +663,7 @@ img {
   display: grid;
   gap: 1rem;
   margin-top: 1.2rem;
-  min-height: 18rem;
+  min-height: 17rem;
 }
 
 .ai-chat__message {
@@ -699,10 +706,15 @@ img {
   color: var(--gold);
 }
 
-.ai-demo__products {
+.ai-demo__products,
+.end-card__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.9rem;
+}
+
+.ai-demo__products {
+  margin-top: 1rem;
 }
 
 .ai-demo__product {
@@ -770,20 +782,11 @@ img {
   margin-bottom: 1rem;
   border-radius: 999px;
   background: linear-gradient(135deg, rgba(182, 140, 94, 0.24), rgba(17, 17, 17, 0.08));
-  color: var(--ink);
 }
 
 .tech-card__icon--logo img {
   width: 1.45rem;
   height: 1.45rem;
-}
-
-.final-copy__actions,
-.end-copy__links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.9rem;
-  margin-top: 1.8rem;
 }
 
 .github-button {
@@ -858,21 +861,18 @@ img {
 
 @media (max-width: 1180px) {
   .hero-grid,
+  .hero-visuals,
   .audience-layout,
   .ai-layout,
-  .final-layout,
   .end-layout,
-  .solution-grid,
   .problem-grid,
+  .solution-grid,
+  .feature-grid,
+  .tech-grid,
   .challenge-grid,
   .future-columns,
-  .feature-grid,
-  .tech-grid {
+  .end-card__grid {
     grid-template-columns: 1fr;
-  }
-
-  .hero-visuals {
-    grid-template-columns: 1fr 1fr;
   }
 
   .hero-copy__metrics,
@@ -924,13 +924,6 @@ img {
     right: 1rem;
   }
 
-  .slide-heading h2,
-  .hero-copy h1,
-  .final-copy h2,
-  .end-copy h2 {
-    line-height: 1;
-  }
-
   .hero-brand-lockup {
     align-items: flex-start;
   }
@@ -951,30 +944,8 @@ img {
     padding-right: 1rem;
   }
 
-  .hero-copy,
-  .final-copy,
-  .final-card,
-  .end-copy,
-  .end-card,
-  .problem-card,
-  .solution-card,
-  .feature-card,
-  .tech-card,
-  .challenge-grid article,
-  .future-columns article,
-  .audience-panel,
-  .ai-flow,
-  .ai-benefits article,
-  .ai-demo {
-    padding: 1.2rem;
-  }
-
-  .hero-visuals {
-    grid-template-columns: 1fr;
-  }
-
-  .hero-visual--tall {
-    min-height: 24rem;
+  .cover-lockup__logo {
+    width: min(18rem, 72vw);
   }
 
   .feature-card--media img {

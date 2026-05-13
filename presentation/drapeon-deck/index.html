@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -24,14 +24,14 @@
     <div class="deck-shell">
       <header class="deck-progress">
         <div class="deck-progress__brand">
-          <img class="deck-progress__logo" src="../../apps/web/public/logo.png" alt="Drapeon logo" />
+          <img class="deck-progress__logo" src="./logo.png" alt="Drapeon logo" />
           <div>
             <p class="deck-progress__eyebrow">Internship Final Project</p>
             <p class="deck-progress__title">Drapeon Presentation</p>
           </div>
         </div>
         <div class="deck-progress__meta">
-          <span id="slide-counter">01 / 10</span>
+          <span id="slide-counter">01 / 11</span>
         </div>
         <div class="deck-progress__track">
           <span id="progress-bar"></span>
@@ -49,35 +49,63 @@
       </aside>
 
       <main class="deck" id="deck">
-        <section class="slide slide-hero is-active" data-slide-title="Cover">
+        <section class="slide slide-cover is-active" data-slide-title="Front Cover">
+          <div class="slide__backdrop slide__backdrop--halo"></div>
+          <div class="slide__content slide__content--center">
+            <div class="cover-lockup reveal">
+              <img class="cover-lockup__logo" src="./logo.png" alt="Drapeon logo" />
+              <h1>Drapeon</h1>
+              <p class="cover-lockup__subtitle">Luxury formalwear rental platform</p>
+            </div>
+
+            <div class="cover-question glass-card reveal reveal-delay-1">
+              <p class="eyebrow">Opening Moment</p>
+              <h2>Look at the logo. What inspired the idea for the project?</h2>
+              <p>
+                The identity leans into drape, structure, and couture presence - the same emotional
+                space that shaped Drapeon as a premium platform for formalwear discovery.
+              </p>
+              <button id="inspiration-toggle" class="slide-cta slide-cta--light" type="button">
+                Reveal the inspiration
+              </button>
+              <div class="cover-question__answer" id="inspiration-answer">
+                <p>
+                  The project started from one thought: luxury rental should feel as elegant and composed
+                  as the garment itself. The mark reflects fabric, tailoring, and confidence.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="slide slide-hero" data-slide-title="Project Overview">
           <div class="slide__backdrop slide__backdrop--mesh"></div>
           <div class="slide__content">
             <div class="reveal hero-grid">
               <div class="hero-copy glass-card">
                 <div class="hero-brand-lockup">
-                  <img class="hero-brand-lockup__logo" src="../../apps/web/public/logo.png" alt="Drapeon logo" />
+                  <img class="hero-brand-lockup__logo" src="./logo.png" alt="Drapeon logo" />
                   <div>
-                    <p class="eyebrow">Luxury Formalwear Rental Platform</p>
-                    <h1>Drapeon</h1>
+                    <p class="eyebrow">Project Overview</p>
+                    <h2>Drapeon</h2>
                   </div>
                 </div>
                 <p class="hero-copy__lead">
-                  A premium multi-vendor platform for renting suits and dresses,
-                  pairing curated designer storefronts with AI-assisted styling
-                  and fitting-first workflows.
+                  A premium multi-vendor platform for renting suits and dresses, pairing curated designer
+                  storefronts with AI-assisted styling and fitting-first workflows.
                 </p>
                 <div class="hero-copy__metrics">
                   <article>
-                    <span>Focus</span>
-                    <strong>Luxury UX + operational scale</strong>
+                    <span>Objective</span>
+                    <strong>Make luxury rental discovery feel guided, polished, and trustworthy.</strong>
                   </article>
                   <article>
-                    <span>Model</span>
-                    <strong>Designer subscriptions + curated inventory</strong>
+                    <span>Business Model</span>
+                    <strong>Designer subscriptions unlock publishing and operational tools.</strong>
                   </article>
                   <article>
-                    <span>Outcome</span>
-                    <strong>Faster discovery, stronger fit confidence</strong>
+                    <span>Impact</span>
+                    <strong>Faster discovery, stronger fit confidence, and cleaner vendor operations.</strong>
                   </article>
                 </div>
               </div>
@@ -89,7 +117,7 @@
                     alt="Luxury men's tailoring"
                   />
                   <div class="hero-visual__caption">
-                    <span>Editorial catalog presentation</span>
+                    <span>Editorial catalog language</span>
                     <strong>Premium product storytelling</strong>
                   </div>
                 </article>
@@ -97,16 +125,16 @@
                   <article class="hero-visual glass-card">
                     <img
                       src="https://images.pexels.com/photos/19895964/pexels-photo-19895964.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop"
-                      alt="Formal dress rack"
+                      alt="Formal dresses"
                     />
                     <div class="hero-visual__caption">
-                      <span>Curated dresses</span>
+                      <span>Luxury occasionwear</span>
                     </div>
                   </article>
                   <article class="hero-visual glass-card">
                     <img
                       src="https://images.unsplash.com/photo-1593032465175-481ac7f401a0?auto=format&fit=crop&w=1200&q=85"
-                      alt="Tailored suit presentation"
+                      alt="Tailored black suit"
                     />
                     <div class="hero-visual__caption">
                       <span>Designer storefront confidence</span>
@@ -116,54 +144,30 @@
               </div>
             </div>
 
-            <button class="slide-cta" type="button" data-action="next">
-              Explore the story
-            </button>
+            <button class="slide-cta" type="button" data-action="next">Explore the story</button>
           </div>
         </section>
 
         <section class="slide" data-slide-title="Problem">
           <div class="slide__content">
             <div class="slide-heading reveal">
-              <p class="eyebrow">01 � Problem & Opportunity</p>
-              <h2>Formalwear discovery is fragmented, generic, and low-confidence.</h2>
+              <p class="eyebrow">01 - Problem & Opportunity</p>
+              <h2>Luxury rental still feels scattered, uncertain, and too manual.</h2>
             </div>
 
-            <div class="problem-grid problem-grid--visual">
+            <div class="problem-grid problem-grid--tight">
               <article class="problem-card glass-card reveal reveal-delay-1">
-                <h3>Disconnected inventory</h3>
-                <p>
-                  Customers jump between boutiques, Instagram pages, and direct
-                  messages just to compare options, availability, and sizing.
-                </p>
+                <h3>Discovery is fragmented</h3>
+                <p>Users compare boutiques, direct messages, and social pages with no unified inventory view.</p>
               </article>
               <article class="problem-card glass-card reveal reveal-delay-2">
-                <h3>Fit anxiety</h3>
-                <p>
-                  Renting occasion wear is high stakes. Without measurements,
-                  fittings, or guidance, customers hesitate before committing.
-                </p>
+                <h3>Fit confidence is low</h3>
+                <p>Formalwear rental is high stakes, and sizing uncertainty creates hesitation before any decision.</p>
               </article>
-              <article class="problem-visual glass-card reveal reveal-delay-3">
-                <img
-                  src="https://images.pexels.com/photos/5386592/pexels-photo-5386592.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop"
-                  alt="Luxury dress details"
-                />
+              <article class="problem-card glass-card reveal reveal-delay-3">
+                <h3>Designers lack premium tooling</h3>
+                <p>Independent ateliers need a polished sales channel without building custom operations software.</p>
               </article>
-              <article class="problem-card glass-card reveal reveal-delay-4">
-                <h3>Designer friction</h3>
-                <p>
-                  Designers need a premium digital channel to present collections,
-                  manage incoming requests, and grow without building custom tech.
-                </p>
-              </article>
-            </div>
-
-            <div class="quote-band reveal reveal-delay-5">
-              <p>
-                Drapeon turns a manual, inconsistent luxury rental experience into a
-                structured platform that feels editorial, personal, and operationally scalable.
-              </p>
             </div>
           </div>
         </section>
@@ -171,7 +175,7 @@
         <section class="slide" data-slide-title="Solution">
           <div class="slide__content">
             <div class="slide-heading reveal">
-              <p class="eyebrow">02 � Solution Overview</p>
+              <p class="eyebrow">02 - Solution Overview</p>
               <h2>A premium marketplace built around styling confidence and designer growth.</h2>
             </div>
 
@@ -179,34 +183,22 @@
               <article class="solution-card glass-card reveal reveal-delay-1">
                 <span class="solution-card__index">01</span>
                 <h3>Luxury discovery</h3>
-                <p>
-                  Users browse curated formalwear with refined filtering, editorial
-                  product pages, and consistent designer context.
-                </p>
+                <p>Users browse curated formalwear with refined filtering, editorial product pages, and consistent designer context.</p>
               </article>
               <article class="solution-card glass-card reveal reveal-delay-2">
                 <span class="solution-card__index">02</span>
                 <h3>AI styling layer</h3>
-                <p>
-                  The platform recommends pieces from real inventory using saved body
-                  measurements, event context, budget, and fit preferences.
-                </p>
+                <p>The platform recommends pieces from real inventory using body measurements, event context, budget, and fit preferences.</p>
               </article>
               <article class="solution-card glass-card reveal reveal-delay-3">
                 <span class="solution-card__index">03</span>
                 <h3>Fitting-first workflow</h3>
-                <p>
-                  Instead of forcing instant checkout, Drapeon prioritizes fitting
-                  requests and designer approval for a more premium conversion path.
-                </p>
+                <p>Instead of forcing instant checkout, Drapeon prioritizes fitting requests and designer approval.</p>
               </article>
               <article class="solution-card glass-card reveal reveal-delay-4">
                 <span class="solution-card__index">04</span>
                 <h3>Subscription-backed supply</h3>
-                <p>
-                  Designers subscribe to publishing plans, unlock product capacity,
-                  and operate inside a branded SaaS-style workspace.
-                </p>
+                <p>Designers subscribe to publishing plans and operate inside a premium SaaS-style workspace.</p>
               </article>
             </div>
           </div>
@@ -215,7 +207,7 @@
         <section class="slide" data-slide-title="Users">
           <div class="slide__content">
             <div class="slide-heading reveal">
-              <p class="eyebrow">03 � Target Users & Main Flow</p>
+              <p class="eyebrow">03 - Target Users & Main Flow</p>
               <h2>Two audiences, one premium ecosystem.</h2>
             </div>
 
@@ -226,9 +218,9 @@
                 <ul class="timeline">
                   <li><span>01</span> Sign up and save body measurements</li>
                   <li><span>02</span> Browse catalog or ask the AI stylist for recommendations</li>
-                  <li><span>03</span> Review designer storefronts and product detail pages</li>
+                  <li><span>03</span> Review designer storefronts and product pages</li>
                   <li><span>04</span> Request a fitting session</li>
-                  <li><span>05</span> Receive approval and continue with the designer</li>
+                  <li><span>05</span> Receive designer approval and continue the journey</li>
                 </ul>
               </article>
 
@@ -238,7 +230,7 @@
                 <ul class="timeline">
                   <li><span>01</span> Apply to become a seller and complete verification</li>
                   <li><span>02</span> Subscribe to a publishing plan</li>
-                  <li><span>03</span> Create storefront, upload products, define fit targeting</li>
+                  <li><span>03</span> Create storefront and upload products</li>
                   <li><span>04</span> Manage fitting requests, messages, and availability</li>
                   <li><span>05</span> Monitor dashboard activity and plan usage</li>
                 </ul>
@@ -250,59 +242,50 @@
         <section class="slide" data-slide-title="Features">
           <div class="slide__content">
             <div class="slide-heading reveal">
-              <p class="eyebrow">04 � Core Features</p>
-              <h2>The platform is built around premium commerce workflows, not generic listings.</h2>
+              <p class="eyebrow">04 - Core Features</p>
+              <h2>The platform is built around premium workflows, not generic listings.</h2>
             </div>
 
             <div class="feature-grid">
               <article class="feature-card glass-card reveal reveal-delay-1 feature-card--media">
                 <img
-                  src="https://images.unsplash.com/photo-1555069519-127aadedf1ee?auto=format&fit=crop&w=1200&q=85"
-                  alt="AI fashion search experience"
+                  src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=85"
+                  alt="AI conversational shopping assistant"
                 />
                 <div>
                   <h3>AI Stylist Assistant</h3>
-                  <p>
-                    Gemini + Pinecone power a grounded styling assistant that answers
-                    company questions and recommends real catalog products.
-                  </p>
+                  <p>Gemini plus Pinecone power a grounded styling assistant that answers questions and recommends real catalog products.</p>
                 </div>
               </article>
               <article class="feature-card glass-card reveal reveal-delay-2 feature-card--media">
                 <img
-                  src="https://images.pexels.com/photos/19895956/pexels-photo-19895956.jpeg?auto=compress&cs=tinysrgb&w=1200&h=1600&fit=crop"
-                  alt="Luxury dress display"
+                  src="https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=1200&q=85"
+                  alt="Luxury boutique storefront"
                 />
                 <div>
                   <h3>Multi-vendor Storefronts</h3>
-                  <p>
-                    Each designer gets a dedicated store identity with subscription-based
-                    inventory publishing and premium product presentation.
-                  </p>
+                  <p>Each designer gets a dedicated store identity with subscription-based inventory publishing and premium presentation.</p>
                 </div>
               </article>
               <article class="feature-card glass-card reveal reveal-delay-3 feature-card--media">
                 <img
                   src="https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&w=1200&q=85"
-                  alt="Formalwear tailoring session"
+                  alt="Formalwear fitting workflow"
                 />
                 <div>
                   <h3>Fitting Session Workflows</h3>
-                  <p>
-                    Customers request fittings directly from product pages, and designers
-                    manage approval, conflicts, and calendar visibility.
-                  </p>
+                  <p>Customers request fittings directly from product pages, and designers manage approval, conflicts, and calendar visibility.</p>
                 </div>
               </article>
             </div>
           </div>
         </section>
 
-        <section class="slide" data-slide-title="AI">
+        <section class="slide" data-slide-title="AI Demo">
           <div class="slide__content">
             <div class="slide-heading reveal">
-              <p class="eyebrow">05 � AI Features + Live Demo</p>
-              <h2>AI is not decorative here. It solves confidence, speed, and personalization.</h2>
+              <p class="eyebrow">05 - AI Features + Live Demo</p>
+              <h2>The assistant behaves like a luxury stylist, not a generic chatbot.</h2>
             </div>
 
             <div class="ai-layout ai-layout--demo">
@@ -315,15 +298,9 @@
                   <span class="ai-demo__status">Live simulation</span>
                 </div>
                 <div class="ai-demo__prompts">
-                  <button type="button" class="chip chip--prompt" data-prompt-index="0">
-                    Black tie under $250
-                  </button>
-                  <button type="button" class="chip chip--prompt" data-prompt-index="1">
-                    Find a fitting-ready dress
-                  </button>
-                  <button type="button" class="chip chip--prompt" data-prompt-index="2">
-                    Explain how fittings work
-                  </button>
+                  <button type="button" class="chip chip--prompt" data-prompt-index="0">Black tie under $250</button>
+                  <button type="button" class="chip chip--prompt" data-prompt-index="1">Find a fitting-ready dress</button>
+                  <button type="button" class="chip chip--prompt" data-prompt-index="2">Explain how fittings work</button>
                 </div>
                 <div class="ai-chat" id="ai-chat-demo" aria-live="polite">
                   <article class="ai-chat__message ai-chat__message--user">
@@ -340,12 +317,13 @@
 
               <div class="ai-benefits">
                 <article class="glass-card reveal reveal-delay-2">
-                  <p class="eyebrow">Why AI matters</p>
-                  <h3>It removes hesitation at the exact decision point.</h3>
-                  <p>
-                    Instead of browsing blindly, the user gets personalized guidance
-                    anchored to real products, availability, and body measurements.
-                  </p>
+                  <p class="eyebrow">How it works</p>
+                  <div class="ai-step-list">
+                    <div class="ai-step"><span>01</span><div><strong>User prompt</strong><p>Event type, budget, color, or general styling help.</p></div></div>
+                    <div class="ai-step"><span>02</span><div><strong>Context injection</strong><p>Saved measurements and body shape enrich the request.</p></div></div>
+                    <div class="ai-step"><span>03</span><div><strong>Grounded tools</strong><p>Searches real products and curated company knowledge.</p></div></div>
+                    <div class="ai-step"><span>04</span><div><strong>Curated response</strong><p>Returns aligned text, product cards, and fit-driven logic.</p></div></div>
+                  </div>
                 </article>
                 <article class="glass-card reveal reveal-delay-3">
                   <p class="eyebrow">AI Stack</p>
@@ -356,13 +334,6 @@
                     <span class="chip">Catalog Grounding</span>
                   </div>
                 </article>
-                <article class="glass-card reveal reveal-delay-4">
-                  <p class="eyebrow">Grounding Rules</p>
-                  <p>
-                    Responses are synchronized with real product results so text, visual
-                    cards, and recommendations stay fully aligned.
-                  </p>
-                </article>
               </div>
             </div>
           </div>
@@ -371,53 +342,40 @@
         <section class="slide" data-slide-title="Tech">
           <div class="slide__content">
             <div class="slide-heading reveal">
-              <p class="eyebrow">06 � Tech Stack & Architecture</p>
+              <p class="eyebrow">06 - Tech Stack & Architecture</p>
               <h2>Chosen for speed, modularity, type safety, and production scalability.</h2>
             </div>
 
             <div class="tech-grid tech-grid--icons">
               <article class="tech-card glass-card reveal reveal-delay-1">
-                <div class="tech-card__icon tech-card__icon--logo">
-                  <img src="https://cdn.simpleicons.org/qwik/B68C5E" alt="Qwik logo" />
-                </div>
+                <div class="tech-card__icon tech-card__icon--logo"><img src="https://cdn.simpleicons.org/qwik/B68C5E" alt="Qwik logo" /></div>
                 <h3>Qwik + Qwik City</h3>
                 <p>Fast, component-driven frontend with strong performance characteristics.</p>
               </article>
               <article class="tech-card glass-card reveal reveal-delay-2">
-                <div class="tech-card__icon tech-card__icon--logo">
-                  <img src="https://cdn.simpleicons.org/nestjs/B68C5E" alt="NestJS logo" />
-                </div>
+                <div class="tech-card__icon tech-card__icon--logo"><img src="https://cdn.simpleicons.org/nestjs/B68C5E" alt="NestJS logo" /></div>
                 <h3>NestJS</h3>
                 <p>Modular backend architecture for auth, AI, designers, admin, and payments.</p>
               </article>
               <article class="tech-card glass-card reveal reveal-delay-3">
-                <div class="tech-card__icon tech-card__icon--logo">
-                  <img src="https://cdn.simpleicons.org/prisma/B68C5E" alt="Prisma logo" />
-                </div>
+                <div class="tech-card__icon tech-card__icon--logo"><img src="https://cdn.simpleicons.org/prisma/B68C5E" alt="Prisma logo" /></div>
                 <h3>Prisma + PostgreSQL</h3>
                 <p>Type-safe database access with clean schemas, relations, and seeding support.</p>
               </article>
               <article class="tech-card glass-card reveal reveal-delay-4">
-                <div class="tech-card__icon tech-card__icon--logo">
-                  <img src="https://cdn.simpleicons.org/stripe/B68C5E" alt="Stripe logo" />
-                </div>
+                <div class="tech-card__icon tech-card__icon--logo"><img src="https://cdn.simpleicons.org/stripe/B68C5E" alt="Stripe logo" /></div>
                 <h3>Stripe</h3>
                 <p>Designer subscription billing, plan management, portal flows, and webhooks.</p>
               </article>
               <article class="tech-card glass-card reveal reveal-delay-5">
-                <div class="tech-card__icon tech-card__icon--logo">
-                  <img src="https://cdn.simpleicons.org/googlegemini/B68C5E" alt="Google Gemini logo" />
-                </div>
+                <div class="tech-card__icon tech-card__icon--logo"><img src="https://cdn.simpleicons.org/googlegemini/B68C5E" alt="Gemini logo" /></div>
                 <h3>Gemini</h3>
                 <p>Conversational intelligence for the stylist assistant and product reasoning.</p>
               </article>
               <article class="tech-card glass-card reveal reveal-delay-6">
-                <div class="tech-card__icon tech-card__icon--logo">
-                  <!-- <img src="https://cdn.simpleicons.org/pinecone/B68C5E" alt="Pinecone logo" /> -->
-                  <img src="https://www.pinecone.io/favicon.ico" alt="Pinecone logo" />
-                </div>
+                <div class="tech-card__icon tech-card__icon--logo"><img src="https://cdn.simpleicons.org/pinecone/B68C5E" alt="Pinecone logo" /></div>
                 <h3>Pinecone</h3>
-                <p>Semantic knowledge retrieval for company Q&A and assistant grounding.</p>
+                <p>Semantic knowledge retrieval for company Q and A and assistant grounding.</p>
               </article>
             </div>
           </div>
@@ -426,31 +384,22 @@
         <section class="slide" data-slide-title="Challenges">
           <div class="slide__content">
             <div class="slide-heading reveal">
-              <p class="eyebrow">07 � Challenges & Engineering Decisions</p>
+              <p class="eyebrow">07 - Challenges & Engineering Decisions</p>
               <h2>Building a premium experience required solving both product and system complexity.</h2>
             </div>
 
             <div class="challenge-grid">
               <article class="glass-card reveal reveal-delay-1">
                 <h3>Grounded AI output</h3>
-                <p>
-                  The assistant had to stay synchronized with real product cards. The
-                  solution was tool-based catalog grounding and stricter response rules.
-                </p>
+                <p>The assistant had to stay synchronized with real product cards, so the solution became tool-based grounding with strict response rules.</p>
               </article>
               <article class="glass-card reveal reveal-delay-2">
-                <h3>Session & role consistency</h3>
-                <p>
-                  With multiple dashboards and protected states, cross-tab auth updates,
-                  refresh handling, and verification state syncing became essential.
-                </p>
+                <h3>Session consistency</h3>
+                <p>Multiple dashboards and protected states required cross-tab auth updates, refresh handling, and verification sync.</p>
               </article>
               <article class="glass-card reveal reveal-delay-3">
-                <h3>Subscription business pivot</h3>
-                <p>
-                  The platform evolved from marketplace checkout to designer subscriptions,
-                  requiring payment logic, plan limits, and dashboard flows to be redesigned cleanly.
-                </p>
+                <h3>Subscription pivot</h3>
+                <p>The project evolved from marketplace checkout to designer subscriptions, which reshaped payment logic, limits, and dashboard flows.</p>
               </article>
             </div>
           </div>
@@ -459,8 +408,8 @@
         <section class="slide" data-slide-title="Future">
           <div class="slide__content">
             <div class="slide-heading reveal">
-              <p class="eyebrow">08 � Future Work</p>
-              <h2>Drapeon is positioned to grow into a full luxury fashion operations platform.</h2>
+              <p class="eyebrow">08 - Future Work</p>
+              <h2>Drapeon can grow into a full luxury fashion operations platform.</h2>
             </div>
 
             <div class="future-columns">
@@ -470,55 +419,12 @@
               </article>
               <article class="glass-card reveal reveal-delay-2">
                 <h3>AI maturity</h3>
-                <p>Sharper fit reasoning, stronger recommendations, analytics on user intent, and source-aware responses.</p>
+                <p>Sharper fit reasoning, stronger recommendations, usage analytics, and source-aware responses.</p>
               </article>
               <article class="glass-card reveal reveal-delay-3">
                 <h3>Business scale</h3>
-                <p>Designer plan management, stronger reporting, internationalization, and cloud scaling for a wider vendor network.</p>
+                <p>Designer plan management, stronger reporting, internationalization, and cloud scalability.</p>
               </article>
-            </div>
-          </div>
-        </section>
-
-        <section class="slide slide-final" data-slide-title="Closing">
-          <div class="slide__backdrop slide__backdrop--halo"></div>
-          <div class="slide__content">
-            <div class="final-layout reveal">
-              <div class="final-copy glass-card">
-                <p class="eyebrow">09 � Conclusion</p>
-                <h2>Drapeon blends luxury presentation with real platform depth.</h2>
-                <p>
-                  The project demonstrates premium UI design, multi-role architecture,
-                  grounded AI, subscription commerce, and a complete fitting-driven
-                  marketplace workflow.
-                </p>
-                <div class="final-copy__actions">
-                  <a
-                    id="github-link"
-                    class="github-button"
-                    href="https://github.com/your-account/drapeon"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path
-                        d="M12 .5a12 12 0 0 0-3.79 23.39c.6.1.82-.26.82-.58v-2.05c-3.34.73-4.04-1.42-4.04-1.42a3.18 3.18 0 0 0-1.33-1.76c-1.09-.75.08-.74.08-.74a2.52 2.52 0 0 1 1.84 1.23 2.58 2.58 0 0 0 3.53 1 2.6 2.6 0 0 1 .77-1.61c-2.67-.3-5.48-1.34-5.48-5.95a4.66 4.66 0 0 1 1.24-3.23 4.32 4.32 0 0 1 .12-3.19s1-.33 3.3 1.23a11.3 11.3 0 0 1 6 0c2.28-1.56 3.29-1.23 3.29-1.23a4.31 4.31 0 0 1 .12 3.19 4.65 4.65 0 0 1 1.24 3.23c0 4.62-2.82 5.65-5.51 5.95a2.92 2.92 0 0 1 .83 2.27v3.37c0 .32.21.69.83.58A12 12 0 0 0 12 .5Z"
-                      />
-                    </svg>
-                    <span>View GitHub Repository</span>
-                  </a>
-                </div>
-              </div>
-
-              <div class="final-card glass-card reveal reveal-delay-1">
-                <p class="eyebrow">Scan the live demo</p>
-                <div class="qr-shell">
-                  <div id="demo-qr" class="qr-shell__code" aria-label="Demo QR code"></div>
-                </div>
-                <a id="demo-link" class="demo-link" href="https://your-demo-url.com" target="_blank" rel="noreferrer">
-                  Open hosted demo
-                </a>
-              </div>
             </div>
           </div>
         </section>
@@ -528,27 +434,39 @@
           <div class="slide__content">
             <div class="end-layout reveal">
               <div class="end-copy glass-card">
-                <p class="eyebrow">10 � Thank You</p>
+                <p class="eyebrow">09 - Thank You</p>
                 <h2>Thank you for your time.</h2>
                 <p>
-                  I would be happy to walk through the implementation, AI workflow,
-                  dashboard architecture, or the product decisions behind Drapeon.
+                  Drapeon demonstrates luxury UI direction, multi-role architecture, grounded AI,
+                  subscription commerce, and a complete fitting-driven marketplace workflow.
                 </p>
                 <div class="end-copy__links">
-                  <a id="portfolio-link" class="demo-link demo-link--dark" href="https://your-portfolio-url.com" target="_blank" rel="noreferrer">
-                    Visit my portfolio
+                  <a id="github-link" class="github-button" href="https://github.com/your-account/drapeon" target="_blank" rel="noreferrer">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 .5a12 12 0 0 0-3.79 23.39c.6.1.82-.26.82-.58v-2.05c-3.34.73-4.04-1.42-4.04-1.42a3.18 3.18 0 0 0-1.33-1.76c-1.09-.75.08-.74.08-.74a2.52 2.52 0 0 1 1.84 1.23 2.58 2.58 0 0 0 3.53 1 2.6 2.6 0 0 1 .77-1.61c-2.67-.3-5.48-1.34-5.48-5.95a4.66 4.66 0 0 1 1.24-3.23 4.32 4.32 0 0 1 .12-3.19s1-.33 3.3 1.23a11.3 11.3 0 0 1 6 0c2.28-1.56 3.29-1.23 3.29-1.23a4.31 4.31 0 0 1 .12 3.19 4.65 4.65 0 0 1 1.24 3.23c0 4.62-2.82 5.65-5.51 5.95a2.92 2.92 0 0 1 .83 2.27v3.37c0 .32.21.69.83.58A12 12 0 0 0 12 .5Z" />
+                    </svg>
+                    <span>View GitHub Repository</span>
                   </a>
-                  <a id="final-demo-link" class="github-button" href="https://your-demo-url.com" target="_blank" rel="noreferrer">
+                  <a id="final-demo-link" class="demo-link demo-link--dark" href="https://your-demo-url.com" target="_blank" rel="noreferrer">
                     Open Drapeon Demo
                   </a>
                 </div>
               </div>
               <div class="end-card glass-card reveal reveal-delay-1">
-                <p class="eyebrow">Portfolio QR</p>
-                <div class="qr-shell qr-shell--compact">
-                  <div id="portfolio-qr" class="qr-shell__code" aria-label="Portfolio QR code"></div>
+                <div class="end-card__grid">
+                  <div>
+                    <p class="eyebrow">Demo QR</p>
+                    <div class="qr-shell qr-shell--compact"><div id="demo-qr" class="qr-shell__code" aria-label="Demo QR code"></div></div>
+                  </div>
+                  <div>
+                    <p class="eyebrow">Portfolio QR</p>
+                    <div class="qr-shell qr-shell--compact"><div id="portfolio-qr" class="qr-shell__code" aria-label="Portfolio QR code"></div></div>
+                  </div>
                 </div>
-                <p class="end-card__caption">Scan to open my portfolio and project work.</p>
+                <a id="portfolio-link" class="demo-link" href="https://your-portfolio-url.com" target="_blank" rel="noreferrer">
+                  Visit my portfolio
+                </a>
+                <p class="end-card__caption">Scan either code to open the live demo or portfolio instantly during the presentation.</p>
               </div>
             </div>
           </div>

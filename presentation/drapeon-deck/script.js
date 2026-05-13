@@ -1,4 +1,4 @@
-const slides = Array.from(document.querySelectorAll('.slide'));
+﻿const slides = Array.from(document.querySelectorAll('.slide'));
 const deck = document.getElementById('deck');
 const slideCounter = document.getElementById('slide-counter');
 const dotsHost = document.getElementById('slide-dots');
@@ -7,6 +7,8 @@ const nextButton = document.getElementById('next-slide');
 const promptButtons = Array.from(document.querySelectorAll('[data-prompt-index]'));
 const aiResponseNode = document.querySelector('#ai-chat-response p');
 const aiProductsNode = document.getElementById('ai-demo-products');
+const inspirationToggle = document.getElementById('inspiration-toggle');
+const inspirationAnswer = document.getElementById('inspiration-answer');
 
 let activeIndex = 0;
 let typingTimer = null;
@@ -15,7 +17,7 @@ const demoScenarios = [
   {
     prompt: 'I need a sharp black-tie suit under $250.',
     response:
-      'I would guide the user toward structured black evening suits with clean shoulders, a narrow lapel line, and verified price fit under the requested budget. The recommendations stay grounded to live catalog inventory and explain why each silhouette matches the event.',
+      'I would guide the user toward structured black evening suits with clean shoulders, a narrow lapel line, and verified budget fit. The response stays grounded to live catalog inventory and explains why each option matches the event.',
     products: [
       {
         title: 'Slim Midnight Formal Suit',
@@ -32,7 +34,7 @@ const demoScenarios = [
   {
     prompt: 'Find a fitting-ready dress for an engagement dinner.',
     response:
-      'The assistant can prioritize elegant evening dresses that align with the customer body profile, surface fitting availability, and suggest the most suitable designers before the customer sends a fitting request.',
+      'The assistant can prioritize elegant evening dresses that align with the customer body profile, surface fitting availability, and suggest the strongest designer options before the request is sent.',
     products: [
       {
         title: 'Satin Evening Column',
@@ -49,12 +51,12 @@ const demoScenarios = [
   {
     prompt: 'Explain how fittings work on Drapeon.',
     response:
-      'The customer selects a product, requests a fitting session, and the designer confirms or declines the slot. The workflow is tracked inside both dashboards so the experience feels concierge-led instead of anonymous checkout.',
+      'The customer selects a product, requests a fitting session, and the designer confirms or declines the slot. That workflow is tracked inside both dashboards so the experience feels concierge-led instead of anonymous checkout.',
     products: [
       {
         title: 'Designer Calendar Workflow',
         store: 'Operations View',
-        image: 'https://thumbs.dreamstime.com/b/man-planning-schedule-calendar-to-do-list-effective-time-management-productivity-meticulously-his-using-digital-400035615.jpg'
+        image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=85'
       },
       {
         title: 'Client Booking Journey',
@@ -73,10 +75,7 @@ function formatCounter(index) {
 
 function updateUI(index) {
   activeIndex = index;
-  document.documentElement.style.setProperty(
-    '--progress',
-    `${((index + 1) / slides.length) * 100}%`
-  );
+  document.documentElement.style.setProperty('--progress', `${((index + 1) / slides.length) * 100}%`);
   slideCounter.textContent = formatCounter(index);
 
   slides.forEach((slide, slideIndex) => {
@@ -91,10 +90,7 @@ function updateUI(index) {
 
 function goToSlide(index) {
   const targetIndex = Math.max(0, Math.min(index, slides.length - 1));
-  slides[targetIndex].scrollIntoView({
-    behavior: 'smooth',
-    block: 'start'
-  });
+  slides[targetIndex].scrollIntoView({ behavior: 'smooth', block: 'start' });
   updateUI(targetIndex);
 }
 
@@ -195,18 +191,12 @@ function hydrateLinks() {
   const githubUrl = document.body.dataset.githubUrl || 'https://github.com/your-account/drapeon';
   const portfolioUrl = document.body.dataset.portfolioUrl || 'https://your-portfolio-url.com';
 
-  const demoLink = document.getElementById('demo-link');
-  const finalDemoLink = document.getElementById('final-demo-link');
+  const demoLink = document.getElementById('final-demo-link');
   const githubLink = document.getElementById('github-link');
   const portfolioLink = document.getElementById('portfolio-link');
 
   if (demoLink) {
     demoLink.href = demoUrl;
-    demoLink.textContent = demoUrl.replace(/^https?:\/\//, '');
-  }
-
-  if (finalDemoLink) {
-    finalDemoLink.href = demoUrl;
   }
 
   if (githubLink) {
@@ -245,6 +235,7 @@ function typeResponse(text) {
 
   aiResponseNode.textContent = '';
   let index = 0;
+
   typingTimer = window.setInterval(() => {
     aiResponseNode.textContent = text.slice(0, index + 1);
     index += 2;
@@ -281,9 +272,21 @@ function bindAiDemo() {
   loadScenario(0);
 }
 
+function bindInspirationToggle() {
+  if (!inspirationToggle || !inspirationAnswer) {
+    return;
+  }
+
+  inspirationToggle.addEventListener('click', () => {
+    const open = inspirationAnswer.classList.toggle('is-open');
+    inspirationToggle.textContent = open ? 'Hide the answer' : 'Reveal the inspiration';
+  });
+}
+
 buildDots();
 bindControls();
 observeSlides();
 hydrateLinks();
 bindAiDemo();
+bindInspirationToggle();
 updateUI(0);
