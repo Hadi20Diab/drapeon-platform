@@ -50,11 +50,22 @@ function toHistory(conversation: PersistedChatConversation | null): AiHistoryMes
 }
 
 function buildRenderedMessageMap(conversations: PersistedChatConversation[]) {
-  return Object.fromEntries(
-    conversations.flatMap((conversation) =>
-      conversation.messages.map((message) => [message.id, message.text])
-    )
-  ) as Record<string, string>;
+  const entries: Array<[string, string]> = [];
+
+  for (const conversation of conversations) {
+    const hasUser = conversation.messages.some((m) => m.role === "user");
+
+    for (const message of conversation.messages) {
+      if (!hasUser && message.role === "agent") {
+        // leave agent welcome messages blank so they can be animated on open
+        entries.push([message.id, ""]);
+      } else {
+        entries.push([message.id, message.text]);
+      }
+    }
+  }
+
+  return Object.fromEntries(entries) as Record<string, string>;
 }
 
 function formatConversationTime(value: string): string {
@@ -382,6 +393,29 @@ export const SiteChatWidget = component$(() => {
       lastScrollState.value = nextState;
       scrollFrame.value = null;
     });
+
+    // If the active conversation only has the welcome agent message, animate it
+    if (open) {
+      const active = activeConversation.value;
+
+      if (active && !hasUserMessages.value) {
+        const welcome = active.messages.find((m) => m.role === "agent");
+
+        if (welcome) {
+          const currentRendered = renderedMessages.value[welcome.id];
+
+          if ((currentRendered === "" || currentRendered == null) && typingMessageId.value !== welcome.id) {
+            animateAssistantReply(
+              welcome.id,
+              welcome.text,
+              renderedMessages,
+              typingMessageId,
+              revealTimer
+            );
+          }
+        }
+      }
+    }
 
     cleanup(() => {
       if (scrollFrame.value != null) {
