@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Drapeon | Final Project Deck</title>
+    <meta
+      name="description"
+      content="Luxury single-page presentation deck for the Drapeon internship final project."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body
+    data-demo-url="https://your-demo-url.com"
+    data-github-url="https://github.com/your-account/drapeon"
+  >
+    <div class="deck-shell">
+      <header class="deck-progress">
+        <div class="deck-progress__brand">
+          <span class="deck-progress__mark">D</span>
+          <div>
+            <p class="deck-progress__eyebrow">Internship Final Project</p>
+            <p class="deck-progress__title">Drapeon Presentation</p>
+          </div>
+        </div>
+        <div class="deck-progress__meta">
+          <span id="slide-counter">01 / 09</span>
+        </div>
+        <div class="deck-progress__track">
+          <span id="progress-bar"></span>
+        </div>
+      </header>
+
+      <aside class="deck-nav" aria-label="Slide navigation">
+        <button class="deck-nav__button" id="prev-slide" type="button" aria-label="Previous slide">
+          <span>&uarr;</span>
+        </button>
+        <div class="deck-nav__dots" id="slide-dots"></div>
+        <button class="deck-nav__button" id="next-slide" type="button" aria-label="Next slide">
+          <span>&darr;</span>
+        </button>
+      </aside>
+
+      <main class="deck" id="deck">
+        <section class="slide slide-hero is-active" data-slide-title="Cover">
+          <div class="slide__backdrop slide__backdrop--mesh"></div>
+          <div class="slide__content">
+            <div class="reveal hero-grid">
+              <div class="hero-copy glass-card">
+                <p class="eyebrow">Luxury Formalwear Rental Platform</p>
+                <h1>Drapeon</h1>
+                <p class="hero-copy__lead">
+                  A premium multi-vendor platform for renting suits and dresses,
+                  pairing curated designer storefronts with AI-assisted styling
+                  and fitting-first workflows.
+                </p>
+                <div class="hero-copy__metrics">
+                  <article>
+                    <span>Focus</span>
+                    <strong>Luxury UX + Operational Scale</strong>
+                  </article>
+                  <article>
+                    <span>Model</span>
+                    <strong>Designer subscriptions + curated inventory</strong>
+                  </article>
+                  <article>
+                    <span>Outcome</span>
+                    <strong>Faster discovery, stronger fit confidence</strong>
+                  </article>
+                </div>
+              </div>
+
+              <div class="hero-panel">
+                <div class="hero-panel__card glass-card reveal reveal-delay-1">
+                  <p class="eyebrow">Project Objective</p>
+                  <p>
+                    Reimagine the formalwear rental journey with a polished digital
+                    experience that serves both fashion-conscious customers and
+                    premium independent designers.
+                  </p>
+                </div>
+                <div class="hero-panel__card glass-card reveal reveal-delay-2">
+                  <p class="eyebrow">Brand Palette</p>
+                  <div class="swatches">
+                    <span style="--swatch:#B68C5E">Gold</span>
+                    <span style="--swatch:#111111">Ink</span>
+                    <span style="--swatch:#F5F5F5">Sand</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button class="slide-cta" type="button" data-action="next">
+              Explore the story
+            </button>
+          </div>
+        </section>
+
+        <section class="slide" data-slide-title="Problem">
+          <div class="slide__content">
+            <div class="slide-heading reveal">
+              <p class="eyebrow">01 · Problem & Opportunity</p>
+              <h2>Formalwear discovery is fragmented, generic, and low-confidence.</h2>
+            </div>
+
+            <div class="problem-grid">
+              <article class="problem-card glass-card reveal reveal-delay-1">
+                <h3>Disconnected inventory</h3>
+                <p>
+                  Customers jump between boutiques, Instagram pages, and direct
+                  messages just to compare options, availability, and sizing.
+                </p>
+              </article>
+              <article class="problem-card glass-card reveal reveal-delay-2">
+                <h3>Fit anxiety</h3>
+                <p>
+                  Renting occasion wear is high stakes. Without measurements,
+                  fittings, or guidance, customers hesitate before committing.
+                </p>
+              </article>
+              <article class="problem-card glass-card reveal reveal-delay-3">
+                <h3>Designer friction</h3>
+                <p>
+                  Designers need a premium digital channel to present collections,
+                  manage incoming requests, and grow without building custom tech.
+                </p>
+              </article>
+            </div>
+
+            <div class="quote-band reveal reveal-delay-4">
+              <p>
+                Drapeon turns a manual, inconsistent luxury rental experience into a
+                structured platform that feels editorial, personal, and operationally scalable.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="slide" data-slide-title="Solution">
+          <div class="slide__content">
+            <div class="slide-heading reveal">
+              <p class="eyebrow">02 · Solution Overview</p>
+              <h2>A premium marketplace built around styling confidence and designer growth.</h2>
+            </div>
+
+            <div class="solution-grid">
+              <article class="solution-card glass-card reveal reveal-delay-1">
+                <span class="solution-card__index">01</span>
+                <h3>Luxury discovery</h3>
+                <p>
+                  Users browse curated formalwear with refined filtering, editorial
+                  product pages, and consistent designer context.
+                </p>
+              </article>
+              <article class="solution-card glass-card reveal reveal-delay-2">
+                <span class="solution-card__index">02</span>
+                <h3>AI styling layer</h3>
+                <p>
+                  The platform recommends pieces from real inventory using saved body
+                  measurements, event context, budget, and fit preferences.
+                </p>
+              </article>
+              <article class="solution-card glass-card reveal reveal-delay-3">
+                <span class="solution-card__index">03</span>
+                <h3>Fitting-first workflow</h3>
+                <p>
+                  Instead of forcing instant checkout, Drapeon prioritizes fitting
+                  requests and designer approval for a more premium conversion path.
+                </p>
+              </article>
+              <article class="solution-card glass-card reveal reveal-delay-4">
+                <span class="solution-card__index">04</span>
+                <h3>Subscription-backed supply</h3>
+                <p>
+                  Designers subscribe to publishing plans, unlock product capacity,
+                  and operate inside a branded SaaS-style workspace.
+                </p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="slide" data-slide-title="Users">
+          <div class="slide__content">
+            <div class="slide-heading reveal">
+              <p class="eyebrow">03 · Target Users & Main Flow</p>
+              <h2>Two audiences, one premium ecosystem.</h2>
+            </div>
+
+            <div class="audience-layout">
+              <article class="audience-panel glass-card reveal reveal-delay-1">
+                <p class="eyebrow">Customer Experience</p>
+                <h3>Users looking for wedding, black-tie, or eventwear</h3>
+                <ul class="timeline">
+                  <li><span>01</span> Sign up and save body measurements</li>
+                  <li><span>02</span> Browse catalog or ask the AI stylist for recommendations</li>
+                  <li><span>03</span> Review designer storefronts and product detail pages</li>
+                  <li><span>04</span> Request a fitting session</li>
+                  <li><span>05</span> Receive approval and continue with the designer</li>
+                </ul>
+              </article>
+
+              <article class="audience-panel glass-card reveal reveal-delay-2">
+                <p class="eyebrow">Designer Experience</p>
+                <h3>Independent formalwear designers and luxury ateliers</h3>
+                <ul class="timeline">
+                  <li><span>01</span> Apply to become a seller and complete verification</li>
+                  <li><span>02</span> Subscribe to a publishing plan</li>
+                  <li><span>03</span> Create storefront, upload products, define fit targeting</li>
+                  <li><span>04</span> Manage fitting requests, messages, and availability</li>
+                  <li><span>05</span> Monitor dashboard activity and plan usage</li>
+                </ul>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="slide" data-slide-title="Features">
+          <div class="slide__content">
+            <div class="slide-heading reveal">
+              <p class="eyebrow">04 · Core Features</p>
+              <h2>The platform is built around premium commerce workflows, not generic listings.</h2>
+            </div>
+
+            <div class="feature-grid">
+              <article class="feature-card glass-card reveal reveal-delay-1">
+                <h3>AI Stylist Assistant</h3>
+                <p>
+                  Gemini + Pinecone power a grounded styling assistant that answers
+                  company questions and recommends real catalog products.
+                </p>
+              </article>
+              <article class="feature-card glass-card reveal reveal-delay-2">
+                <h3>Multi-vendor Storefronts</h3>
+                <p>
+                  Each designer gets a dedicated store identity with subscription-based
+                  inventory publishing and premium product presentation.
+                </p>
+              </article>
+              <article class="feature-card glass-card reveal reveal-delay-3">
+                <h3>Fitting Session Workflows</h3>
+                <p>
+                  Customers request fittings directly from product pages, and designers
+                  manage approval, conflicts, and calendar visibility.
+                </p>
+              </article>
+              <article class="feature-card glass-card reveal reveal-delay-4">
+                <h3>Role-based Dashboards</h3>
+                <p>
+                  Separate designer and admin environments support approvals,
+                  analytics, moderation, notifications, and operational oversight.
+                </p>
+              </article>
+              <article class="feature-card glass-card reveal reveal-delay-5">
+                <h3>Authentication & Trust</h3>
+                <p>
+                  Secure auth, email verification, account recovery, profile measurements,
+                  and protected seller onboarding improve platform reliability.
+                </p>
+              </article>
+              <article class="feature-card glass-card reveal reveal-delay-6">
+                <h3>Luxury Frontend Experience</h3>
+                <p>
+                  Editorial layouts, premium typography, subtle motion, and consistent
+                  visual hierarchy make the experience feel brand-first.
+                </p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="slide" data-slide-title="AI">
+          <div class="slide__content">
+            <div class="slide-heading reveal">
+              <p class="eyebrow">05 · AI Features</p>
+              <h2>AI is not decorative here. It solves confidence, speed, and personalization.</h2>
+            </div>
+
+            <div class="ai-layout">
+              <div class="ai-flow glass-card reveal reveal-delay-1">
+                <div class="ai-step">
+                  <span>01</span>
+                  <div>
+                    <strong>User prompt</strong>
+                    <p>Event type, budget, color, silhouette, or general styling help.</p>
+                  </div>
+                </div>
+                <div class="ai-step">
+                  <span>02</span>
+                  <div>
+                    <strong>Context injection</strong>
+                    <p>Saved measurements, body shape, and account context enrich the request.</p>
+                  </div>
+                </div>
+                <div class="ai-step">
+                  <span>03</span>
+                  <div>
+                    <strong>Grounded tools</strong>
+                    <p>Searches real products and company knowledge instead of inventing answers.</p>
+                  </div>
+                </div>
+                <div class="ai-step">
+                  <span>04</span>
+                  <div>
+                    <strong>Curated response</strong>
+                    <p>Returns synchronized text, product cards, and fit-driven recommendations.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="ai-benefits">
+                <article class="glass-card reveal reveal-delay-2">
+                  <p class="eyebrow">Why AI matters</p>
+                  <h3>It removes hesitation at the exact decision point.</h3>
+                  <p>
+                    Instead of browsing blindly, the user gets personalized guidance
+                    anchored to real products, availability, and body measurements.
+                  </p>
+                </article>
+                <article class="glass-card reveal reveal-delay-3">
+                  <p class="eyebrow">AI Stack</p>
+                  <div class="chip-row">
+                    <span class="chip">Gemini</span>
+                    <span class="chip">Pinecone</span>
+                    <span class="chip">Prompt Tools</span>
+                    <span class="chip">Catalog Grounding</span>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="slide" data-slide-title="Tech">
+          <div class="slide__content">
+            <div class="slide-heading reveal">
+              <p class="eyebrow">06 · Tech Stack & Architecture</p>
+              <h2>Chosen for speed, modularity, type safety, and production scalability.</h2>
+            </div>
+
+            <div class="tech-grid">
+              <article class="tech-card glass-card reveal reveal-delay-1">
+                <div class="tech-card__icon">Q</div>
+                <h3>Qwik + Qwik City</h3>
+                <p>Fast, component-driven frontend with strong performance characteristics.</p>
+              </article>
+              <article class="tech-card glass-card reveal reveal-delay-2">
+                <div class="tech-card__icon">N</div>
+                <h3>NestJS</h3>
+                <p>Modular backend architecture for auth, AI, designers, admin, and payments.</p>
+              </article>
+              <article class="tech-card glass-card reveal reveal-delay-3">
+                <div class="tech-card__icon">P</div>
+                <h3>Prisma + PostgreSQL</h3>
+                <p>Type-safe database access with clean schemas, relations, and seeding support.</p>
+              </article>
+              <article class="tech-card glass-card reveal reveal-delay-4">
+                <div class="tech-card__icon">S</div>
+                <h3>Stripe</h3>
+                <p>Designer subscription billing, plan management, portal flows, and webhooks.</p>
+              </article>
+              <article class="tech-card glass-card reveal reveal-delay-5">
+                <div class="tech-card__icon">G</div>
+                <h3>Gemini</h3>
+                <p>Conversational intelligence for the stylist assistant and product reasoning.</p>
+              </article>
+              <article class="tech-card glass-card reveal reveal-delay-6">
+                <div class="tech-card__icon">V</div>
+                <h3>Validation + Security</h3>
+                <p>JWT auth, verified accounts, role guards, DTO validation, and protected actions.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="slide" data-slide-title="Challenges">
+          <div class="slide__content">
+            <div class="slide-heading reveal">
+              <p class="eyebrow">07 · Challenges & Engineering Decisions</p>
+              <h2>Building a premium experience required solving both product and system complexity.</h2>
+            </div>
+
+            <div class="challenge-grid">
+              <article class="glass-card reveal reveal-delay-1">
+                <h3>Grounded AI output</h3>
+                <p>
+                  The assistant had to stay synchronized with real product cards. The
+                  solution was tool-based catalog grounding and stricter response rules.
+                </p>
+              </article>
+              <article class="glass-card reveal reveal-delay-2">
+                <h3>Session & role consistency</h3>
+                <p>
+                  With multiple dashboards and protected states, cross-tab auth updates,
+                  refresh handling, and verification state syncing became essential.
+                </p>
+              </article>
+              <article class="glass-card reveal reveal-delay-3">
+                <h3>Subscription business pivot</h3>
+                <p>
+                  The platform evolved from marketplace checkout to designer subscriptions,
+                  requiring payment logic, plan limits, and dashboard flows to be redesigned cleanly.
+                </p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="slide" data-slide-title="Future">
+          <div class="slide__content">
+            <div class="slide-heading reveal">
+              <p class="eyebrow">08 · Future Work</p>
+              <h2>Drapeon is positioned to grow into a full luxury fashion operations platform.</h2>
+            </div>
+
+            <div class="future-columns">
+              <article class="glass-card reveal reveal-delay-1">
+                <h3>Customer expansion</h3>
+                <p>Mobile app, richer wishlists, saved stylist sessions, and deeper appointment journeys.</p>
+              </article>
+              <article class="glass-card reveal reveal-delay-2">
+                <h3>AI maturity</h3>
+                <p>Sharper fit reasoning, stronger recommendations, analytics on user intent, and source-aware responses.</p>
+              </article>
+              <article class="glass-card reveal reveal-delay-3">
+                <h3>Business scale</h3>
+                <p>Designer plan management, stronger reporting, internationalization, and cloud scaling for a wider vendor network.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="slide slide-final" data-slide-title="Closing">
+          <div class="slide__backdrop slide__backdrop--halo"></div>
+          <div class="slide__content">
+            <div class="final-layout reveal">
+              <div class="final-copy glass-card">
+                <p class="eyebrow">09 · Conclusion</p>
+                <h2>Drapeon blends luxury presentation with real platform depth.</h2>
+                <p>
+                  The project demonstrates premium UI design, multi-role architecture,
+                  grounded AI, subscription commerce, and a complete fitting-driven
+                  marketplace workflow.
+                </p>
+                <div class="final-copy__actions">
+                  <a
+                    id="github-link"
+                    class="github-button"
+                    href="https://github.com/your-account/drapeon"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M12 .5a12 12 0 0 0-3.79 23.39c.6.1.82-.26.82-.58v-2.05c-3.34.73-4.04-1.42-4.04-1.42a3.18 3.18 0 0 0-1.33-1.76c-1.09-.75.08-.74.08-.74a2.52 2.52 0 0 1 1.84 1.23 2.58 2.58 0 0 0 3.53 1 2.6 2.6 0 0 1 .77-1.61c-2.67-.3-5.48-1.34-5.48-5.95a4.66 4.66 0 0 1 1.24-3.23 4.32 4.32 0 0 1 .12-3.19s1-.33 3.3 1.23a11.3 11.3 0 0 1 6 0c2.28-1.56 3.29-1.23 3.29-1.23a4.31 4.31 0 0 1 .12 3.19 4.65 4.65 0 0 1 1.24 3.23c0 4.62-2.82 5.65-5.51 5.95a2.92 2.92 0 0 1 .83 2.27v3.37c0 .32.21.69.83.58A12 12 0 0 0 12 .5Z"
+                      />
+                    </svg>
+                    <span>View GitHub Repository</span>
+                  </a>
+                </div>
+              </div>
+
+              <div class="final-card glass-card reveal reveal-delay-1">
+                <p class="eyebrow">Scan the live demo</p>
+                <div class="qr-shell">
+                  <div id="demo-qr" class="qr-shell__code" aria-label="Demo QR code"></div>
+                </div>
+                <a id="demo-link" class="demo-link" href="https://your-demo-url.com" target="_blank" rel="noreferrer">
+                  Open hosted demo
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="./script.js"></script>
+  </body>
+</html>
