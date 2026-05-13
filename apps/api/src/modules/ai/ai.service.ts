@@ -60,6 +60,7 @@ type ParsedSearchFilters = {
   size?: string;
   color?: string;
   bodyShape?: BodyShape;
+  designerQuery?: string;
   minPrice?: number;
   maxPrice?: number;
   limit: number;
@@ -98,13 +99,14 @@ export class AiService {
     {
       name: "searchProducts",
       description:
-        "Search active products in the catalog using optional filters for category, size, color, and price range.",
+        "Search active products in the catalog using optional filters for category, size, color, price range, and designer/store name.",
       parameters: {
         type: Type.OBJECT,
         properties: {
           category: { type: Type.STRING, enum: ["SUIT", "DRESS"] },
           size: { type: Type.STRING },
           color: { type: Type.STRING },
+          designerQuery: { type: Type.STRING },
           bodyShape: {
             type: Type.STRING,
             enum: ["HOURGLASS", "PEAR", "APPLE", "RECTANGLE", "INVERTED_TRIANGLE", "ATHLETIC"]
@@ -386,6 +388,16 @@ export class AiService {
           }
         : {}),
       ...(filters.bodyShape ? { bodyShapes: { has: filters.bodyShape } } : {}),
+      ...(filters.designerQuery
+        ? {
+            designer: {
+              storeName: {
+                contains: filters.designerQuery,
+                mode: "insensitive"
+              }
+            }
+          }
+        : {}),
       variants: {
         some: {
           isActive: true,
@@ -519,6 +531,8 @@ export class AiService {
           : undefined,
       size: typeof args.size === "string" ? args.size : undefined,
       color: typeof args.color === "string" ? args.color : undefined,
+      designerQuery:
+        typeof args.designerQuery === "string" ? args.designerQuery.trim() || undefined : undefined,
       bodyShape: this.isBodyShape(args.bodyShape) ? args.bodyShape : undefined,
       minPrice: typeof args.minPrice === "number" ? args.minPrice : undefined,
       maxPrice: typeof args.maxPrice === "number" ? args.maxPrice : undefined,
@@ -552,6 +566,7 @@ export class AiService {
       "You must recommend existing products from tools only; never invent products.",
       "Never mention a product title, designer name, or product link unless it came from this turn's tool output.",
       "When body shape is known, prefer searchProducts with the bodyShape filter before giving any style guidance.",
+      "If the user names a designer, atelier, or store, treat that as a strict searchProducts designerQuery filter instead of a soft preference.",
       "Do not claim garment features that were not verified by tool output. Keep reasoning grounded in availability, category, stored fit profile, and designer body-shape tags.",
       "If user profile measurements are available, use them and do not ask for those values again.",
       "If the user is browsing as a guest, still help fully and only ask for missing fit details when they are necessary for a better recommendation.",
@@ -831,18 +846,21 @@ export class AiService {
     const budget = this.extractBudgetRange(prompt);
     const color = typeof filters.color === "string" ? filters.color : this.extractPromptColor(prompt);
     const size = typeof filters.size === "string" ? filters.size : this.extractPromptSize(prompt);
+    const designerQuery =
+      typeof filters.designerQuery === "string" ? filters.designerQuery : this.extractPromptDesigner(payload.prompt);
 
     return {
       category:
         typeof filters.category === "string"
           ? filters.category
-          : /\b(suit|tuxedo|tailoring|jacket)\b/.test(prompt)
+          : /\b(suit|suits|tuxedo|tuxedos|tailoring|jacket|jackets)\b/.test(prompt)
             ? ProductCategory.SUIT
-            : /\b(dress|gown|cocktail|eveningwear)\b/.test(prompt)
+            : /\b(dress|dresses|gown|gowns|cocktail|cocktails|eveningwear)\b/.test(prompt)
               ? ProductCategory.DRESS
               : undefined,
       size,
       color,
+      designerQuery,
       bodyShape,
       minPrice: budget.minPrice,
       maxPrice: budget.maxPrice,
@@ -874,7 +892,7 @@ export class AiService {
       return true;
     }
 
-    return /\b(find|recommend|show|need|want|looking|wear|dress|gown|suit|tuxedo|tailoring|style|outfit|catalog|product)\b/.test(
+    return /\b(find|give|recommend|show|need|want|looking|wear|dress|dresses|gown|gowns|suit|suits|tuxedo|tuxedos|tailoring|style|outfit|catalog|product)\b/.test(
       payload.prompt.toLowerCase()
     );
   }
@@ -959,6 +977,24 @@ export class AiService {
 
     const numericSize = normalized.match(/\b(?:size\s*)?(46|48|50|52|54)\b/);
     return numericSize?.[1];
+  }
+
+  private extractPromptDesigner(prompt: string): string | undefined {
+    const normalizedPrompt = prompt.trim();
+    const designerPatterns = [
+      /\b(?:posted by|by|from)\s+([a-z][a-z\s'.-]*?(?:atelier|studio|house|designs?))\b/i,
+      /\b([a-z][a-z\s'.-]*?(?:atelier|studio|house|designs?))\b/i
+    ];
+
+    for (const pattern of designerPatterns) {
+      const candidate = normalizedPrompt.match(pattern)?.[1]?.replace(/\s+/g, " ").trim();
+
+      if (candidate && candidate.length >= 4) {
+        return candidate;
+      }
+    }
+
+    return undefined;
   }
 
   private isTransientModelError(error: unknown): boolean {

@@ -154,4 +154,53 @@ describe("AiService", () => {
       })
     ]);
   });
+
+  it("treats named ateliers as a strict designer filter in grounded catalog search", async () => {
+    const { service, prisma, generateContent } = createService();
+    generateContent.mockResolvedValue({
+      candidates: [],
+      functionCalls: []
+    });
+    prisma.product.findMany.mockResolvedValue([
+      {
+        id: "product-3",
+        title: "Double-Breasted Signature Suit 96",
+        rentalPrice: 414,
+        bodyShapes: [BodyShape.ATHLETIC],
+        images: [{ url: "https://cdn.example.com/suit-96.jpg" }],
+        variants: [{ sizeLabel: "50", color: "Black", isActive: true }],
+        designer: {
+          storeName: "Nour Nehme Atelier",
+          slug: "nour-nehme-atelier"
+        }
+      }
+    ]);
+
+    const result = await service.recommend(null, {
+      prompt: "give me suits that posted by nour Nehme Atelier"
+    });
+
+    expect(prisma.product.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          category: "SUIT",
+          designer: {
+            storeName: {
+              contains: "nour Nehme Atelier",
+              mode: "insensitive"
+            }
+          }
+        })
+      })
+    );
+    expect(result.products).toEqual([
+      expect.objectContaining({
+        id: "product-3",
+        title: "Double-Breasted Signature Suit 96",
+        designer: expect.objectContaining({
+          storeName: "Nour Nehme Atelier"
+        })
+      })
+    ]);
+  });
 });
