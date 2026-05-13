@@ -60,6 +60,26 @@ function asString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 }
 
+function asNumber(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
+  return undefined;
+}
+
+function normalizeComparable(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 function tokenizePrompt(prompt: string): string[] {
   return prompt
     .toLowerCase()
@@ -132,6 +152,76 @@ function detectRequestedBodyShape(
     asBodyShape(context.filters?.bodyShape) ??
     asBodyShape(context.profile.measurements?.bodyShape)
   );
+}
+
+function detectRequestedDesignerQuery(context: GroundedResponseContext): string | undefined {
+  return asString(context.filters?.designerQuery);
+}
+
+function matchesDesignerQuery(product: GroundedProductCard, designerQuery: string): boolean {
+  const storeName = normalizeComparable(product.designer.storeName);
+  const normalizedQuery = normalizeComparable(designerQuery);
+
+  if (!normalizedQuery) {
+    return true;
+  }
+
+  if (storeName.includes(normalizedQuery)) {
+    return true;
+  }
+
+  const stopWords = new Set(["atelier", "studio", "house", "design", "designs"]);
+  const tokens = normalizedQuery
+    .split(" ")
+    .filter((token) => token.length >= 2 && !stopWords.has(token));
+
+  return tokens.length > 0 && tokens.every((token) => storeName.includes(token));
+}
+
+function applyHardProductFilters<T extends GroundedProductCard>(
+  products: T[],
+  context: GroundedResponseContext
+): T[] {
+  const requestedCategory = detectRequestedCategory(context.prompt, context.filters);
+  const requestedColor = asString(context.filters?.color)?.toLowerCase();
+  const requestedSize = asString(context.filters?.size)?.toLowerCase();
+  const requestedDesigner = detectRequestedDesignerQuery(context);
+  const minPrice = asNumber(context.filters?.minPrice);
+  const maxPrice = asNumber(context.filters?.maxPrice);
+
+  return products.filter((product) => {
+    if (requestedCategory && product.category !== requestedCategory) {
+      return false;
+    }
+
+    if (
+      requestedColor &&
+      !product.colorOptions.some((color) => color.toLowerCase() === requestedColor)
+    ) {
+      return false;
+    }
+
+    if (
+      requestedSize &&
+      !product.sizeOptions.some((size) => size.toLowerCase() === requestedSize)
+    ) {
+      return false;
+    }
+
+    if (requestedDesigner && !matchesDesignerQuery(product, requestedDesigner)) {
+      return false;
+    }
+
+    if (minPrice != null && product.rentalPrice < minPrice) {
+      return false;
+    }
+
+    if (maxPrice != null && product.rentalPrice > maxPrice) {
+      return false;
+    }
+
+    return true;
+  });
 }
 
 function scoreProductForPrompt(
@@ -246,7 +336,8 @@ export function selectGroundedProducts<T extends GroundedProductCard>(
   context: GroundedResponseContext,
   limit = 3
 ): T[] {
-  const ranked = [...products].sort((left, right) => {
+  const eligibleProducts = applyHardProductFilters(products, context);
+  const ranked = [...eligibleProducts].sort((left, right) => {
     const scoreDifference = scoreProductForPrompt(right, context) - scoreProductForPrompt(left, context);
 
     if (scoreDifference !== 0) {
@@ -257,6 +348,44 @@ export function selectGroundedProducts<T extends GroundedProductCard>(
   });
 
   return selectDiverseProductCards(ranked, limit);
+}
+
+function describeRequestedProductFilters(context: GroundedResponseContext): string | null {
+  const requestedCategory = detectRequestedCategory(context.prompt, context.filters);
+  const requestedColor = asString(context.filters?.color);
+  const requestedSize = asString(context.filters?.size);
+  const requestedDesigner = detectRequestedDesignerQuery(context);
+  const minPrice = asNumber(context.filters?.minPrice);
+  const maxPrice = asNumber(context.filters?.maxPrice);
+  const parts: string[] = [];
+
+  if (requestedColor) {
+    parts.push(`${requestedColor.toLowerCase()}-colored`);
+  }
+
+  if (requestedDesigner) {
+    parts.push(`pieces from ${requestedDesigner}`);
+  }
+
+  if (requestedCategory === ProductCategory.DRESS) {
+    parts.push("dress options");
+  } else if (requestedCategory === ProductCategory.SUIT) {
+    parts.push("suit options");
+  }
+
+  if (requestedSize) {
+    parts.push(`in size ${requestedSize.toUpperCase()}`);
+  }
+
+  if (minPrice != null && maxPrice != null) {
+    parts.push(`between $${minPrice} and $${maxPrice}`);
+  } else if (maxPrice != null) {
+    parts.push(`under $${maxPrice}`);
+  } else if (minPrice != null) {
+    parts.push(`over $${minPrice}`);
+  }
+
+  return parts.length > 0 ? parts.join(" ") : null;
 }
 
 function buildFitRationale(
@@ -342,8 +471,11 @@ export function composeGroundedRecommendationText(
       `I found the most relevant verified guidance for **${primaryEntry.question}** in the knowledge cards below.`
     );
   } else {
+    const requestedFilters = describeRequestedProductFilters(context);
     sections.push(
-      `${greeting}I could not verify a strong match from the current tool results yet. Try adding the event type, preferred color, or size and I will narrow the search.`
+      requestedFilters
+        ? `${greeting}I could not verify an exact live match for ${requestedFilters} right now. Try widening one constraint like color, budget, or designer and I will search again.`
+        : `${greeting}I could not verify a strong match from the current tool results yet. Try adding the event type, preferred color, or size and I will narrow the search.`
     );
   }
 

@@ -1,4 +1,4 @@
-import { BodyShape } from "@prisma/client";
+import { BodyShape, ProductCategory } from "@prisma/client";
 
 import { AiService } from "./ai.service";
 
@@ -61,6 +61,7 @@ describe("AiService", () => {
       {
         id: "product-1",
         title: "Heritage Evening Tuxedo",
+        category: ProductCategory.SUIT,
         rentalPrice: 260,
         bodyShapes: [BodyShape.ATHLETIC],
         images: [{ url: "https://cdn.example.com/tuxedo.jpg" }],
@@ -117,6 +118,7 @@ describe("AiService", () => {
       {
         id: "product-2",
         title: "Slim Midnight Formal Suit",
+        category: ProductCategory.SUIT,
         rentalPrice: 180,
         bodyShapes: [BodyShape.ATHLETIC],
         images: [{ url: "https://cdn.example.com/suit.jpg" }],
@@ -165,6 +167,7 @@ describe("AiService", () => {
       {
         id: "product-3",
         title: "Double-Breasted Signature Suit 96",
+        category: ProductCategory.SUIT,
         rentalPrice: 414,
         bodyShapes: [BodyShape.ATHLETIC],
         images: [{ url: "https://cdn.example.com/suit-96.jpg" }],
@@ -221,5 +224,72 @@ describe("AiService", () => {
     expect(result.knowledgeEntries).toEqual([]);
     expect(result.recommendationText).toContain("Drapeon products");
     expect(result.recommendationText).toContain("can’t answer unrelated general-world questions");
+  });
+
+  it("keeps only exact prompt matches when model search results are broader than the request", async () => {
+    const { service, prisma, generateContent } = createService();
+    generateContent
+      .mockResolvedValueOnce({
+        candidates: [],
+        functionCalls: [
+          {
+            id: "call-1",
+            name: "searchProducts",
+            args: {
+              category: "DRESS",
+              color: "Sand",
+              size: "XS",
+              maxPrice: 300
+            }
+          }
+        ]
+      })
+      .mockResolvedValueOnce({
+        candidates: [],
+        functionCalls: []
+      });
+    prisma.product.findMany.mockResolvedValue([
+      {
+        id: "product-rami",
+        title: "Pleated Statement Dress 126",
+        category: ProductCategory.DRESS,
+        rentalPrice: 228,
+        bodyShapes: [BodyShape.RECTANGLE],
+        images: [{ url: "https://cdn.example.com/rami.jpg" }],
+        variants: [{ sizeLabel: "XS", color: "Sand", isActive: true }],
+        designer: {
+          storeName: "Rami Tannous Atelier",
+          slug: "rami-tannous-atelier"
+        }
+      },
+      {
+        id: "product-adam",
+        title: "Pleated Statement Dress 168",
+        category: ProductCategory.DRESS,
+        rentalPrice: 214,
+        bodyShapes: [BodyShape.RECTANGLE],
+        images: [{ url: "https://cdn.example.com/adam.jpg" }],
+        variants: [{ sizeLabel: "XS", color: "Sand", isActive: true }],
+        designer: {
+          storeName: "Adam Nassar Atelier",
+          slug: "adam-nassar-atelier"
+        }
+      }
+    ]);
+
+    const result = await service.recommend(null, {
+      prompt: "Find me a sand-colored Rami Tannous dress, size XS, for under $300."
+    });
+
+    expect(result.products).toEqual([
+      expect.objectContaining({
+        id: "product-rami",
+        designer: expect.objectContaining({
+          storeName: "Rami Tannous Atelier"
+        })
+      })
+    ]);
+    expect(result.recommendationText).toContain("Rami Tannous Atelier");
+    expect(result.recommendationText).not.toContain("Adam Nassar Atelier");
   });
 });

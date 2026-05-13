@@ -157,4 +157,58 @@ describe("ai-response utils", () => {
     expect(text).not.toContain(knowledgeEntries[0]!.answer);
     expect(text).not.toContain(knowledgeEntries[1]!.answer);
   });
+
+  it("enforces explicit designer, color, size, and budget filters before ranking", () => {
+    const result = selectGroundedProducts(
+      [
+        buildProduct({
+          id: "rami-match",
+          title: "Pleated Statement Dress 126",
+          category: ProductCategory.DRESS,
+          rentalPrice: 228,
+          designer: { storeName: "Rami Tannous Atelier", slug: "rami-tannous-atelier" },
+          colorOptions: ["Black", "Sand"],
+          sizeOptions: ["L", "S", "XS"]
+        }),
+        buildProduct({
+          id: "wrong-designer",
+          title: "Pleated Statement Dress 168",
+          category: ProductCategory.DRESS,
+          rentalPrice: 214,
+          designer: { storeName: "Adam Nassar Atelier", slug: "adam-nassar-atelier" },
+          colorOptions: ["Champagne", "Sand"],
+          sizeOptions: ["L", "M", "XS"]
+        }),
+        buildProduct({
+          id: "too-expensive",
+          title: "Pleated Statement Dress 190",
+          category: ProductCategory.DRESS,
+          rentalPrice: 410,
+          designer: { storeName: "Rami Tannous Atelier", slug: "rami-tannous-atelier" },
+          colorOptions: ["Sand"],
+          sizeOptions: ["XS"]
+        })
+      ],
+      {
+        prompt: "Find me a sand-colored Rami Tannous dress, size XS, for under $300.",
+        filters: {
+          category: ProductCategory.DRESS,
+          color: "Sand",
+          size: "XS",
+          designerQuery: "Rami Tannous Atelier",
+          maxPrice: 300
+        },
+        profile: {
+          firstName: "Malik",
+          measurements: null,
+          preferences: null
+        },
+        usedStoredMeasurements: false
+      },
+      3
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.id).toBe("rami-match");
+  });
 });

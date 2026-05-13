@@ -624,9 +624,15 @@ export class AiService {
     payload: AiRecommendationDto,
     profile: UserProfileContext
   ): GroundedRecommendationContext {
+    const promptFilters = this.buildPromptConstraintFilters(payload, profile);
+    const requestFilters = this.toRecord(payload.filters) ?? {};
+
     return {
       prompt: payload.prompt,
-      filters: (this.toRecord(payload.filters) ?? null) as Record<string, unknown> | null,
+      filters: ({
+        ...promptFilters,
+        ...requestFilters
+      } satisfies Record<string, unknown>) as Record<string, unknown> | null,
       profile,
       usedStoredMeasurements: payload.measurements == null && profile.measurements != null
     };
@@ -853,31 +859,41 @@ export class AiService {
     payload: AiRecommendationDto,
     profile: UserProfileContext
   ): Record<string, unknown> {
+    return this.buildPromptConstraintFilters(payload, profile);
+  }
+
+  private buildPromptConstraintFilters(
+    payload: AiRecommendationDto,
+    profile: UserProfileContext
+  ): Record<string, unknown> {
     const filters = this.toRecord(payload.filters) ?? {};
     const prompt = payload.prompt.toLowerCase();
-    const bodyShape = this.extractBodyShape(filters.bodyShape) ?? this.extractBodyShape(profile.measurements?.bodyShape);
     const budget = this.extractBudgetRange(prompt);
-    const color = typeof filters.color === "string" ? filters.color : this.extractPromptColor(prompt);
-    const size = typeof filters.size === "string" ? filters.size : this.extractPromptSize(prompt);
-    const designerQuery =
-      typeof filters.designerQuery === "string" ? filters.designerQuery : this.extractPromptDesigner(payload.prompt);
 
     return {
       category:
         typeof filters.category === "string"
           ? filters.category
-          : /\b(suit|suits|tuxedo|tuxedos|tailoring|jacket|jackets)\b/.test(prompt)
-            ? ProductCategory.SUIT
-            : /\b(dress|dresses|gown|gowns|cocktail|cocktails|eveningwear)\b/.test(prompt)
-              ? ProductCategory.DRESS
-              : undefined,
-      size,
-      color,
-      designerQuery,
-      bodyShape,
-      minPrice: budget.minPrice,
-      maxPrice: budget.maxPrice,
-      limit: 6
+          : this.extractPromptCategory(prompt),
+      size:
+        typeof filters.size === "string" ? filters.size : this.extractPromptSize(prompt),
+      color:
+        typeof filters.color === "string" ? filters.color : this.extractPromptColor(prompt),
+      designerQuery:
+        typeof filters.designerQuery === "string"
+          ? filters.designerQuery
+          : this.extractPromptDesigner(payload.prompt),
+      bodyShape:
+        this.extractBodyShape(filters.bodyShape) ??
+        this.extractBodyShape(profile.measurements?.bodyShape),
+      minPrice:
+        typeof filters.minPrice === "number" ? filters.minPrice : budget.minPrice,
+      maxPrice:
+        typeof filters.maxPrice === "number" ? filters.maxPrice : budget.maxPrice,
+      limit:
+        typeof filters.limit === "number" && Number.isInteger(filters.limit) && filters.limit > 0
+          ? Math.min(filters.limit, 12)
+          : 6
     };
   }
 
@@ -896,6 +912,7 @@ export class AiService {
       typeof filters.category === "string" ||
       typeof filters.size === "string" ||
       typeof filters.color === "string" ||
+      typeof filters.designerQuery === "string" ||
       this.isBodyShape(filters.bodyShape)
     ) {
       return true;
@@ -1000,6 +1017,18 @@ export class AiService {
     return numericSize?.[1];
   }
 
+  private extractPromptCategory(prompt: string): ProductCategory | undefined {
+    if (/\b(suit|suits|tuxedo|tuxedos|tailoring|jacket|jackets)\b/.test(prompt)) {
+      return ProductCategory.SUIT;
+    }
+
+    if (/\b(dress|dresses|gown|gowns|cocktail|cocktails|eveningwear)\b/.test(prompt)) {
+      return ProductCategory.DRESS;
+    }
+
+    return undefined;
+  }
+
   private extractPromptDesigner(prompt: string): string | undefined {
     const normalizedPrompt = prompt.trim();
     const designerPatterns = [
@@ -1012,6 +1041,72 @@ export class AiService {
 
       if (candidate && candidate.length >= 4) {
         return candidate;
+      }
+    }
+
+    const preCategoryMatch = normalizedPrompt.match(
+      /\b([a-z][a-z\s'.-]{2,80}?)\s+(?:dress|dresses|gown|gowns|suit|suits|tuxedo|tuxedos)\b/i
+    );
+
+    if (preCategoryMatch?.[1]) {
+      const ignoredTokens = new Set([
+        "i",
+        "hello",
+        "find",
+        "show",
+        "give",
+        "me",
+        "a",
+        "an",
+        "the",
+        "need",
+        "needs",
+        "want",
+        "wants",
+        "looking",
+        "look",
+        "please",
+        "for",
+        "under",
+        "over",
+        "size",
+        "formal",
+        "event",
+        "evening",
+        "wedding",
+        "cocktail",
+        "refined",
+        "clean",
+        "sharp",
+        "minimal",
+        "sleek",
+        "classic",
+        "sophisticated",
+        "tie",
+        "sand",
+        "black",
+        "white",
+        "ivory",
+        "emerald",
+        "burgundy",
+        "champagne",
+        "midnight",
+        "blue",
+        "slate",
+        "grey",
+        "gray",
+        "colored",
+        "colour",
+        "color",
+        "and"
+      ]);
+      const cleanedTokens = preCategoryMatch[1]
+        .split(/[^a-zA-Z']+/)
+        .map((token) => token.trim())
+        .filter((token) => token.length > 0 && !ignoredTokens.has(token.toLowerCase()));
+
+      if (cleanedTokens.length >= 2) {
+        return cleanedTokens.slice(-3).join(" ");
       }
     }
 
