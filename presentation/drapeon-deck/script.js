@@ -191,7 +191,7 @@ function renderQrCode(nodeId, url) {
 function hydrateLinks() {
   const demoUrl = document.body.dataset.demoUrl || 'https://your-demo-url.com';
   const githubUrl = document.body.dataset.githubUrl || 'https://github.com/your-account/drapeon';
-  const portfolioUrl = document.body.dataset.portfolioUrl || 'https://your-portfolio-url.com';
+  const portfolioUrl = document.body.dataset.portfolioUrl || 'https://hadi-diab.vercel.app';
 
   const demoLink = document.getElementById('final-demo-link');
   const aiLiveDemoLink = document.getElementById('ai-live-demo-link');
