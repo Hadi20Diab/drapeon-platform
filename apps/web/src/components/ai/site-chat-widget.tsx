@@ -253,6 +253,7 @@ export const SiteChatWidget = component$(() => {
   const closeTimer = useSignal<number | null>(null);
   const messageViewportRef = useSignal<HTMLElement>();
   const messageEndRef = useSignal<HTMLElement>();
+  const composerRef = useSignal<HTMLTextAreaElement>();
   const scrollFrame = useSignal<number | null>(null);
   const lastScrollState = useSignal("");
 
@@ -262,6 +263,10 @@ export const SiteChatWidget = component$(() => {
       conversations.value[0] ??
       null
     );
+  });
+
+  const hasUserMessages = useComputed$(() => {
+    return (activeConversation.value?.messages ?? []).some((m) => m.role === "user");
   });
 
   useVisibleTask$(() => {
@@ -686,7 +691,36 @@ export const SiteChatWidget = component$(() => {
             <div class="grid h-full grid-rows-[auto_1fr_auto]">
               <div ref={messageViewportRef} class="overflow-y-auto px-4 py-5 min-h-[31rem]">
                 <div class="space-y-4">
-                  {(activeConversation.value?.messages ?? []).map((message) => {
+
+                    {!hasUserMessages.value && !isSending.value && (
+                      <div class="chatbot-suggestions grid gap-3">
+                        <p class="text-sm font-semibold text-brand-ink/60">Try a suggestion</p>
+                        <div class="flex flex-wrap gap-2">
+                          {[
+                            "Show me evening dresses",
+                            "How do I choose my size?",
+                            "Find designers near me"
+                          ].map((suggestion) => (
+                            <button
+                              key={suggestion}
+                              type="button"
+                              class="btn-secondary border-brand-ink/10 text-brand-ink"
+                              onClick$={() => {
+                                input.value = suggestion;
+                                // focus composer
+                                if (typeof window !== "undefined") {
+                                  composerRef.value?.focus();
+                                }
+                              }}
+                            >
+                              {suggestion}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {(activeConversation.value?.messages ?? []).map((message) => {
                     const displayedText =
                       message.role === "agent"
                         ? renderedMessages.value[message.id] ?? message.text
@@ -800,6 +834,7 @@ export const SiteChatWidget = component$(() => {
                         ? "Ask about products, fit, subscriptions, or Drapeon policies..."
                         : "Ask about products, fittings, sizing, or Drapeon policies..."
                     }
+                    ref={composerRef}
                     value={input.value}
                     disabled={isSending.value}
                     rows={1}
@@ -807,6 +842,12 @@ export const SiteChatWidget = component$(() => {
                       input.value = target.value;
                       target.style.height = "0px";
                       target.style.height = `${Math.min(target.scrollHeight, 128)}px`;
+                    }}
+                    onKeyDown$={(event: KeyboardEvent) => {
+                      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+                        event.preventDefault();
+                        sendPrompt();
+                      }
                     }}
                   />
                   <button class="chatbot-send-btn" type="submit" disabled={isSending.value}>
