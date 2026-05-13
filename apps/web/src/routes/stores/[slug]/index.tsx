@@ -24,6 +24,8 @@ export const useStorePage = routeLoader$(async ({ params, status }) => {
     description: store.description ?? null,
     brandColor: store.brandColor ?? null,
     websiteUrl: store.websiteUrl ?? null,
+    instagramUrl: store.instagramUrl ?? null,
+    tiktokUrl: store.tiktokUrl ?? null,
     products: items
   };
 });
@@ -66,6 +68,61 @@ export default component$(() => {
               {store.value.description ??
                 "Browse the full rental edit from this studio, with every piece pulled from the live catalog inventory."}
             </p>
+            {(
+              store.value.websiteUrl || store.value.instagramUrl || store.value.tiktokUrl
+            ) && (
+              <div class="mt-4 flex items-center gap-4 text-sm">
+                {store.value.websiteUrl && (
+                  <a
+                    href={store.value.websiteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-2"
+                    aria-label={`Visit ${store.value.storeName} website`}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4" style={{ color: 'var(--brand)' }}>
+                      <circle cx="12" cy="12" r="10" />
+                      <path d="M2 12h20" />
+                      <path d="M12 2v20" />
+                    </svg>
+                    <span class="underline">{store.value.websiteUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")}</span>
+                  </a>
+                )}
+
+                {store.value.instagramUrl && (
+                  <a
+                    href={store.value.instagramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-2"
+                    aria-label={`${store.value.storeName} Instagram`}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4" style={{ color: 'var(--brand)' }}>
+                      <rect x="3" y="3" width="18" height="18" rx="5" />
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M17.5 6.5h.01" />
+                    </svg>
+                    <span class="underline">Instagram</span>
+                  </a>
+                )}
+
+                {store.value.tiktokUrl && (
+                  <a
+                    href={store.value.tiktokUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-2"
+                    aria-label={`${store.value.storeName} TikTok`}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4" style={{ color: 'var(--brand)' }}>
+                      <path d="M9 18c0-4 0-7 6-7v4a4 4 0 01-6 3z" />
+                      <path d="M15 6h3v3" />
+                    </svg>
+                    <span class="underline">TikTok</span>
+                  </a>
+                )}
+              </div>
+            )}
           </div>
           <div
             class="justify-self-start border border-brand-ink/12 bg-white/80 px-5 py-4 lg:justify-self-end"
