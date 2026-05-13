@@ -181,17 +181,6 @@ export default component$(() => {
       action="Back to Products"
       actionHref="/designers/products"
     >
-      {error.value && (
-        <p class="border border-brand-rose/30 bg-brand-rose/10 px-4 py-3 text-sm font-semibold text-brand-rose">
-          {error.value}
-        </p>
-      )}
-      {notice.value && (
-        <p class="border border-brand-olive/30 bg-brand-olive/10 px-4 py-3 text-sm font-semibold text-brand-olive">
-          {notice.value}
-        </p>
-      )}
-
       {dashboard.value && !canPublish() && (
         <article class="glass-panel grid gap-5 p-6 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
@@ -334,11 +323,10 @@ export default component$(() => {
                   <button
                     key={option.value}
                     type="button"
-                    class={`border px-4 py-3 text-xs font-extrabold uppercase tracking-[0.12em] transition ${
-                      active
+                    class={`border px-4 py-3 text-xs font-extrabold uppercase tracking-[0.12em] transition ${active
                         ? "border-brand-rose bg-brand-ink text-brand-sand"
                         : "border-brand-ink/15 bg-white text-brand-ink hover:border-brand-rose"
-                    }`}
+                      }`}
                     disabled={!canPublish()}
                     onClick$={() => toggleBodyShape(option.value)}
                   >
@@ -433,6 +421,16 @@ export default component$(() => {
           </div>
         </form>
       </article>
+      {error.value && (
+        <p class="border border-brand-rose/30 bg-brand-rose/10 px-4 py-3 text-sm font-semibold text-brand-rose">
+          {error.value}
+        </p>
+      )}
+      {notice.value && (
+        <p class="border border-brand-olive/30 bg-brand-olive/10 px-4 py-3 text-sm font-semibold text-brand-olive">
+          {notice.value}
+        </p>
+      )}
     </DesignerShell>
   );
 });
