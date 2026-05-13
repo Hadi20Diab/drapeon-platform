@@ -13,6 +13,7 @@ node_modules
 .cache
 .mf
 .rollup.cache
+.vercel
 tsconfig.tsbuildinfo
 
 # Logs
