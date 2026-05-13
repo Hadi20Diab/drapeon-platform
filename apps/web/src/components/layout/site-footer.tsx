@@ -34,11 +34,11 @@ export const SiteFooter = component$(() => {
           </div>
         </div>
         <div class="text-sm text-brand-sand/70">
-          <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-gold">Operations</p>
+          <p class="text-xs font-bold uppercase tracking-[0.16em] text-brand-gold">Company</p>
           <div class="mt-4 grid gap-2">
-            <a href="/admin/dashboard">Admin</a>
-            <span>Neon PostgreSQL</span>
-            <span>Gemini Live Agent</span>
+            <a href="/about">About</a>
+            <a href="/careers">Careers</a>
+            <a href="/privacy">Privacy</a>
           </div>
         </div>
       </div>
