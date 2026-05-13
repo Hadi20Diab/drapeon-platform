@@ -17,10 +17,30 @@ async function bootstrap(): Promise<void> {
   const apiPrefix = configService.get<string>("API_PREFIX", "api");
   const port = configService.get<number>("PORT", 4000);
   const webOrigin = configService.get<string>("WEB_ORIGIN", "http://localhost:5173");
+  const allowedOrigins = webOrigin
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 
+  // Support a dynamic origin check so the server responds with the correct
+  // Access-Control-Allow-Origin header when the frontend origin matches.
   app.enableCors({
-    origin: [webOrigin, "http://localhost:5174"],
-    credentials: true
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      // Allow non-browser requests (curl, server-to-server) which have no origin
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Not allowed by CORS"));
+    },
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+    optionsSuccessStatus: 200
   });
   app.setGlobalPrefix(apiPrefix);
   app.useGlobalPipes(
