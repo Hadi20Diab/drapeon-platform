@@ -1,10 +1,33 @@
 import { z } from "zod";
 
+function isValidOriginList(value: string): boolean {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .every((origin) => {
+      if (origin === "*") {
+        return true;
+      }
+
+      try {
+        const parsed = new URL(origin);
+        return ["http:", "https:"].includes(parsed.protocol);
+      } catch {
+        return false;
+      }
+    });
+}
+
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(4000),
   API_PREFIX: z.string().min(1).default("api"),
-  WEB_ORIGIN: z.string().url().optional(),
+  WEB_ORIGIN: z
+    .string()
+    .min(1)
+    .refine(isValidOriginList, "WEB_ORIGIN must be a valid absolute URL or a comma-separated list of absolute URLs.")
+    .optional(),
   DATABASE_URL: z.string().url(),
   DIRECT_URL: z.string().url().optional(),
   JWT_ACCESS_SECRET: z.string().min(32),
