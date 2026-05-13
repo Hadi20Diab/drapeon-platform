@@ -5,8 +5,8 @@ const navigation = [
   ["Products", "/designers/products"],
   ["Billing", "/designers/billing"],
   ["Appointments", "/designers/appointments"],
-  ["Messages", "/designers/messages"],
-  ["Notifications", "/designers/notifications"],
+  // ["Messages", "/designers/messages"],
+  // ["Notifications", "/designers/notifications"],
   ["Settings", "/designers/settings"]
 ];
 
