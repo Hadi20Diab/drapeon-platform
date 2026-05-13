@@ -1429,6 +1429,24 @@ export async function chatWithAi(payload: {
   });
 }
 
+export async function fetchAiSessions(): Promise<{
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messages: Array<{ id: string; role: "user" | "agent"; text: string; createdAt?: string }>;
+}[]> {
+  return requestApi<{
+    id: string;
+    title: string;
+    createdAt: string;
+    updatedAt: string;
+    messages: Array<{ id: string; role: "user" | "agent"; text: string; createdAt?: string }>;
+  }[]>("/ai/sessions", {
+    headers: authHeaders()
+  });
+}
+
 export async function fetchAdminKnowledge(query = ""): Promise<
   PaginatedAdmin<AdminKnowledgeEntry> & { pinecone: { configured: boolean } }
 > {

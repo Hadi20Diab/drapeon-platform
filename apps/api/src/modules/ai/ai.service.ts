@@ -673,6 +673,52 @@ export class AiService {
     throw new Error("The AI response could not be generated.");
   }
 
+  /**
+   * Return a list of AI sessions and their messages for the given user.
+   * If no userId is provided, returns an empty array.
+   */
+  async getSessionsForUser(userId: string | null | undefined) {
+    if (!userId) {
+      return [];
+    }
+
+    const sessions = await this.prisma.aiSession.findMany({
+      where: { userId },
+      include: {
+        messages: {
+          orderBy: { createdAt: "asc" }
+        }
+      },
+      orderBy: { startedAt: "desc" },
+      take: 100
+    });
+
+    return sessions.map((s) => {
+      const firstUser = s.messages.find((m) => m.role === "USER");
+      const title = firstUser
+        ? firstUser.content.length <= 38
+          ? firstUser.content
+          : `${firstUser.content.slice(0, 35).trimEnd()}...`
+        : s.messages[0]?.content ?? "Conversation";
+
+      return {
+        id: s.id,
+        title,
+        createdAt: s.startedAt.toISOString(),
+        updatedAt:
+          (s.messages?.length ?? 0) > 0
+            ? (s.messages![s.messages!.length - 1]!.createdAt).toISOString()
+            : s.startedAt.toISOString(),
+        messages: s.messages.map((m) => ({
+          id: m.id,
+          role: m.role === "USER" ? "user" : "agent",
+          text: m.content,
+          createdAt: m.createdAt.toISOString()
+        }))
+      };
+    });
+  }
+
   private async hydrateGroundedCollections(
     payload: AiRecommendationDto,
     groundedContext: GroundedRecommendationContext,

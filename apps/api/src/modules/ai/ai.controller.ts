@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
 
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { OptionalJwtAuthGuard } from "../auth/guards/optional-jwt-auth.guard";
@@ -13,5 +13,10 @@ export class AiController {
   @Post("recommendations")
   getRecommendations(@CurrentUser("sub") userId: string | undefined, @Body() payload: AiRecommendationDto) {
     return this.aiService.recommend(userId, payload, { channel: "REST" });
+  }
+
+  @Get("/sessions")
+  async getSessions(@CurrentUser("sub") userId: string | undefined) {
+    return this.aiService.getSessionsForUser(userId ?? null);
   }
 }

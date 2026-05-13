@@ -11,6 +11,7 @@ import {
   chatWithAi,
   readAuthSession,
   subscribeToAuthSession,
+  fetchAiSessions,
   type AiChatResponse,
   type AiHistoryMessage,
   type AuthSession
@@ -177,6 +178,52 @@ function syncConversationState(
   writePersistedActiveChatConversation(identity, activeConversationId);
 }
 
+function mergeServerIntoLocal(
+  localConversations: PersistedChatConversation[],
+  serverConversations: Array<{ id: string; title?: string; createdAt: string; updatedAt: string; messages: Array<{ id: string; role: "user" | "agent"; text: string; createdAt?: string }> }>
+): PersistedChatConversation[] {
+  const localById = new Map(localConversations.map((c) => [c.id, c]));
+
+  for (const s of serverConversations) {
+    const serverConv: PersistedChatConversation = {
+      id: s.id,
+      title: s.title ?? "Conversation",
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
+      messages: s.messages.map((m) => ({ id: m.id, role: m.role, text: m.text }))
+    };
+
+    const local = localById.get(s.id);
+
+    if (!local) {
+      // Add server conversation if not present locally
+      localConversations.push(serverConv);
+      localById.set(serverConv.id, serverConv);
+      continue;
+    }
+
+    // If local exists, append any server messages that are missing locally.
+    const localMsgIds = new Set(local.messages.map((m) => m.id));
+    const newMessages = serverConv.messages.filter((m) => !localMsgIds.has(m.id));
+
+    if (newMessages.length > 0) {
+      local.messages = [...local.messages, ...newMessages];
+      // Update the updatedAt to the latest known
+      if (serverConv.updatedAt > local.updatedAt) {
+        local.updatedAt = serverConv.updatedAt;
+      }
+      // If local title is default, prefer server title
+      if (local.title === "New conversation" && serverConv.title) {
+        local.title = serverConv.title;
+      }
+    }
+  }
+
+  // Sort by updatedAt desc
+  localConversations.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  return localConversations;
+}
+
 function animateAssistantReply(
   messageId: string,
   fullText: string,
@@ -299,6 +346,26 @@ export const SiteChatWidget = component$(() => {
     isOpen.value = consumeQueuedSiteChatOpen();
     isClosing.value = false;
 
+    // Background sync: fetch server sessions for authenticated users and merge into local storage
+    (async () => {
+      try {
+        const auth = readAuthSession();
+
+        if (auth?.user?.id) {
+          const server = await fetchAiSessions();
+
+          if (Array.isArray(server) && server.length > 0) {
+            const merged = mergeServerIntoLocal(initialConversations, server);
+            syncConversationState(identity.value, merged, activeConversationId.value, conversations, activeConversationId);
+            renderedMessages.value = buildRenderedMessageMap(merged);
+          }
+        }
+      } catch (err) {
+        // silent fail — keep local conversations performant
+        // console.debug("Site chat server sync failed:", err);
+      }
+    })();
+
     const handleOpen = () => {
       if (closeTimer.value != null) {
         window.clearTimeout(closeTimer.value);
@@ -336,6 +403,23 @@ export const SiteChatWidget = component$(() => {
       socketRef.value?.disconnect();
       socketRef.value = null;
       isConversationMenuOpen.value = false;
+
+      // If the user just logged in, fetch server sessions and merge in the background
+      (async () => {
+        try {
+          if (nextSession?.user?.id) {
+            const server = await fetchAiSessions();
+
+            if (Array.isArray(server) && server.length > 0) {
+              const merged = mergeServerIntoLocal(conversations.value, server);
+              syncConversationState(identity.value, merged, activeConversationId.value, conversations, activeConversationId);
+              renderedMessages.value = buildRenderedMessageMap(merged);
+            }
+          }
+        } catch (err) {
+          // ignore background sync errors
+        }
+      })();
     });
 
     return () => {
