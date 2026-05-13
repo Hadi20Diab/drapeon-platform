@@ -11,8 +11,6 @@ const aiResponseNode = document.querySelector('#ai-chat-response p');
 const aiProductsNode = document.getElementById('ai-demo-products');
 const aiLiveDemoNode = document.getElementById('ai-demo-live');
 const aiFallbackDemoNode = document.getElementById('ai-demo-fallback');
-const inspirationToggle = document.getElementById('inspiration-toggle');
-const inspirationAnswer = document.getElementById('inspiration-answer');
 
 let activeIndex = 0;
 let typingTimer = null;
@@ -302,21 +300,9 @@ function bindAiDemo() {
   loadScenario(0);
 }
 
-function bindInspirationToggle() {
-  if (!inspirationToggle || !inspirationAnswer) {
-    return;
-  }
-
-  inspirationToggle.addEventListener('click', () => {
-    const open = inspirationAnswer.classList.toggle('is-open');
-    inspirationToggle.textContent = open ? 'Hide the answer' : 'Reveal the inspiration';
-  });
-}
-
 buildDots();
 bindControls();
 observeSlides();
 hydrateLinks();
 bindAiDemo();
-bindInspirationToggle();
 updateUI(0);

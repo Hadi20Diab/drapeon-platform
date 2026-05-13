@@ -53,27 +53,27 @@
           <div class="slide__backdrop slide__backdrop--halo"></div>
           <div class="slide__content slide__content--center">
             <div class="cover-lockup reveal">
-              <img class="cover-lockup__logo" src="./logo.png" alt="Drapeon logo" />
+              <p class="eyebrow">Internship Final Project</p>
+              <div class="cover-lockup__crest">
+                <img class="cover-lockup__logo" src="./logo.png" alt="Drapeon logo" />
+              </div>
               <h1>Drapeon</h1>
-              <p class="cover-lockup__subtitle">Luxury formalwear rental platform</p>
+              <p class="cover-lockup__subtitle">
+                A luxury multi-vendor formalwear platform shaped around AI styling, designer storefronts,
+                and fitting-first workflows.
+              </p>
+              <div class="cover-pill-row">
+                <span class="chip">AI Stylist</span>
+                <span class="chip">Designer Subscriptions</span>
+                <span class="chip">Fitting Sessions</span>
+              </div>
             </div>
 
-            <div class="cover-question glass-card reveal reveal-delay-1">
-              <p class="eyebrow">Opening Moment</p>
-              <h2>Look at the logo. What inspired the idea for the project?</h2>
+            <div class="cover-note glass-card reveal reveal-delay-1">
               <p>
-                The identity leans into drape, structure, and couture presence - the same emotional
-                space that shaped Drapeon as a premium platform for formalwear discovery.
+                Designed to make premium rental discovery feel composed, trustworthy, and guided from the
+                first impression to the fitting request.
               </p>
-              <button id="inspiration-toggle" class="slide-cta slide-cta--light" type="button">
-                Reveal the inspiration
-              </button>
-              <div class="cover-question__answer" id="inspiration-answer">
-                <p>
-                  The project started from one thought: luxury rental should feel as elegant and composed
-                  as the garment itself. The mark reflects fabric, tailoring, and confidence.
-                </p>
-              </div>
             </div>
           </div>
         </section>
@@ -297,49 +297,22 @@
                   </div>
                   <span class="ai-demo__status">Live mode</span>
                 </div>
-                <div class="ai-live-panel">
-                  <p class="ai-live-panel__lead">
-                    When the internet is stable, this slide stays minimal and lets you move directly
-                    into the real Drapeon experience.
+                <div class="ai-live-stage">
+                  <div class="ai-live-stage__orb"></div>
+                  <p class="ai-live-stage__label">Real storefront experience</p>
+                  <h4>Open the live site, launch the AI stylist, and ask a real prompt.</h4>
+                  <p class="ai-live-stage__caption">
+                    If the connection becomes unstable, I can switch to the offline backup demo instantly.
                   </p>
-                  <ol class="ai-live-steps">
-                    <li>
-                      <span>01</span>
-                      <div>
-                        <strong>Open the live site</strong>
-                        <p>Launch the hosted Drapeon demo in the browser.</p>
-                      </div>
-                    </li>
-                    <li>
-                      <span>02</span>
-                      <div>
-                        <strong>Open the AI stylist widget</strong>
-                        <p>Show the floating assistant directly inside the storefront journey.</p>
-                      </div>
-                    </li>
-                    <li>
-                      <span>03</span>
-                      <div>
-                        <strong>Ask a real prompt</strong>
-                        <p>Example: “Find me a black-tie suit under $250” or “Explain fittings.”</p>
-                      </div>
-                    </li>
-                  </ol>
-                  <div class="ai-live-actions">
-                    <a
-                      id="ai-live-demo-link"
-                      class="demo-link demo-link--dark"
-                      href="https://your-demo-url.com"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Open Live Demo
-                    </a>
-                    <p class="ai-live-note">
-                      If the connection is unstable, switch to fallback mode in `script.js` and the
-                      simulated AI conversation will appear again.
-                    </p>
-                  </div>
+                  <a
+                    id="ai-live-demo-link"
+                    class="demo-link demo-link--dark"
+                    href="https://your-demo-url.com"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open Live Demo
+                  </a>
                 </div>
               </div>
 
