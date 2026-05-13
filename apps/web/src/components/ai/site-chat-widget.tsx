@@ -39,8 +39,39 @@ interface SocketLike {
   disconnect(): void;
 }
 
+type AiTransportMode = "auto" | "rest" | "socket";
+
 function apiBaseUrl(): string {
   return import.meta.env.PUBLIC_API_URL ?? "http://localhost:4000";
+}
+
+function aiTransportMode(): AiTransportMode {
+  const configured = (import.meta.env.PUBLIC_AI_TRANSPORT ?? "auto").toLowerCase();
+
+  if (configured === "rest" || configured === "socket") {
+    return configured;
+  }
+
+  return "auto";
+}
+
+function shouldUseSocketTransport(): boolean {
+  const mode = aiTransportMode();
+
+  if (mode === "rest") {
+    return false;
+  }
+
+  if (mode === "socket") {
+    return true;
+  }
+
+  try {
+    const hostname = new URL(apiBaseUrl()).hostname.toLowerCase();
+    return hostname === "localhost" || hostname === "127.0.0.1";
+  } catch {
+    return false;
+  }
 }
 
 function toHistory(conversation: PersistedChatConversation | null): AiHistoryMessage[] {
@@ -291,6 +322,21 @@ function scrollChatToLatest(
   });
 }
 
+function sanitizeChatHistory(history: AiHistoryMessage[]): AiHistoryMessage[] {
+  return history
+    .filter(
+      (message): message is AiHistoryMessage =>
+        (message.role === "user" || message.role === "agent") &&
+        typeof message.text === "string" &&
+        message.text.trim().length > 0
+    )
+    .map((message) => ({
+      role: message.role,
+      text: message.text.split("\0").join("").trim().slice(0, 1200)
+    }))
+    .slice(-10);
+}
+
 export const SiteChatWidget = component$(() => {
   const session = useSignal<AuthSession | null>(null);
   const identity = useSignal("guest");
@@ -509,6 +555,10 @@ export const SiteChatWidget = component$(() => {
   });
 
   const ensureSocket = $(async () => {
+    if (!shouldUseSocketTransport()) {
+      throw new Error("Live socket transport disabled for this environment.");
+    }
+
     if (socketRef.value?.connected) {
       return socketRef.value;
     }
@@ -518,7 +568,8 @@ export const SiteChatWidget = component$(() => {
 
     const socket = io(`${apiBaseUrl()}/ai-live`, {
       auth: activeSession ? { token: activeSession.tokens.accessToken } : {},
-      transports: ["websocket"]
+      transports: ["websocket"],
+      reconnection: false
     });
 
     socket.on("ai.recommendations.response", (response: AiChatResponse) => {
@@ -552,6 +603,10 @@ export const SiteChatWidget = component$(() => {
 
     socket.on("ai.error", (payload: { message?: string }) => {
       error.value = payload.message ?? "The live stylist connection failed.";
+      void appendAgentMessage(
+        pendingConversationId.value ?? activeConversationId.value,
+        "I couldn’t complete that request through the live stylist right now. Please try again in a moment."
+      );
       pendingConversationId.value = null;
       waitingForSocketResponse.value = false;
       isSending.value = false;
@@ -572,11 +627,36 @@ export const SiteChatWidget = component$(() => {
 
       socket.on("connect_error", () => {
         window.clearTimeout(timer);
+        socket.disconnect();
+        socketRef.value = null;
         reject(new Error("Could not connect to the live stylist."));
       });
     });
 
     return socketRef.value;
+  });
+
+  const appendAgentMessage = $((conversationId: string, text: string) => {
+    const replyMessage = createChatMessage({
+      role: "agent",
+      text
+    });
+    const replyConversations = appendChatMessage(conversations.value, conversationId, replyMessage);
+
+    syncConversationState(
+      identity.value,
+      replyConversations,
+      conversationId,
+      conversations,
+      activeConversationId
+    );
+    animateAssistantReply(
+      replyMessage.id,
+      replyMessage.text,
+      renderedMessages,
+      typingMessageId,
+      revealTimer
+    );
   });
 
   const createFreshConversation = $(() => {
@@ -645,7 +725,7 @@ export const SiteChatWidget = component$(() => {
     }
 
     const conversationId = conversation.id;
-    const history = toHistory(conversation);
+    const history = sanitizeChatHistory(toHistory(conversation));
     const userMessage = createChatMessage({ role: "user", text });
     const nextConversations = appendChatMessage(conversations.value, conversationId, userMessage);
 
@@ -671,7 +751,14 @@ export const SiteChatWidget = component$(() => {
       socket.emit("ai.recommendations.request", { prompt: text, history });
     } catch {
       try {
-        const response = await chatWithAi({ prompt: text, history });
+        let response: AiChatResponse | null = null;
+
+        try {
+          response = await chatWithAi({ prompt: text, history });
+        } catch {
+          response = await chatWithAi({ prompt: text });
+        }
+
         const replyMessage = createChatMessage({
           role: "agent",
           text: response.recommendationText,
@@ -695,7 +782,15 @@ export const SiteChatWidget = component$(() => {
           revealTimer
         );
       } catch (caught) {
-        error.value = caught instanceof Error ? caught.message : "Could not reach the stylist.";
+        const message =
+          caught instanceof Error && caught.message.trim().length > 0
+            ? caught.message
+            : "Could not reach the stylist.";
+        error.value = message;
+        await appendAgentMessage(
+          conversationId,
+          "I couldn’t complete that request right now. Please try again in a moment, or simplify the prompt and I’ll retry."
+        );
       } finally {
         pendingConversationId.value = null;
         waitingForSocketResponse.value = false;
@@ -805,8 +900,8 @@ export const SiteChatWidget = component$(() => {
             </div>
           </div>
           <div class="flex-1 overflow-hidden bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(248,243,235,0.98))]">
-            <div class="grid h-full grid-rows-[auto_1fr_auto]">
-              <div ref={messageViewportRef} class="overflow-y-auto px-4 py-5 min-h-[31rem]">
+            <div class="grid h-full grid-rows-[1fr_auto]">
+              <div ref={messageViewportRef} class="overflow-y-auto px-4 py-5">
                 <div class="space-y-4">
 
                     {!hasUserMessages.value && !isSending.value && (
@@ -939,10 +1034,15 @@ export const SiteChatWidget = component$(() => {
               </div>
 
               <form
-                class="border-t border-brand-ink/8 bg-white/90 px-4 py-4 backdrop-blur-xl"
+                class="border-t border-brand-ink/8 bg-white/90 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-xl"
                 preventdefault:submit
                 onSubmit$={() => sendPrompt()}
               >
+                {error.value && (
+                  <p class="mb-3 px-2 text-xs font-semibold text-brand-rose">
+                    {error.value}
+                  </p>
+                )}
                 <div class="chatbot-composer flex items-end gap-3 rounded-[26px] border border-brand-ink/10 bg-white px-3 py-3 shadow-[0_16px_40px_rgba(17,17,17,0.08)]">
                   <textarea
                     class="min-h-[44px] max-h-32 flex-1 resize-none bg-transparent px-2 text-sm leading-6 outline-none placeholder:text-brand-ink/32"
