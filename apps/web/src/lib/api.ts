@@ -16,6 +16,17 @@ export interface CatalogProduct {
   colorOptions: string[];
 }
 
+export interface StoreInfo {
+  slug: string;
+  storeName: string;
+  location?: string | null;
+  description?: string | null;
+  brandColor?: string | null;
+  websiteUrl?: string | null;
+  instagramUrl?: string | null;
+  tiktokUrl?: string | null;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -863,6 +874,14 @@ export async function fetchProductDetails(id: string): Promise<CatalogProduct | 
   }
 }
 
+export async function fetchStoreBySlug(slug: string): Promise<StoreInfo | null> {
+  try {
+    return await requestApi<StoreInfo>(`/stores/${encodeURIComponent(slug)}`);
+  } catch {
+    return null;
+  }
+}
+
 export async function loginUser(payload: {
   email: string;
   password: string;
@@ -991,7 +1010,8 @@ export function readAuthSession(): AuthSession | null {
       typeof window === "undefined" ? null : window.sessionStorage.getItem(authStorageKey);
 
     if (sessionValue) {
-      writeBrowserStorage(authStorageKey, sessionValue);
+      // Fallback to tab-local storage without re-writing to global storage 
+      // to avoid session resurrection glitches across multiple tabs.
       return JSON.parse(sessionValue) as AuthSession;
     }
   } catch {
@@ -1021,7 +1041,13 @@ export function subscribeToAuthSession(listener: (session: AuthSession | null) =
     listener(readAuthSession());
   };
   const handleStorage = (event: StorageEvent) => {
-    if (event.key === authStorageKey || event.key === authEventKey) {
+    if (event.key === authStorageKey) {
+      if (event.newValue === null) {
+        // Someone else cleared the global session, so we clear our tab-local session
+        window.sessionStorage.removeItem(authStorageKey);
+      }
+      notify();
+    } else if (event.key === authEventKey) {
       notify();
     }
   };
