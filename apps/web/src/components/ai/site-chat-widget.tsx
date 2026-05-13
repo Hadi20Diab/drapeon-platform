@@ -360,9 +360,8 @@ export const SiteChatWidget = component$(() => {
             renderedMessages.value = buildRenderedMessageMap(merged);
           }
         }
-      } catch (err) {
-        // silent fail — keep local conversations performant
-        // console.debug("Site chat server sync failed:", err);
+      } catch {
+        // silent fail - keep local conversations performant
       }
     })();
 
@@ -416,7 +415,7 @@ export const SiteChatWidget = component$(() => {
               renderedMessages.value = buildRenderedMessageMap(merged);
             }
           }
-        } catch (err) {
+        } catch {
           // ignore background sync errors
         }
       })();
