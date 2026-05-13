@@ -1,5 +1,5 @@
 import { $, component$, useSignal, useVisibleTask$ } from "@builder.io/qwik";
-import { Link, routeLoader$ } from "@builder.io/qwik-city";
+import { Link, routeLoader$, type DocumentHead } from "@builder.io/qwik-city";
 
 import {
   createFittingBooking,
@@ -351,3 +351,67 @@ export default component$(() => {
     </section>
   );
 });
+
+export const head: DocumentHead = ({ resolveValue, params, url }: any) => {
+  const product = resolveValue(useProductDetails) as any;
+
+  if (!product) {
+    return {
+      title: "Product not found | Drapeon",
+      meta: [{ name: "robots", content: "noindex" }]
+    };
+  }
+
+  const image = product.imageUrl ?? (product.images?.[0] ?? "/logo.png");
+  const description = product.description ??
+    "A fitting-ready formalwear piece prepared for atelier appointments and AI styling recommendations.";
+  const origin = (url && url.origin) || "http://localhost:5173";
+  const canonical = new URL(`/catalog/${params.id}`, origin).href;
+
+  const schema = {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    name: product.title,
+    image: [image],
+    description,
+    sku: product.sku ?? product.id,
+    brand: {
+      "@type": "Brand",
+      name: product.designer?.storeName ?? "Drapeon"
+    },
+    offers: {
+      "@type": "Offer",
+      priceCurrency: "USD",
+      price: product.rentalPrice,
+      availability:
+        (product.quantity && product.quantity > 0) ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      url: canonical
+    }
+  };
+
+  return {
+    title: `${product.title} — ${product.designer?.storeName ?? "Drapeon"} | Drapeon`,
+    meta: [
+      { name: "description", content: description },
+      { property: "og:title", content: product.title },
+      { property: "og:description", content: description },
+      { property: "og:image", content: image },
+      { property: "og:type", content: "product" },
+      { property: "og:url", content: canonical },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: product.title },
+      { name: "twitter:description", content: description },
+      { name: "twitter:image", content: image }
+    ],
+    links: [
+      { rel: "canonical", href: canonical },
+      { rel: "image_src", href: image }
+    ],
+    scripts: [
+      {
+        props: { type: "application/ld+json" },
+        script: JSON.stringify(schema)
+      }
+    ]
+  };
+};
