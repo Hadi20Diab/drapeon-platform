@@ -54,7 +54,7 @@ const demoScenarios = [
       {
         title: 'Designer Calendar Workflow',
         store: 'Operations View',
-        image: 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=85'
+        image: 'https://thumbs.dreamstime.com/b/man-planning-schedule-calendar-to-do-list-effective-time-management-productivity-meticulously-his-using-digital-400035615.jpg'
       },
       {
         title: 'Client Booking Journey',
